@@ -1,0 +1,4 @@
+# Everything downloaded here is NEVER committed (Scryfall bulk, CR text,
+# MTR/IPG, card images). Keep the directory, ignore its contents.
+*
+!.gitignore

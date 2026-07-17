@@ -1,0 +1,76 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Internal / private material (NOT part of the public portfolio repo)
+# ─────────────────────────────────────────────────────────────────────────
+.claude/
+roadmap-*.md
+notes/
+
+# ─────────────────────────────────────────────────────────────────────────
+# Data — bulk sources are NEVER committed (Fan Content Policy + Scryfall guidelines)
+# raw/ and interim/ track only their own .gitignore (see data/*/.gitignore)
+# ─────────────────────────────────────────────────────────────────────────
+data/raw/*
+data/interim/*
+!data/raw/.gitignore
+!data/interim/.gitignore
+
+# ─────────────────────────────────────────────────────────────────────────
+# Secrets / environment
+# ─────────────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─────────────────────────────────────────────────────────────────────────
+# Python
+# ─────────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.installed.cfg
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+
+# ─────────────────────────────────────────────────────────────────────────
+# Jupyter
+# ─────────────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+notebooks/**/*-checkpoint.ipynb
+
+# ─────────────────────────────────────────────────────────────────────────
+# Neo4j / Docker local state (if bind-mounted)
+# ─────────────────────────────────────────────────────────────────────────
+neo4j/data/
+neo4j/logs/
+neo4j/import/
+neo4j/plugins/
+
+# ─────────────────────────────────────────────────────────────────────────
+# OS / editors
+# ─────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~

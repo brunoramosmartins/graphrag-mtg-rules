@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "graphrag-mtg-rules"
+version = "0.1.0"
+description = "Portfolio-grade GraphRAG over the official Magic: The Gathering rules corpus (Scryfall, Comprehensive Rules, rulings) with a judge-curated golden set and academic-benchmark calibration."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Bruno Ramos Martins" }]
+keywords = ["graphrag", "knowledge-graph", "neo4j", "rag", "magic-the-gathering"]
+
+# Core runtime — kept intentionally light so `pip install -e .` stays fast and
+# portable. Heavy, phase-specific dependencies live in the optional groups below.
+dependencies = [
+    "neo4j>=5.20",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "python-dotenv>=1.0",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# Phase 3 — LLM extraction / entity linking. Provider-agnostic; the default
+# client is Anthropic's Claude (see docs/adr/adr-003-*).
+extraction = ["anthropic>=0.40"]
+
+# Phase 3/4/6 — BGE-M3 reuse from Project 1 for fuzzy card-name linking and the
+# vector baseline.
+embeddings = ["sentence-transformers>=3.0", "FlagEmbedding>=1.2"]
+
+# Phase 7 — OpenTelemetry tracing + Arize Phoenix viewer (reused from Project 1).
+observability = [
+    "opentelemetry-sdk>=1.25",
+    "opentelemetry-exporter-otlp>=1.25",
+    "arize-phoenix>=4.0",
+]
+
+# Phase 8 — Streamlit demo with subgraph visualization.
+app = ["streamlit>=1.35", "streamlit-agraph>=0.0.45"]
+
+# Development tooling.
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/brunoramosmartins/graphrag-mtg-rules"
+Repository = "https://github.com/brunoramosmartins/graphrag-mtg-rules"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+graphrag_mtg = ["py.typed"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ruff
+# ─────────────────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["graphrag_mtg"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pytest
+# ─────────────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: tests that require a live Neo4j instance (run in CI against a service container)",
+]
