@@ -23,7 +23,7 @@ from graphrag_mtg.etl.normalize import (
         ("Jötun Grunt", "jotun grunt"),
         ("Márton Stromgald", "marton stromgald"),
         ("Séance", "seance"),
-        ("Lim-Dul’s Vault", "lim-dul's vault"),  # curly apostrophe -> ASCII
+        ("Lim-Dul’s Vault", "lim-dul's vault"),  # noqa: RUF001 - curly apostrophe is the case under test
         ("  Sol   Ring  ", "sol ring"),          # whitespace collapsed
     ],
 )

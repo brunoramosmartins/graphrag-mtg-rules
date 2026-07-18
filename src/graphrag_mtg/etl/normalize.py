@@ -26,13 +26,13 @@ _LIGATURES = {
 # Typographic punctuation -> ASCII, so "Lim-Dul's" matches whichever quote a
 # source used.
 _PUNCTUATION = {
-    "‘": "'",
-    "’": "'",
-    "“": '"',
-    "”": '"',
-    "–": "-",  # en dash
+    "‘": "'",  # noqa: RUF001 - left single quote; the ambiguity IS the data here
+    "’": "'",  # noqa: RUF001 - right single quote (the apostrophe in card names)
+    "“": '"',  # left double quotation mark
+    "”": '"',  # right double quotation mark
+    "–": "-",  # noqa: RUF001 - en dash
     "—": "-",  # em dash
-    "−": "-",  # minus sign
+    "−": "-",  # noqa: RUF001 - minus sign
 }
 
 FACE_SEPARATOR = "//"

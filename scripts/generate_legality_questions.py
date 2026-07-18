@@ -63,7 +63,7 @@ def _sample(buckets: dict[str, list[tuple[dict, str]]], count: int, rng: random.
         selected.extend(pool[: round(count * frac)])
     # Top up (or trim) to exactly `count` from the remaining pool.
     if len(selected) < count:
-        chosen = set(id(x) for x in selected)
+        chosen = {id(x) for x in selected}
         leftovers = [x for pool in buckets.values() for x in pool if id(x) not in chosen]
         rng.shuffle(leftovers)
         selected.extend(leftovers[: count - len(selected)])
