@@ -21,7 +21,7 @@ def main() -> int:
     print(f"Connecting to {settings.neo4j_uri} as {settings.neo4j_user} ...")
     try:
         ok = verify_connectivity()
-    except Exception as exc:  # noqa: BLE001 - smoke script prints, doesn't re-raise
+    except Exception as exc:  # smoke script prints, doesn't re-raise
         print(f"FAILED: {exc}")
         print("Is Neo4j up? Try: docker compose up -d && docker compose ps")
         return 1

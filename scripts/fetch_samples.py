@@ -30,7 +30,11 @@ SCRYFALL_CARD = "https://api.scryfall.com/cards/named?exact=Lightning%20Bolt"
 
 
 def _client() -> httpx.Client:
-    return httpx.Client(headers={"User-Agent": USER_AGENT, "Accept": "application/json"}, timeout=TIMEOUT)
+    return httpx.Client(
+        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+        timeout=TIMEOUT,
+        follow_redirects=True,
+    )
 
 
 def fetch_scryfall(out: Path) -> None:
@@ -78,7 +82,7 @@ def fetch_rulesguru(out: Path) -> None:
     manual steps in notes/ and confirm the content license (see
     docs/data-sources.md, the one open G1 item).
     """
-    url = "https://rulesguru.net/api/questions/"
+    url = "https://rulesguru.org/api/questions/"
     payload = {
         "count": 10,
         "questionTags": [],
@@ -95,7 +99,7 @@ def fetch_rulesguru(out: Path) -> None:
             data = resp.json()
         (out / "rulesguru_sample.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
         print(f"[rulesguru] API OK; sample saved ({url})")
-    except Exception as exc:  # noqa: BLE001 - endpoint may differ; report, don't crash the run
+    except Exception as exc:  # endpoint may differ; report, don't crash the run
         (out / "rulesguru_error.txt").write_text(
             f"{url}\nfetch failed: {exc}\n"
             "Confirm the current API endpoint and the QUESTION-CONTENT LICENSE "
