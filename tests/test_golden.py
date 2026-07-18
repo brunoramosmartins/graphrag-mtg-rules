@@ -15,6 +15,7 @@ from graphrag_mtg.evaluation.golden import (
     content_sha256,
     dump_golden,
     load_golden,
+    load_golden_dir,
     snapshot_hash,
 )
 
@@ -122,6 +123,32 @@ def test_load_dump_round_trip(tmp_path):
     loaded = load_golden(path)
     assert [q.id for q in loaded] == ["hand-1", "rg-99"]
     assert loaded[0].vector_should == VectorExpectation.fail
+
+
+def test_load_golden_dir_concatenates_shards(tmp_path):
+    dump_golden([_authored()], tmp_path / "authored_v0.jsonl")
+    dump_golden(
+        [
+            GoldenQuestion(
+                id="rg-1", source=Source.rulesguru, stratum=Stratum.rulings_2hop, hops=2,
+                vector_should=VectorExpectation.lose,
+            )
+        ],
+        tmp_path / "ids_v0.jsonl",
+    )
+    loaded = load_golden_dir(tmp_path)
+    assert {q.id for q in loaded} == {"hand-1", "rg-1"}
+
+
+def test_load_golden_dir_rejects_duplicate_ids(tmp_path):
+    dup = GoldenQuestion(
+        id="rg-1", source=Source.rulesguru, stratum=Stratum.rulings_2hop, hops=2,
+        vector_should=VectorExpectation.lose,
+    )
+    dump_golden([dup], tmp_path / "a_v0.jsonl")
+    dump_golden([dup], tmp_path / "b_v0.jsonl")
+    with pytest.raises(ValueError):
+        load_golden_dir(tmp_path)
 
 
 def test_load_ignores_blank_and_comment_lines(tmp_path):

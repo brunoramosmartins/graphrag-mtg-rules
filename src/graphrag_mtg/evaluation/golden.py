@@ -127,6 +127,26 @@ def load_golden(path: Path | str = DEFAULT_PATH) -> list[GoldenQuestion]:
     return out
 
 
+def load_golden_dir(directory: Path | str = "data/golden") -> list[GoldenQuestion]:
+    """Load and concatenate every ``*.jsonl`` shard in a directory.
+
+    The golden set is sharded by origin (``ids_v0.jsonl`` for RulesGuru +
+    generated rows, ``authored_v0.jsonl`` for hand-written ones). Raises
+    ``ValueError`` on a duplicate id across shards.
+    """
+    seen: dict[str, str] = {}
+    out: list[GoldenQuestion] = []
+    for path in sorted(Path(directory).glob("*.jsonl")):
+        for question in load_golden(path):
+            if question.id in seen:
+                raise ValueError(
+                    f"duplicate golden id {question.id!r} in {path.name} and {seen[question.id]}"
+                )
+            seen[question.id] = path.name
+            out.append(question)
+    return out
+
+
 def dump_golden(questions: list[GoldenQuestion], path: Path | str) -> None:
     """Write questions as one compact JSON object per line."""
     p = Path(path)

@@ -112,9 +112,23 @@ python scripts/build_golden_pool.py --per-stratum 15
 - 2-hop / interaction strata: candidate pool pulled from RulesGuru;
   **human annotation of hops/gold-entities is the remaining work** — the
   answer key itself is judge-reliable (that is RulesGuru's asset).
-- Hard-interaction authored set: **pending** (~10–15 questions).
+- Hard-interaction authored set: **done** — 12 questions in
+  `authored_v0.jsonl` (`scripts/build_authored_set.py`), all
+  `verified=false` pending a judge's review of the rulings/CR citations.
 
-G2 passes when ≥ 60 questions are `verified` across all six strata. If
+**Current count: 52** (20 legality verified · 20 RulesGuru + 12 authored
+unverified). ~8 short of the 60-verified bar — reachable by generating
+more legality (`--count`) and verifying the RulesGuru/authored rows.
+
+## Files (shards)
+
+The golden set is sharded by origin; `load_golden_dir("data/golden")`
+loads and concatenates them (rejecting duplicate ids):
+
+- `ids_v0.jsonl` — RulesGuru skeletons (IDs, no text) + generated legality.
+- `authored_v0.jsonl` — hand-authored hard-interaction questions.
+
+G2 passes when ≥ 60 questions are `verified` across the strata. If
 RulesGuru coverage of a stratum proves thin, the fallback is to lean
 harder on the authored set (per [`contingency.md`](contingency.md)); the
 scaffold does not change.
