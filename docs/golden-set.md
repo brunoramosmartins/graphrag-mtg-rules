@@ -116,9 +116,16 @@ python scripts/build_golden_pool.py --per-stratum 15
   `authored_v0.jsonl` (`scripts/build_authored_set.py`), all
   `verified=false` pending a judge's review of the rulings/CR citations.
 
-**Current count: 52** (20 legality verified · 20 RulesGuru + 12 authored
-unverified). ~8 short of the 60-verified bar — reachable by generating
-more legality (`--count`) and verifying the RulesGuru/authored rows.
+**Current count: 62** — legality 20 · keyword_rule 14 · rulings 13 ·
+interaction 12 · negative 3 · definition 0 (Phase 2). By origin: 30
+RulesGuru, 20 generated, 12 authored.
+
+The **≥60 count bar is met**; what remains is **verification**: 20 rows
+are verified (generated legality), 42 are not (RulesGuru annotations and
+the authored answers, which need a judge's review of the rulings and CR
+citations). Note the RulesGuru "Complicated" pool is thin — repeated
+pulls returned duplicates — which is exactly why the authored set carries
+the interaction stratum.
 
 ## Files (shards)
 
