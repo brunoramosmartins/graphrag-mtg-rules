@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 DEFAULT_PATH = Path("data/golden/ids_v0.jsonl")
 
 
-class Stratum(str, Enum):
+class Stratum(StrEnum):
     """The six question strata (see docs/golden-set.md)."""
 
     legality_1hop = "legality_1hop"
@@ -30,7 +30,7 @@ class Stratum(str, Enum):
     negative_temporal = "negative_temporal"
 
 
-class Source(str, Enum):
+class Source(StrEnum):
     """Where a question comes from (drives what may be committed)."""
 
     rulesguru = "rulesguru"
@@ -38,7 +38,7 @@ class Source(str, Enum):
     authored = "authored"
 
 
-class VectorExpectation(str, Enum):
+class VectorExpectation(StrEnum):
     """A-priori prediction of how the vector baseline should do."""
 
     tie = "tie"

@@ -33,9 +33,8 @@ import hashlib
 import json
 import os
 import re
-import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -232,7 +231,7 @@ def process(
         "version": source.version,
         "sha256": sha256,
         "bytes": size,
-        "downloaded_at": datetime.now(timezone.utc).isoformat(),
+        "downloaded_at": datetime.now(UTC).isoformat(),
     }
     print(f"[{source.name}] downloaded {size:,} bytes -> {dest} (sha256 {sha256[:12]}...)")
     return "downloaded"

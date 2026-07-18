@@ -20,17 +20,17 @@ from graphrag_mtg.evaluation.golden import (
 
 
 def _authored(**overrides) -> GoldenQuestion:
-    base = dict(
-        id="hand-1",
-        source=Source.authored,
-        stratum=Stratum.interaction_multihop,
-        hops=3,
-        question="Humility and Opalescence are both on the battlefield. What are the P/T?",
-        answer="Timestamp order in layer 7b decides; ...",
-        vector_should=VectorExpectation.fail,
-        vector_should_reason="Answer is a layer-system path, not a stated passage.",
-        verified=True,
-    )
+    base = {
+        "id": "hand-1",
+        "source": Source.authored,
+        "stratum": Stratum.interaction_multihop,
+        "hops": 3,
+        "question": "Humility and Opalescence are both on the battlefield. What are the P/T?",
+        "answer": "Timestamp order in layer 7b decides; ...",
+        "vector_should": VectorExpectation.fail,
+        "vector_should_reason": "Answer is a layer-system path, not a stated passage.",
+        "verified": True,
+    }
     base.update(overrides)
     return GoldenQuestion(**base)
 
