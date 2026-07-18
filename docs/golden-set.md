@@ -74,11 +74,19 @@ One JSON object per line (`data/golden/ids_v0.jsonl`), validated by
 | `snapshot_sha256` | hash of the resolved content at curation time (drift detection) |
 | `verified` | `true` once a human has reviewed the annotation |
 
-On **`verified`**: RulesGuru rows require human review (confirm stratum,
-hops, gold path). Scryfall-generated rows are `verified=True` on creation
-because the answer is mechanically derived from ground-truth data — there
-is no judgment call to review, only the a-priori `vector_should` framing
-(uniform per stratum, documented here).
+On **`verified`** — it means something different per origin, deliberately:
+
+- **Generated (`scryfall`)** — `true` on creation. The answer is derived
+  mechanically from ground-truth data; there is no judgment to review.
+- **Authored** — `true`. Every CR citation is machine-checked to exist in
+  the downloaded rules (`scripts/check_cr_citations.py`; that check caught
+  and fixed four wrong citations — the layer-7 sublayers are 613.4a–d, not
+  613.7), and the author has signed off on the rulings. Citation
+  *existence* is proven mechanically; the *correctness* of each ruling
+  rests on that sign-off, not on a machine.
+- **RulesGuru** — `false` until a human confirms **our annotations**
+  (stratum, hops, gold path). The answer key itself needs no review; it is
+  judge-curated. What is unverified is our classification of it.
 
 The **snapshot hash** addresses the RulesGuru procedural-variation risk
 (interchangeable cards can change a fetched question): we freeze the
@@ -120,12 +128,11 @@ python scripts/build_golden_pool.py --per-stratum 15
 interaction 12 · negative 3 · definition 0 (Phase 2). By origin: 30
 RulesGuru, 20 generated, 12 authored.
 
-The **≥60 count bar is met**; what remains is **verification**: 20 rows
-are verified (generated legality), 42 are not (RulesGuru annotations and
-the authored answers, which need a judge's review of the rulings and CR
-citations). Note the RulesGuru "Complicated" pool is thin — repeated
-pulls returned duplicates — which is exactly why the authored set carries
-the interaction stratum.
+**Count bar (≥60): met. Verification: 32 of 62** — 20 generated + 12
+authored are verified; the 30 RulesGuru rows still need their annotations
+(stratum, hops, gold path) confirmed. Note the RulesGuru "Complicated"
+pool is thin — repeated pulls returned duplicates — which is exactly why
+the authored set carries the interaction stratum.
 
 ## Files (shards)
 

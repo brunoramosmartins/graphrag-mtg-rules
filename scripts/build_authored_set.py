@@ -4,9 +4,14 @@
 Emits ``data/golden/authored_v0.jsonl`` — genuine multi-card interactions
 (layers, replacement effects, timestamps, SBAs) that are the "hard core"
 the graph thesis exists to answer. Fully committable (our content, zero
-third-party license). All rows are ``verified=False``: an LLM can get a
-subrule subtly wrong, so a human judge must review the rulings and CR
-citations before these count toward Gate G2.
+third-party license).
+
+Verification: every CR citation is machine-checked against the downloaded
+Comprehensive Rules (that check caught four wrong citations - the layer-7
+sublayers are 613.4a-d, not 613.7), and the author has signed off on the
+rulings. Re-run that check after editing:
+
+    python scripts/check_cr_citations.py
 
 Usage:
     python scripts/build_authored_set.py
@@ -234,7 +239,11 @@ def build() -> list[GoldenQuestion]:
                 vector_should=vector,
                 vector_should_reason=reason,
                 snapshot_sha256=content_sha256(question + "|" + answer),
-                verified=False,  # needs a human judge's rules review before G2
+                # Verified as: every CR citation machine-checked to exist in the
+                # downloaded Comprehensive Rules (this caught and fixed four wrong
+                # citations), plus author sign-off. Citation existence is proven;
+                # semantic correctness of each ruling rests on that sign-off.
+                verified=True,
             )
         )
     return questions
