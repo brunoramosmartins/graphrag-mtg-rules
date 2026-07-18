@@ -125,15 +125,40 @@ python scripts/build_golden_pool.py --per-stratum 15
   `authored_v0.jsonl` (`scripts/build_authored_set.py`), all
   `verified=false` pending a judge's review of the rulings/CR citations.
 
-**Current count: 62** — legality 20 · keyword_rule 14 · rulings 13 ·
-interaction 12 · negative 3 · definition 0 (Phase 2). By origin: 30
-RulesGuru, 20 generated, 12 authored.
+**Current count: 62, all verified** — by origin: 30 RulesGuru, 20
+generated, 12 authored.
 
-**Count bar (≥60): met. Verification: 32 of 62** — 20 generated + 12
-authored are verified; the 30 RulesGuru rows still need their annotations
-(stratum, hops, gold path) confirmed. Note the RulesGuru "Complicated"
-pool is thin — repeated pulls returned duplicates — which is exactly why
-the authored set carries the interaction stratum.
+| Stratum | Count | `vector_should` |
+|---|---|---|
+| `interaction_multihop` | 30 | fail |
+| `legality_1hop` | 20 | lose |
+| `negative_temporal` | 9 | fail |
+| `keyword_rule_2hop` | 3 | lose |
+| `rulings_2hop` | **0** | — |
+| `definition_1hop` | **0** | — |
+
+### Known gap: two empty strata, and no `tie` stratum
+
+The annotation pass (`scripts/annotate_rulesguru_pass1.py`) revealed that
+**RulesGuru is an interaction-puzzle corpus, not a rulings-lookup one**.
+Every one of its 30 rows is a multi-permanent scenario; none is a
+"card → official ruling → rule" question. The seeded classification hid
+this because it was derived from `complexity`.
+
+Consequences to fix before the evaluation is credible:
+
+- **`rulings_2hop` is empty.** Its real source is the Scryfall rulings
+  corpus (77,999 rulings already downloaded), not RulesGuru — a generator
+  like the legality one can build it.
+- **`definition_1hop` is empty**, pending the Phase 2 CR glossary parse.
+- **No stratum currently predicts `tie`.** The roadmap deliberately wants
+  strata where the vector baseline should *draw*; without them a reported
+  graph win is not falsifiable. `definition_1hop` is the natural `tie`
+  stratum (the answer is written in one CR passage), so filling it is what
+  restores that balance.
+
+Gate G2's count and verification bars are met; this is a **composition**
+gap, tracked rather than papered over.
 
 ## Files (shards)
 
