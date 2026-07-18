@@ -21,8 +21,8 @@ is our **a-priori** prediction (recorded before running anything), per
 
 | Stratum | Hops | What it tests | Primary source | `vector_should` |
 |---|---|---|---|---|
-| `legality_1hop` | 1 | "Is *card* legal in *format*?" | Scryfall `legalities` (auto) | tie |
-| `definition_1hop` | 1 | "What does *keyword* do?" | CR keyword glossary (auto) | tie |
+| `legality_1hop` | 1 | "Is *card* legal in *format*?" | Scryfall `legalities` (auto) | lose |
+| `definition_1hop` | 1 | "What does *keyword* do?" | CR keyword glossary (auto, Phase 2) | tie |
 | `keyword_rule_2hop` | 2 | keyword → governing rule → sub-rules | RulesGuru / CR | lose |
 | `rulings_2hop` | 2 | card → ruling → rule cited | RulesGuru + Scryfall rulings | lose |
 | `interaction_multihop` | 3+ | layer / replacement / timestamp interaction | RulesGuru + authored | fail |
@@ -74,6 +74,12 @@ One JSON object per line (`data/golden/ids_v0.jsonl`), validated by
 | `snapshot_sha256` | hash of the resolved content at curation time (drift detection) |
 | `verified` | `true` once a human has reviewed the annotation |
 
+On **`verified`**: RulesGuru rows require human review (confirm stratum,
+hops, gold path). Scryfall-generated rows are `verified=True` on creation
+because the answer is mechanically derived from ground-truth data — there
+is no judgment call to review, only the a-priori `vector_should` framing
+(uniform per stratum, documented here).
+
 The **snapshot hash** addresses the RulesGuru procedural-variation risk
 (interchangeable cards can change a fetched question): we freeze the
 content hash per id at curation time and can detect upstream drift on
@@ -97,8 +103,12 @@ python scripts/build_golden_pool.py --per-stratum 15
 **In progress — path is clear, no blocker.**
 
 - Framework, schema, and loader: **done** (this document + `golden.py`).
-- 1-hop strata (`legality_1hop`, `definition_1hop`): **auto-generatable
-  with reliable keys** from Scryfall/CR (generators land next).
+- `legality_1hop`: **done** — generated from Scryfall `legalities`
+  (`scripts/generate_legality_questions.py`), reliable key, auto-verified.
+  Marked `vector_should=lose`: format legality is structured metadata, so
+  the graph edge should beat prose retrieval (conservative, not `fail`).
+- `definition_1hop`: **deferred to Phase 2** — its answer key is the CR
+  keyword glossary (702.x), which the `cr_parser` provides.
 - 2-hop / interaction strata: candidate pool pulled from RulesGuru;
   **human annotation of hops/gold-entities is the remaining work** — the
   answer key itself is judge-reliable (that is RulesGuru's asset).
