@@ -38,11 +38,11 @@ _SPECS: list[tuple] = [
         "3/3 (its mana value), with no abilities. Opalescence makes each other non-Aura "
         "enchantment a creature (layer 4) with base P/T equal to its mana value (layer 7b). "
         "Humility removes abilities (layer 6) and sets creatures' base P/T to 1/1 (layer 7b). "
-        "Both set base P/T in layer 7b, so timestamps decide within that sublayer (613.7): "
-        "Opalescence is later, so its 1/1->mana-value setting wins, giving Ghostly Prison 3/3. "
-        "Humility's layer-6 ability removal still applies, so it has no abilities.",
+        "Both set base P/T in layer 7b (613.4b), so timestamps decide within that sublayer "
+        "(613.7): Opalescence is later, so its mana-value setting wins, giving Ghostly Prison "
+        "3/3. Humility's layer-6 ability removal still applies, so it has no abilities.",
         ["Humility", "Opalescence", "Ghostly Prison"],
-        ["613.3", "613.7"],
+        ["613.4b", "613.7"],
         "(:Card)-[:HAS_KEYWORD|MENTIONS]->... layer-system Rule subtree 613 (types 4, abilities 6, P/T 7b) + 613.7 timestamps",
         VectorExpectation.fail,
         "The answer is the resolution of two 7b effects by timestamp across the layer system; no single passage states it.",
@@ -53,12 +53,13 @@ _SPECS: list[tuple] = [
         3,
         "A 2/2 creature has a +1/+1 counter on it (shown as 3/3). Humility then enters. "
         "What are its power and toughness?",
-        "2/2. Humility sets base P/T to 1/1 in layer 7b. The +1/+1 counter applies in layer 7c, "
-        "which always comes after 7b regardless of timestamp (613.7 orders sublayers 7a-7d). "
-        "So 1/1 base + 1/1 counter = 2/2. The common mistake is to think Humility makes it 1/1.",
+        "2/2. Humility sets base P/T to 1/1 in layer 7b (613.4b). The +1/+1 counter applies in "
+        "layer 7c (613.4c), which always comes after 7b regardless of timestamp - 613.4 fixes "
+        "the order of sublayers 7a-7d. So 1/1 base + 1/1 counter = 2/2. The common mistake is "
+        "to think Humility makes it 1/1.",
         ["Humility", "+1/+1 counter"],
-        ["613.7", "613.7c"],
-        "Rule 613.7 sublayer ordering: base-set (7b) before counters (7c)",
+        ["613.4b", "613.4c"],
+        "Rule 613.4 sublayer ordering: base-set (7b) before counters (7c)",
         VectorExpectation.fail,
         "Requires knowing the fixed 7b-before-7c sublayer order, not a fact stated in any single card or passage.",
     ),
@@ -162,7 +163,7 @@ _SPECS: list[tuple] = [
         "in layer 4), removing their other land types, text, and abilities and granting the "
         "intrinsic 'T: Add R' of a Mountain (305.7). Gaea's Cradle loses its own ability.",
         ["Blood Moon", "Gaea's Cradle"],
-        ["305.7", "613.3"],
+        ["305.7", "613.1d"],
         "(:Card {Blood Moon}) type-change (layer 4) -> (:Card {Gaea's Cradle}) gains Mountain intrinsic (305.7)",
         VectorExpectation.fail,
         "The answer emerges from applying a type-changing effect plus the basic-land intrinsic-ability rule; no passage states Cradle taps for R.",
@@ -208,7 +209,7 @@ _SPECS: list[tuple] = [
         "that is lethal, destroying the 3/3 (702.7, 702.2). The 3/3 is gone before the regular "
         "damage step, so it never deals its 3 back and your creature survives.",
         ["first strike", "deathtouch"],
-        ["702.7", "702.2b", "510.5"],
+        ["702.7", "702.2b", "510.4"],
         "(:Keyword {first strike})-[:DEFINED_BY]->(:Rule 702.7) + (:Keyword {deathtouch})-[:DEFINED_BY]->(:Rule 702.2)",
         VectorExpectation.fail,
         "Composes first strike's separate damage step with deathtouch lethality; the survival outcome is a path, not a passage.",
