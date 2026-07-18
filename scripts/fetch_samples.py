@@ -78,23 +78,32 @@ def fetch_comprehensive_rules(out: Path) -> None:
 def fetch_rulesguru(out: Path) -> None:
     """Fetch ~10 RulesGuru questions to confirm the API shape (Gate G2 input).
 
-    RulesGuru's question endpoint may change; if this fails, record the
-    manual steps in notes/ and confirm the content license (see
-    docs/data-sources.md, the one open G1 item).
+    License + versioning are settled in docs/data-sources.md: eval-only,
+    non-commercial, no model training; version question IDs + this fetch,
+    never the question text. The API is a work in progress, so if the shape
+    changes, reconfirm against docs/data-sources.md before Phase 1 curation.
     """
-    url = "https://rulesguru.org/api/questions/"
-    payload = {
+    url = "https://rulesguru.org/api/questions"  # no trailing slash — Express route is exact
+    # The API is a GET with a percent-encoded JSON `settings` query param
+    # (NOT a POST body). Schema per https://rulesguru.org/api/documentation/.
+    # Rate-limited to one request / 2s, so `count` batches in a single call.
+    # Keep the smoke filters permissive: an empty `legality` (or any filter
+    # that matches nothing) makes the API answer 404 "not enough questions".
+    # Omitting legality lets the server draw from the full pool.
+    settings = {
         "count": 10,
-        "questionTags": [],
-        "answerTags": [],
-        "complexityLevels": ["Simple", "Intermediate", "Complicated"],
-        "expansions": [],
-        "playableCardsOnly": False,
-        "rulesToInclude": [],
+        "level": ["0", "1", "2"],
+        "complexity": ["Simple", "Intermediate", "Complicated"],
+        "tags": [],
+        "tagsConjunc": "OR",
+        "rules": [],
+        "rulesConjunc": "OR",
+        "cards": [],
+        "cardsConjunc": "OR",
     }
     try:
         with _client() as client:
-            resp = client.post(url, json=payload)
+            resp = client.get(url, params={"json": json.dumps(settings, separators=(",", ":"))})
             resp.raise_for_status()
             data = resp.json()
         (out / "rulesguru_sample.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -102,8 +111,8 @@ def fetch_rulesguru(out: Path) -> None:
     except Exception as exc:  # endpoint may differ; report, don't crash the run
         (out / "rulesguru_error.txt").write_text(
             f"{url}\nfetch failed: {exc}\n"
-            "Confirm the current API endpoint and the QUESTION-CONTENT LICENSE "
-            "before Phase 1 (open G1 item; see docs/data-sources.md).\n",
+            "The API is a work in progress; reconfirm the endpoint/shape "
+            "against docs/data-sources.md before Phase 1 curation.\n",
             encoding="utf-8",
         )
         print(f"[rulesguru] could not fetch automatically ({exc}); see rulesguru_error.txt")

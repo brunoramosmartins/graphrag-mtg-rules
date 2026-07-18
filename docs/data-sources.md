@@ -28,7 +28,7 @@ is **strictly non-commercial**.
 | **Scryfall bulk data** | Oracle cards, faces, sets, legalities, official rulings | Structured backbone + rulings corpus | JSON (daily), free | **OK-with-restriction** | Never commit bulk; download script + SHA-256 |
 | **WotC Comprehensive Rules** | ~300 pp, hierarchical numbering, cross-refs | Rule tree + extraction corpus | Official TXT | **OK-with-restriction** | Never redistribute; download script only |
 | **WotC MTR / IPG** | Tournament rules & infractions | Additional text layer (vector in P3) | PDF | **OK-with-restriction** | Never redistribute; download script only |
-| **RulesGuru (API)** | ~1.5k judge questions with answers, difficulty, topic | Curated golden set | API / JSON | **OK-with-restriction (pending confirm)** | See decision below |
+| **RulesGuru (API)** | ~1.5k judge questions with answers, difficulty, topic | Curated golden set | API / JSON | **OK-with-restriction (eval-only)** | IDs + fetch script only; never the question text |
 | **Cranial Insertion (archive)** | ~20 yrs of judge Q&A | Secondary **private** validation | web | **OK for private manual use only** | Never redistribute; link only |
 | **MetaQA** | 400k 1/2/3-hop questions over a movie KG | Machinery calibration (Phase 6) | Public download | **OK (academic)** | Not committed; fetched on demand |
 
@@ -66,20 +66,30 @@ is **strictly non-commercial**.
   rulings can carry the project if MTR/IPG are cut).
 
 ### RulesGuru
-- **URLs.** Site: `https://rulesguru.org`. Source:
-  `https://github.com/KingSupernova31/RulesGuru`. It exposes a
-  question API used by the site.
-- **Terms (as evaluated).** The application code is open-source. The
-  **license of the question content specifically** must be confirmed
-  from the repo's `LICENSE` and any content notice — **this is the one
-  open item of G1.**
-- **Decision (safe default until confirmed):** version **question IDs +
-  a fetch script only** (`data/golden/ids_v0.jsonl` + fetch), never the
-  question text. The answer key remains fully usable locally. If the
-  content license clearly permits redistribution, we may switch to
-  committing `questions_v0.jsonl` — recorded here when confirmed.
-- **Verdict: OK-with-restriction (pending explicit confirmation in
-  Phase 1, feeding gate G2).**
+- **URLs.** Site: `https://rulesguru.org` (the `.net` host
+  301-redirects here). Source:
+  `https://github.com/KingSupernova31/RulesGuru`. Question API:
+  **GET** `https://rulesguru.org/api/questions/?json=<settings>`, where
+  `<settings>` is percent-encoded JSON (schema at
+  `https://rulesguru.org/api/documentation/`); rate-limited to one
+  request / 2 s, so batch via the `count` field.
+- **License (confirmed 2026-07-17).** `LICENSE.md`, © 2018 Isaac King —
+  **source-available, not open-source.** It prohibits (a) commercial
+  use, (b) **AI training** (defined broadly: any use contributing
+  "directly or indirectly" to constructing, improving, or optimizing an
+  ML model or neural network), and (c) competing use. The terms apply to
+  "all copies, modifications, and derivatives" — i.e. the question
+  content (`questions.db`), not just the server code. Redistribution
+  must include the terms and keep the copyright notices.
+- **Our posture (accepted; feeds G2).** RulesGuru is used **only as an
+  evaluation golden set**: non-commercial, with **no model training or
+  fine-tuning** — the pipeline consumes a pretrained LLM via API, and
+  the questions are a held-out benchmark, never a training signal. We do
+  **not** redistribute question text: version **question IDs + a fetch
+  script only** (`data/golden/ids_v0.jsonl` + fetch), never
+  `questions_v0.jsonl`. The answer key stays fully usable locally.
+- **Verdict: OK-with-restriction (eval-only; IDs + fetch).** The
+  previously-open G1 item is now closed.
 
 ### Cranial Insertion
 - **URL.** `https://www.cranialinsertion.com`.
@@ -97,8 +107,11 @@ is **strictly non-commercial**.
 
 **Proceed with Magic.** All required sources are OK or
 OK-with-restriction under a non-commercial fan project that does not
-redistribute WotC text/data or Scryfall bulk. The single open item
-(RulesGuru question-content license) has a safe default (IDs + fetch)
-that does not block the design. **Plan B (D&D 5e SRD, CC-licensed)**
-stays in reserve per [`contingency.md`](./contingency.md); the scaffold
-is domain-agnostic, so activating it loses no infrastructure work.
+redistribute WotC text/data or Scryfall bulk. The previously-open item
+(RulesGuru question-content license) is **resolved** (confirmed
+2026-07-17): the content is source-available under a non-commercial,
+no-AI-training license, used here **eval-only** and versioned as **IDs +
+fetch, never question text** — see the RulesGuru entry above. **Plan B
+(D&D 5e SRD, CC-licensed)** stays in reserve per
+[`contingency.md`](./contingency.md); the scaffold is domain-agnostic,
+so activating it loses no infrastructure work.
