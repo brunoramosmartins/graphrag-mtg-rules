@@ -43,7 +43,7 @@ def _table(counter: Counter, top: int, total: int | None = None) -> None:
     width = max((len(str(k)) for k, _ in counter.most_common(top)), default=8)
     for key, count in counter.most_common(top):
         share = f"  {count / total:6.1%}" if total else ""
-        print(f"  {str(key):<{width}}  {count:>7,}{share}")
+        print(f"  {key!s:<{width}}  {count:>7,}{share}")
 
 
 def load_cards() -> list[dict]:
