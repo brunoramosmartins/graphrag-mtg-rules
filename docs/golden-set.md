@@ -102,6 +102,7 @@ python scripts/build_golden_pool.py --per-stratum 15
 
 # 2. Human review: fix stratum/hops, fill gold_entities/gold_cr_rules/gold_path,
 #    write vector_should_reason for interaction/negative rows, set verified=true.
+#    Procedure + worked examples: docs/annotation-guide.md
 
 # 3. Re-materialize full text at eval time (by id) and check snapshot drift.
 ```
