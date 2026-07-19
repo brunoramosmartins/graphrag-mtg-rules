@@ -81,3 +81,18 @@ def test_parse_mana_cost():
 )
 def test_mana_value(cost, expected):
     assert mana_value(cost) == expected
+
+
+@pytest.mark.parametrize(
+    "combined",
+    [
+        "{2}{B} // {B}",        # adventure: real value is the creature half (3)
+        "{1}{R}{R} // {1}{R}",  # summing both sides would give 5, Scryfall says 3
+    ],
+)
+def test_mana_value_rejects_a_combined_multi_face_cost(combined):
+    # Summing across faces is wrong for adventure cards and right for split
+    # ones, and the string alone cannot tell them apart — so refuse rather
+    # than return a plausible wrong number. 209 cards in the bulk hit this.
+    with pytest.raises(ValueError, match="combined cost"):
+        mana_value(combined)

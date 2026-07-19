@@ -19,6 +19,7 @@ import json
 import random
 from pathlib import Path
 
+from graphrag_mtg.etl.cards import is_playable
 from graphrag_mtg.evaluation.generators import build_legality_question
 from graphrag_mtg.evaluation.golden import GoldenQuestion, dump_golden, load_golden
 
@@ -26,25 +27,16 @@ ORACLE_PATH = Path("data/raw/scryfall_oracle_cards.json")
 OUT_PATH = Path("data/golden/ids_v0.jsonl")
 DEFAULT_FORMATS = ["standard", "modern", "legacy", "pioneer", "commander", "pauper", "vintage"]
 
-# Non-playable layouts to skip (tokens, emblems, and other non-deck objects).
-_SKIP_LAYOUTS = {"token", "double_faced_token", "emblem", "art_series", "vanguard", "scheme", "planar"}
-
 # Target mix so the batch is not all "legal"; banned/restricted are the
 # interesting minority. Fractions of --count; capped by what actually exists.
 _STATUS_MIX = {"legal": 0.40, "banned": 0.25, "not_legal": 0.20, "restricted": 0.15}
-
-
-def _is_playable(card: dict) -> bool:
-    if card.get("layout") in _SKIP_LAYOUTS or "Token" in card.get("type_line", ""):
-        return False
-    return bool(card.get("oracle_id") and card.get("legalities") and card.get("name"))
 
 
 def _bucket_candidates(cards: list[dict], formats: list[str]) -> dict[str, list[tuple[dict, str]]]:
     """Group ``(card, format)`` pairs by their legality status."""
     buckets: dict[str, list[tuple[dict, str]]] = {s: [] for s in _STATUS_MIX}
     for card in cards:
-        if not _is_playable(card):
+        if not is_playable(card):
             continue
         legalities = card["legalities"]
         for fmt in formats:
