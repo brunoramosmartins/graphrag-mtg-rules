@@ -16,7 +16,7 @@ first schema-as-code, applied by [`graph/schema.py`](../src/graphrag_mtg/graph/s
 | `Card` | `oracle_id` | `name`, `oracle_text`, `mana_cost`, `cmc`, `type_line`, `colors`, `keywords`, `layout` | Scryfall oracle |
 | `CardFace` | `face_key` (`<oracle_id>#<i>`) | `name`, `oracle_text`, `mana_cost`, `type_line` | Scryfall (multi-face layouts) |
 | `Format` | `name` | — (`standard`, `modern`, `commander`, …) | Scryfall `legalities` |
-| `Rule` | `number` (`613.7c`) | `level`, `text`, `is_glossary` | CR (deterministic parse) |
+| `Rule` | `number` (`613.7c`) | `level`, `text`, `section` | CR (deterministic parse) |
 | `Keyword` | `name` | `is_evergreen` | Scryfall `keywords` + CR glossary |
 | `Ruling` | `ruling_id` | `source`, `published_at`, `text` | Scryfall rulings |
 
@@ -54,6 +54,23 @@ graph without passing `extraction/gate.py`. Deterministic edges carry
   `(:Card)-[:MELDS_WITH]->(:Card)` (the two halves) and
   `(:Card)-[:MELDS_INTO]->(:Card)` (the result). Not created until a
   golden-set question needs it — per the no-inflation rule.
+
+## Glossary modeling (v1 refinement, Phase 2)
+
+v1 originally gave `Rule` an `is_glossary` flag, on the assumption that
+glossary entries could live as `Rule` nodes. Parsing the real document
+retired that: the CR's **726 glossary entries carry no rule number**, and
+`Rule` is keyed on `number` — so they cannot be `Rule` nodes at all.
+
+Instead the parser emits them as their own record, and the loader turns
+each into a `Keyword` node plus a `DEFINED_BY` edge to the rule the entry
+cites. **220 entries cite a `702.x` keyword rule**, which is exactly the
+deterministic source of `(:Keyword)-[:DEFINED_BY]->(:Rule)` and of the
+`definition_1hop` stratum that restores the `tie` prediction.
+
+`Rule` gains `section` instead (`Game Concepts`, `Additional Rules`, …),
+which the parse yields for free and which gives traversals a cheap way to
+scope a search.
 
 ## Explicitly excluded (anti-inflation)
 
