@@ -61,7 +61,9 @@ pip install -e ".[dev]"
 cp .env.example .env          # set NEO4J_PASSWORD
 
 # 3. Database
-docker compose up -d          # Neo4j on bolt://localhost:7687 (Browser: :7474)
+docker compose up -d --wait   # Neo4j on bolt://localhost:7687 (Browser: :7474)
+                              # --wait blocks until healthy; Bolt needs ~30s and
+                              # connecting sooner fails the handshake, not the config
 python scripts/smoke_neo4j.py # verifies the driver can reach Neo4j
 
 # 4. Checks
