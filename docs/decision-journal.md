@@ -59,6 +59,18 @@ component — the edge can only come from validated LLM extraction,
 which is exactly Phase 3's job. The stratum moves there instead of
 being faked here.
 
+## 2026-07-20 — G3 assessed on the dev split: proceed, iterate to grounded mode
+
+First extraction run (open mode, gpt-4o-mini, 30 dev rulings, ~$0.01):
+31 candidates, 2 fabricated quotes killed by the parser, 7 of 31
+(23%) citing **plausible but nonexistent** rule numbers — all caught by
+the gate's existence check. Spans and concepts look right; the numbers
+are invented (e.g. 702.74b for connive, which is 702.131). Neither
+trivial nor infeasible under E-003's decision rule, so Phase 3 proceeds
+as designed: round 2 grounds the prompt in candidate rules retrieved
+from the graph. What the gate cannot catch — existing-but-wrong numbers
+— is exactly what the manual annotations will measure.
+
 ## 2026-07-20 — Correction: 25 rulings (3 cards) cite rule numbers, not 1
 
 The Phase 3 sampling stratifier re-measured with the pattern

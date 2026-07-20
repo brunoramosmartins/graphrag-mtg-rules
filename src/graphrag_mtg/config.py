@@ -20,8 +20,11 @@ class Settings(BaseSettings):
         neo4j_uri: Bolt URI of the Neo4j instance.
         neo4j_user: Neo4j username.
         neo4j_password: Neo4j password (also consumed by docker-compose).
+        llm_provider: Which API serves extraction/generation calls —
+            ``"anthropic"`` (default, ADR-003) or ``"openai"``.
         llm_model: Default LLM model id for extraction/generation phases.
         anthropic_api_key: API key for the default LLM provider (Claude).
+        openai_api_key: API key for the alternative OpenAI provider.
     """
 
     model_config = SettingsConfigDict(
@@ -35,8 +38,10 @@ class Settings(BaseSettings):
     neo4j_user: str = Field(default="neo4j")
     neo4j_password: str = Field(default="please-change-me")
 
+    llm_provider: str = Field(default="anthropic")
     llm_model: str = Field(default="claude-opus-4-8")
     anthropic_api_key: str = Field(default="")
+    openai_api_key: str = Field(default="")
 
 
 @lru_cache
