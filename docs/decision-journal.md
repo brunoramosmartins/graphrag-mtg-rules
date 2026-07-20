@@ -51,13 +51,27 @@ Phase 2 build decisions, each forced by measurement rather than taste:
 - `PRUNE_STALE_RULES` keyed on `source_sha256` — `MERGE` never
   deletes, so withdrawn rules survived a CR update until pruned.
 
-## 2026-07-19 — `rulings_2hop` deferred to Phase 3 on evidence *(written same day)*
+## 2026-07-19 — `rulings_2hop` deferred to Phase 3 on evidence *(written same day; measurement corrected 2026-07-20, see below)*
 
 Measured: 1 of 77,999 rulings contains a CR rule number (and it is
 about a store locator). `CITES_RULE` therefore has no deterministic
 component — the edge can only come from validated LLM extraction,
 which is exactly Phase 3's job. The stratum moves there instead of
 being faked here.
+
+## 2026-07-20 — Correction: 25 rulings (3 cards) cite rule numbers, not 1
+
+The Phase 3 sampling stratifier re-measured with the pattern
+`\b\d{3}\.\d+[a-z]?\b` and found **25 of 77,999** rulings carrying an
+explicit CR number — all from 3 cards whose rulings enumerate the
+704.5x state-based actions in the form "(704.5g)". The Phase 2 pattern
+missed parenthesized citations and undercounted by 24. The decision
+stands unchanged — 0.03% coverage concentrated on 3 cards is not a
+deterministic component worth building on — but the number in
+[golden-set.md](golden-set.md) and [evaluation.md](evaluation.md) was
+wrong and is now corrected. Lesson recorded: a measurement that feeds a
+decision gets its pattern reviewed like code, because the number
+outlives the script that produced it.
 
 ## 2026-07-19 — Literature reading anchored to decisions
 
