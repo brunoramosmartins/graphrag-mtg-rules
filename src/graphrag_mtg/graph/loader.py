@@ -145,6 +145,17 @@ SET rl.text = row.text,
 MERGE (c)-[:HAS_RULING]->(rl)
 """
 
+# A quarterly CR release removes and renumbers rules. MERGE only ever adds or
+# updates, so without this a withdrawn rule would survive forever as a ghost
+# node that statistics show as healthy. Every rule the current load touched
+# carries its source hash; anything else is by definition no longer in the
+# document. Rules only: card oracle identities are not withdrawn, and pruning
+# them would be destructive under --limit.
+PRUNE_STALE_RULES = """
+MATCH (r:Rule) WHERE r.source_sha256 <> $sha256
+DETACH DELETE r
+"""
+
 READ_SOURCE_LOAD = "MATCH (s:SourceLoad {name: $name}) RETURN s.sha256 AS sha256"
 
 MERGE_SOURCE_LOAD = """
@@ -177,6 +188,7 @@ class BatchResult:
     rows: int = 0
     nodes_created: int = 0
     relationships_created: int = 0
+    nodes_deleted: int = 0
 
     @property
     def created(self) -> int:
@@ -184,6 +196,10 @@ class BatchResult:
         return self.nodes_created + self.relationships_created
 
     def __str__(self) -> str:
+        # A prune result carries deletions only; reporting it as "0 created"
+        # would read as though nothing happened even when rules were withdrawn.
+        if not self.rows and not self.created:
+            return f"{self.nodes_deleted:,} withdrawn rules deleted"
         return f"{self.created:,} created / {self.rows:,} rows"
 
 
@@ -389,12 +405,22 @@ def load_cards(session, cards: list[Card], sha256: str, *, size: int) -> dict[st
     }
 
 
-def load_rules(session, doc: CRDocument, sha256: str, *, size: int) -> dict[str, BatchResult]:
+def load_rules(
+    session, doc: CRDocument, sha256: str, *, size: int, prune: bool = True
+) -> dict[str, BatchResult]:
     """Merge the CR tree, its cross-references, and glossary keyword definitions.
 
-    Order matters: every node must exist before the edge statements MATCH it.
+    Order matters twice. Every node must exist before the edge statements MATCH
+    it, and stale rules are pruned *last* — after the current document has
+    stamped its hash on everything it contains, so that whatever is left over
+    is exactly what the new CR withdrew.
+
+    Args:
+        prune: Delete rules the current document no longer contains. Only turn
+            this off to inspect a partial load; leaving it off across a real CR
+            release leaves withdrawn rules in the graph.
     """
-    return {
+    counts = {
         "Rule": _run_batches(session, MERGE_RULES, rule_rows(doc), sha256=sha256, size=size),
         "HAS_SUBRULE": _run_batches(session, MERGE_RULE_TREE, rule_tree_rows(doc), size=size),
         "REFERENCES": _run_batches(
@@ -404,6 +430,10 @@ def load_rules(session, doc: CRDocument, sha256: str, *, size: int) -> dict[str,
             session, MERGE_KEYWORD_DEFINITIONS, keyword_definition_rows(doc), size=size
         ),
     }
+    if prune:
+        counters = session.run(PRUNE_STALE_RULES, sha256=sha256).consume().counters
+        counts["pruned"] = BatchResult(nodes_deleted=counters.nodes_deleted)
+    return counts
 
 
 def load_rulings(session, raw_rulings, sha256: str, *, size: int) -> dict[str, BatchResult]:

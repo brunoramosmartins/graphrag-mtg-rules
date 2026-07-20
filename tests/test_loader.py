@@ -176,6 +176,35 @@ def test_ruling_rows_skip_records_without_an_oracle_id():
     assert rows[0]["text"] == "a"
 
 
+def test_batch_result_reports_prunes_as_deletions():
+    # A prune carries deletions only. Rendering it as "0 created" would read as
+    # though nothing happened on the very release where rules were withdrawn.
+    from graphrag_mtg.graph.loader import BatchResult
+
+    assert str(BatchResult(nodes_deleted=3)) == "3 withdrawn rules deleted"
+    assert str(BatchResult(rows=10, nodes_created=4)) == "4 created / 10 rows"
+
+
+def test_prune_statement_is_scoped_only_by_the_source_hash():
+    """PRUNE_STALE_RULES is global by construction — assert that, do not run it.
+
+    The statement deletes every :Rule whose source hash is not the current
+    load's. That is correct for a CR release, where the load has just stamped
+    the whole document, and catastrophic anywhere else: run against a populated
+    database with an arbitrary hash it removes the entire rule tree. There is no
+    safe way to exercise it in the unit suite, so its behaviour is verified by
+    `scripts/simulate_cr_update.py`, which performs a real full-document load
+    first. This test only pins the contract that makes it dangerous.
+    """
+    from graphrag_mtg.graph.loader import PRUNE_STALE_RULES
+
+    assert "DETACH DELETE" in PRUNE_STALE_RULES
+    assert "r.source_sha256 <> $sha256" in PRUNE_STALE_RULES
+    # No other predicate narrows it; a future edit adding one should update the
+    # simulation script and this contract together.
+    assert PRUNE_STALE_RULES.count("WHERE") == 1
+
+
 @pytest.mark.integration
 def test_merge_is_idempotent():
     """Loading the same rows twice must create nothing the second time."""

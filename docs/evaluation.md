@@ -55,7 +55,7 @@ work. `fail` — the answer is a path no single passage states.
 | `definition_1hop` | 15 | 1 | **tie** | The keyword's rule states the effect outright |
 | `legality_1hop` | 20 | 1 | lose | Structured metadata; prose signal is weak and rotates |
 | `keyword_rule_2hop` | 3 | 2 | lose | Keyword to rule to sub-rule; text can sometimes carry it |
-| `rulings_2hop` | 0 | 2 | lose | *Stratum still empty — Phase 2 issue #5* |
+| `rulings_2hop` | 0 | 2 | lose | *Deferred to Phase 3: its path runs through `CITES_RULE`, and 1 of 77,999 rulings cites a rule number, so the edge is entirely an LLM target* |
 | `interaction_multihop` | 30 | 3+ | fail | Composition of two or more effects; stated nowhere |
 | `negative_temporal` | 9 | 2–3 | fail | Turns on something **not** happening, or on ordering |
 
