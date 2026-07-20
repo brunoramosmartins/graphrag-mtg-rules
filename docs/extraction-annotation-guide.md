@@ -15,9 +15,19 @@ spans here poison every number downstream.
   full text (gitignored; regenerate with
   `python scripts/sample_rulings_for_annotation.py` if lost — the fixed
   seed reproduces the draw).
-- `data/golden/extraction_annotations.jsonl` — **what you write.** One
-  row per ruling, offsets + ids only plus short verbatim quotes (licence:
-  no bulk ruling text in the repo).
+- `data/interim/extraction_annotations_draft.jsonl` — **where you work**
+  (gitignored). Generate it with
+  `python scripts/prefill_extraction_annotations.py`: every ruling
+  arrives with deterministic linker seeds — exact/loose mentions filled
+  in, homonym candidates marked `"target_oracle_id": "UNDECIDED"` — and
+  `cited_rules` deliberately empty (seeding those from any model would
+  grade the extractor against itself).
+- `data/golden/extraction_annotations.jsonl` — the committed result:
+  offsets + ids only plus short verbatim quotes (licence: no bulk ruling
+  text in the repo). Never edited by hand — produced by
+  `python scripts/check_extraction_annotations.py --publish`, which
+  refuses rows with broken offsets, unknown rule numbers, or leftover
+  `UNDECIDED` sentinels.
 
 ## Row schema
 
@@ -49,6 +59,14 @@ each one:
   English ("creatures with fear" is the keyword, not the card Fear).
   These negatives are what make tail precision measurable; do not skip
   them.
+- `target_oracle_id: "UNDECIDED"` — the prefilled state of every homonym
+  seed. Replace each with an oracle_id or `null`; the publish script
+  rejects leftovers.
+
+Seeded exact/loose mentions are usually right — confirm, don't trust.
+The seeds only speed up precision checking: **read the full text anyway**,
+because mentions the scanner *missed* are exactly what makes recall
+measurable, and only you can add those.
 
 Rules of thumb:
 
@@ -91,6 +109,49 @@ Set `verified: true` only when: every offset round-trips
 downloaded CR, and every homonym occurrence got an explicit yes/no
 (`target_oracle_id` set or null).
 
+## Worked example
+
+A real `homonym` row from the dev split (host card: Crib Swap).
+
+> If the target creature is an illegal target by the time Crib Swap tries
+> to resolve, the spell won't resolve. No player will create a
+> Shapeshifter token.
+
+The prefill produced one mention and no citations:
+
+```json
+{"surface": "Shapeshifter", "start": 133, "end": 145,
+ "target_oracle_id": "UNDECIDED", "seed": "surface",
+ "candidates": [{"oracle_id": "2bb2f9ed-…", "name": "Shapeshifter"}, … 6 total]}
+```
+
+Three decisions, in order:
+
+1. **"Crib Swap" is absent from the mentions — correct.** It is the host
+   card, and `MENTIONS` means *another* card. Nothing to do.
+2. **"Shapeshifter" → `null`.** Six real cards carry that name, but here
+   the word is a **creature type** on a token, not a card being named.
+   This is the single most common homonym pattern in the corpus, and the
+   negative is as valuable as any positive: it is what stops the linker
+   from scoring a false positive for free.
+3. **`cited_rules`** — the ruling is about a spell failing to resolve
+   because its only target became illegal. That is rule `608`'s territory;
+   the leaf about a spell with no legal targets is what carries the point.
+   Look the number up in the CR (never from memory), quote the clause it
+   rests on, and record the offsets:
+
+```json
+{"rule_number": "608.2b", "start": 0, "end": 76,
+ "quote": "If the target creature is an illegal target by the time Crib Swap tries to resolve"}
+```
+
+Then set `"annotator": "brm"` and `"verified": true`, and run the checker.
+
+**Two habits worth keeping.** Check offsets in a REPL rather than by eye
+(`text[133:145] == "Shapeshifter"`), and when a ruling turns on nothing
+citable, leave `cited_rules` empty — an honest empty list is a correct
+annotation, and roughly a quarter of rulings deserve one.
+
 ## Session plan (anti-burnout, from the roadmap)
 
 Three sessions of ~2 hours: (1) all `multiword` + `plain` rows — fast,
@@ -103,6 +164,8 @@ the prompt-iteration set, and its labels are never reported as results.
 
 - `evaluation/metrics.py` (`evaluate_by_stratum`) — linking and citation
   P/R/F1 with bootstrap CIs, stratified by the sampling strata.
-- **E-003 in `experiments/registry.md`** — registered *after* this file
-  is frozen and *before* the extractor runs on the annotation split.
-  Order matters: sample → annotate → register → run.
+- **E-003 in `experiments/registry.md`** — registered 2026-07-20, after
+  the sample froze and before any extractor run. Order: sample →
+  register → annotate → run. **Blinding rule:** never run the extractor
+  on the annotation split before labels are published — the dev split
+  alone drives prompt iteration.
