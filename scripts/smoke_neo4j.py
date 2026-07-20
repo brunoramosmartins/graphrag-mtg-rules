@@ -2,7 +2,7 @@
 """Phase 0 smoke test: verify the Python driver can reach Neo4j.
 
 Usage:
-    docker compose up -d
+    docker compose up -d --wait
     python scripts/smoke_neo4j.py
 
 Exits 0 on success, 1 if Neo4j is unreachable.
@@ -23,7 +23,10 @@ def main() -> int:
         ok = verify_connectivity()
     except Exception as exc:  # smoke script prints, doesn't re-raise
         print(f"FAILED: {exc}")
-        print("Is Neo4j up? Try: docker compose up -d && docker compose ps")
+        # An "incomplete handshake response" here usually means Neo4j is still
+        # booting: Docker publishes 7687 before Bolt is listening. --wait blocks
+        # until the compose healthcheck passes.
+        print("Is Neo4j up *and healthy*? Try: docker compose up -d --wait")
         return 1
     if ok:
         print("OK: Neo4j is healthy and answered `RETURN 1`.")

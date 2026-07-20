@@ -125,37 +125,72 @@ python scripts/build_golden_pool.py --per-stratum 15
   `authored_v0.jsonl` (`scripts/build_authored_set.py`), all
   `verified=false` pending a judge's review of the rulings/CR citations.
 
-**Current count: 62, all verified** — by origin: 30 RulesGuru, 20
-generated, 12 authored.
+**Current count: 77, all verified** — by origin: 30 RulesGuru, 20
+generated, 27 authored.
 
 | Stratum | Count | `vector_should` |
 |---|---|---|
 | `interaction_multihop` | 30 | fail |
 | `legality_1hop` | 20 | lose |
+| `definition_1hop` | 15 | **tie** |
 | `negative_temporal` | 9 | fail |
 | `keyword_rule_2hop` | 3 | lose |
 | `rulings_2hop` | **0** | — |
-| `definition_1hop` | **0** | — |
 
-### Known gap: two empty strata, and no `tie` stratum
+Predictions now span all three values — 39 `fail`, 23 `lose`, 15 `tie`.
 
-The annotation pass (`scripts/annotate_rulesguru_pass1.py`) revealed that
-**RulesGuru is an interaction-puzzle corpus, not a rulings-lookup one**.
-Every one of its 30 rows is a multi-permanent scenario; none is a
-"card → official ruling → rule" question. The seeded classification hid
-this because it was derived from `complexity`.
+### `definition_1hop` — filled in Phase 2, and why it matters
 
-Consequences to fix before the evaluation is credible:
+The Phase 1 annotation pass revealed that **RulesGuru is an
+interaction-puzzle corpus, not a rulings-lookup one**. Every one of its 30
+rows is a multi-permanent scenario; the seeded classification hid this
+because it was derived from `complexity`. That left two strata empty and,
+worse, **no stratum predicting `tie`** — every prediction was a graph win,
+so no run could have falsified the hypothesis.
 
-- **`rulings_2hop` is empty.** Its real source is the Scryfall rulings
-  corpus (77,999 rulings already downloaded), not RulesGuru — a generator
-  like the legality one can build it.
-- **`definition_1hop` is empty**, pending the Phase 2 CR glossary parse.
-- **No stratum currently predicts `tie`.** The roadmap deliberately wants
-  strata where the vector baseline should *draw*; without them a reported
-  graph win is not falsifiable. `definition_1hop` is the natural `tie`
-  stratum (the answer is written in one CR passage), so filling it is what
-  restores that balance.
+`definition_1hop` closed that hole (`scripts/generate_definition_questions.py`).
+Fifteen keywords whose effect is stated outright in a single CR passage, so
+a passage retriever should draw with the graph. See
+[`evaluation.md`](evaluation.md) for why the stratum is required.
+
+Each row is validated against the real parsed document before being
+emitted — the keyword must exist in the CR glossary and its cited rule must
+exist in the tree — and all 15 gold paths were confirmed to resolve in the
+loaded graph. The **answer prose is ours**: copying glossary text into a
+committed file would redistribute CR text, which the IP rules forbid, so
+the selection and citation are derived and the wording is paraphrased.
+
+### `rulings_2hop` — deferred to Phase 3, on evidence
+
+The Phase 2 plan was to mine the Scryfall rulings corpus for rulings that
+cite a CR rule, giving a deterministic `Card → Ruling → Rule` path. Measured
+against the real corpus, that premise is false:
+
+> **1 of 77,999 rulings contains a CR rule number** — and that one is about
+> a store locator, not a rules citation.
+
+Scryfall rulings are written in players' language and deliberately avoid rule
+numbers. "It will lose that ability before it can trigger" is a layer-6
+statement (613.1f) that never names 613.
+
+Two consequences, both worth stating plainly:
+
+1. **`CITES_RULE` has no deterministic component at all.** It is entirely an
+   LLM extraction target. Far from emptying Phase 3, this is the strongest
+   evidence yet that the phase is necessary — it is exactly the project's
+   rule that "the LLM only adds relations the deterministic parser cannot".
+2. **The stratum cannot be honestly filled yet.** Its `gold_path` runs through
+   `CITES_RULE`, so rows written now could not be validated against the graph
+   the way the 15 `definition_1hop` paths were (15/15 confirmed). Writing
+   unverifiable rows to close a checkbox would be the kind of false confidence
+   this project exists to avoid.
+
+Moved to Phase 3, where the questions will be authored alongside the manual
+extraction annotations that measure the extractor's F1 — the same rulings serve
+both purposes. **IP posture, decided now:** question and answer prose will be
+ours, with the ruling referenced by id and materialized from `data/raw/` at
+evaluation time. Ruling text is WotC/Scryfall content and is never committed,
+the same posture already applied to the CR and to RulesGuru.
 
 Gate G2's count and verification bars are met; this is a **composition**
 gap, tracked rather than papered over.
@@ -167,6 +202,8 @@ loads and concatenates them (rejecting duplicate ids):
 
 - `ids_v0.jsonl` — RulesGuru skeletons (IDs, no text) + generated legality.
 - `authored_v0.jsonl` — hand-authored hard-interaction questions.
+- `definitions_v0.jsonl` — `definition_1hop`, keyed on the normalized keyword
+  so `gold_path` matches how the loader merges `Keyword` nodes.
 
 G2 passes when ≥ 60 questions are `verified` across the strata. If
 RulesGuru coverage of a stratum proves thin, the fallback is to lean

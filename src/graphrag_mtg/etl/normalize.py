@@ -105,11 +105,29 @@ def _symbol_value(symbol: str) -> int:
 
 
 def mana_value(cost: str) -> int:
-    """Return a mana cost's mana value (converted mana cost).
+    """Return a *single* mana cost's mana value (CR 202.3).
+
+    Only accepts one face's cost. A combined multi-face cost ("{2}{B} // {B}")
+    is rejected rather than summed, because the correct answer depends on the
+    layout and cannot be derived from the string alone: an adventure card's
+    mana value is that of its creature half, while a split card's is taken
+    from the combined cost (CR 712.12a). Summing the symbols silently returns
+    the wrong number for every adventure card — 209 of them in the current
+    bulk. Use Scryfall's ``cmc``, which already encodes those rules, or split
+    with :func:`split_faces` and pick the face you mean.
+
+    Raises:
+        ValueError: if ``cost`` holds more than one face's cost.
 
     >>> mana_value("{2}{W}{U}")
     4
     >>> mana_value("{2/W}")
     2
     """
+    if FACE_SEPARATOR in (cost or ""):
+        msg = (
+            f"mana_value() takes one face's cost, got a combined cost {cost!r}. "
+            "Use Card.cmc from Scryfall, or split_faces() and pick a face."
+        )
+        raise ValueError(msg)
     return sum(_symbol_value(symbol) for symbol in parse_mana_cost(cost))

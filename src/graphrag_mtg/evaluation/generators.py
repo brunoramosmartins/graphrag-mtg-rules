@@ -2,18 +2,35 @@
 
 `legality_1hop` questions are generated from a Scryfall oracle card's
 ``legalities`` field: the answer *is* the data, so these rows are our own
-content (committable in full) and auto-verified. `definition_1hop` is
-deferred to Phase 2, where the CR glossary parse provides the answer key.
+content (committable in full) and auto-verified.
+
+`definition_1hop` is built from the CR glossary parsed in Phase 2. The
+*selection* and the *citation* are derived from the real document — the
+keyword must exist in the glossary and its cited rule must exist in the tree —
+but the answer prose is **ours**, deliberately. Copying glossary text into a
+committed file would redistribute CR text, which the project's IP rules forbid;
+paraphrasing keeps the row fully ours, the same posture as the authored set.
 """
 
 from __future__ import annotations
 
+from graphrag_mtg.etl.normalize import normalize_name
 from graphrag_mtg.evaluation.golden import (
     GoldenQuestion,
     Source,
     Stratum,
     VectorExpectation,
     content_sha256,
+)
+
+# Why this stratum predicts a tie, recorded a priori. The evaluation needs
+# strata where the vector baseline should draw: without them a reported graph
+# win cannot be falsified.
+_TIE_REASON = (
+    "The CR states this keyword's effect in one self-contained passage (its "
+    "701.x/702.x rule), so a passage retriever should find it as readily as the "
+    "graph edge does. No traversal is required, and claiming a graph advantage "
+    "here would be over-claiming."
 )
 
 # Scryfall format keys -> display names for the question stem.
@@ -71,4 +88,38 @@ def build_legality_question(card: dict, fmt: str) -> GoldenQuestion | None:
         vector_should=VectorExpectation.lose,
         snapshot_sha256=content_sha256(f"{oracle_id}|{fmt}|{status}"),
         verified=True,  # answer is mechanically derived from ground-truth data
+    )
+
+
+def build_definition_question(keyword: str, rule_number: str, answer: str) -> GoldenQuestion:
+    """Build a ``definition_1hop`` question for one keyword.
+
+    Args:
+        keyword: Display spelling, e.g. ``First strike``.
+        rule_number: The CR rule that defines it, e.g. ``702.7``. The caller is
+            responsible for having validated it against the parsed CR.
+        answer: Our paraphrase of the rule's effect — never CR text verbatim.
+
+    Returns:
+        A ``tie``-predicted, verified question keyed on the normalized keyword,
+        matching how :mod:`graphrag_mtg.graph.loader` merges ``Keyword`` nodes.
+    """
+    key = normalize_name(keyword)
+    return GoldenQuestion(
+        id=f"hand-def-{key.replace(' ', '-')}",
+        source=Source.authored,
+        stratum=Stratum.definition_1hop,
+        hops=1,
+        question=f"What does {key} do?",
+        answer=answer,
+        gold_entities=[keyword],
+        gold_cr_rules=[rule_number],
+        gold_path=f"(:Keyword {{name:'{key}'}})-[:DEFINED_BY]->(:Rule {{number:'{rule_number}'}})",
+        vector_should=VectorExpectation.tie,
+        vector_should_reason=_TIE_REASON,
+        snapshot_sha256=content_sha256(f"{key}|{rule_number}|{answer}"),
+        # Verified as: the keyword and its rule are checked to exist in the
+        # parsed CR by the generating script, and the paraphrase is the
+        # author's, reviewed against the rule text.
+        verified=True,
     )

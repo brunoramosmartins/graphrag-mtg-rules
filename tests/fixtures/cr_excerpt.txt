@@ -1,0 +1,65 @@
+﻿Magic: The Gathering Comprehensive Rules
+
+These rules are effective as of February 27, 2026.
+
+Introduction
+
+This document is the ultimate authority for Magic: The Gathering competitive game play.
+
+Contents
+
+6. Spells, Abilities, and Effects
+613. Interaction of Continuous Effects
+614. Replacement Effects
+7. Additional Rules
+702. Keyword Abilities
+
+6. Spells, Abilities, and Effects
+
+613. Interaction of Continuous Effects
+
+613.3. Within layers 2–6, apply effects from characteristic-defining abilities first (see rule 604.3), then all other effects in timestamp order (see rule 613.7). Note that dependency may alter the order in which effects are applied within a layer. (See rule 613.8.)
+
+613.4. Within layer 7, apply effects in a series of sublayers in the order described below. Within each sublayer, apply effects in timestamp order. (See rule 613.7.) Note that dependency may alter the order in which effects are applied within a sublayer. (See rule 613.8.)
+
+613.4a Layer 7a: Effects from characteristic-defining abilities that define power and/or toughness are applied. See rule 604.3.
+
+613.4b Layer 7b: Effects that set power and/or toughness to a specific number or value are applied. Effects that refer to the base power and/or toughness of a creature apply in this layer.
+
+613.4c Layer 7c: Effects and counters that modify power and/or toughness (but don't set power and/or toughness to a specific number or value) are applied.
+
+Example: A creature with a +1/+1 counter on it is affected by an effect setting its base power and toughness to 1/1. It is a 2/2.
+
+613.7. Within a layer or sublayer, determining which order effects are applied in is usually done using a timestamp order.
+     A continuation line that the document indents rather than starting a new rule.
+
+613.8. Sometimes an effect is dependent on another effect. See rules 613.3 and 613.4.
+
+614. Replacement Effects
+
+614.1. Some continuous effects are replacement effects.
+
+7. Additional Rules
+
+702. Keyword Abilities
+
+702.2. Deathtouch
+
+702.2c Any nonzero amount of combat damage assigned to a creature by a source with deathtouch is considered to be lethal damage.
+
+Glossary
+
+Abandon
+To turn a face-up ongoing scheme card face down and put it on the bottom of its owner's scheme deck. See rule 701.33, "Abandon."
+
+Ability
+1. Text on an object that explains what that object does or can do.
+2. An activated or triggered ability on the stack. This kind of ability is an object.
+See rule 113, "Abilities," and section 6, "Spells, Abilities, and Effects."
+
+Deathtouch
+A keyword ability that makes damage lethal. See rule 702.2, "Deathtouch."
+
+Credits
+
+Magic: The Gathering Original Game Design: Richard Garfield
