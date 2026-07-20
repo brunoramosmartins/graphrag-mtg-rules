@@ -117,7 +117,9 @@ def test_legality_rows_are_one_per_format():
 
 def test_card_keyword_rows_are_one_per_keyword():
     rows = card_keyword_rows([parse_card(CARD)])
-    assert [r["keyword"] for r in rows] == ["Flying", "Trample"]
+    # The merge key is normalized; the printed spelling is kept alongside it.
+    assert [r["keyword"] for r in rows] == ["flying", "trample"]
+    assert [r["display_name"] for r in rows] == ["Flying", "Trample"]
 
 
 def test_rule_rows_and_tree_edges():
@@ -136,8 +138,32 @@ def test_only_keyword_glossary_entries_become_keywords():
     # citing rules outside 701/702 ("Active Player" -> 102.1) would inflate the
     # Keyword label and pollute the definition_1hop stratum.
     rows = keyword_definition_rows(_doc())
-    assert [r["keyword"] for r in rows] == ["Deathtouch"]
+    assert [r["keyword"] for r in rows] == ["deathtouch"]
+    assert rows[0]["display_name"] == "Deathtouch"
     assert rows[0]["rule"] == "702.2"
+
+
+def test_card_and_glossary_keywords_share_one_normalized_key():
+    # Scryfall writes "First strike", the CR glossary "First Strike". Keying on
+    # the raw name split 19 keywords into two nodes each - one holding the card
+    # edges, the other the rule definition - silently breaking the
+    # Card -> Keyword -> Rule traversal that keyword_rule_2hop needs.
+    card = parse_card({**CARD, "keywords": ["First strike"]})
+    doc = CRDocument(
+        effective_date=None,
+        rules=[Rule(number="702.7", level=2, text="First Strike", parent="702", section="s")],
+        glossary=[
+            GlossaryEntry(term="First Strike", definition="A keyword.", references=["702.7"])
+        ],
+    )
+
+    from_card = card_keyword_rows([card])[0]
+    from_glossary = keyword_definition_rows(doc)[0]
+
+    assert from_card["keyword"] == from_glossary["keyword"] == "first strike"
+    # The original spelling survives for display.
+    assert from_card["display_name"] == "First strike"
+    assert from_glossary["display_name"] == "First Strike"
 
 
 def test_ruling_rows_skip_records_without_an_oracle_id():

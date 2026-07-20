@@ -17,6 +17,14 @@ metadata, deliberately outside the domain ontology.
 ontology keys ``Ruling`` on ``ruling_id``. A content hash of those four fields
 gives a stable key, so re-loading the same ruling merges onto the same node
 instead of creating a duplicate.
+
+**Keywords are keyed on a normalized name.** Scryfall writes keywords in
+sentence case ("First strike") and the CR glossary in title case ("First
+Strike"). Merging on the raw name split 19 keywords across two nodes each —
+one holding the card edges, the other the rule definition — silently breaking
+the ``Card -> Keyword -> Rule`` traversal the ``keyword_rule_2hop`` stratum
+depends on. Both sides now merge on :func:`normalize_name`, with the original
+spelling kept as ``display_name``.
 """
 
 from __future__ import annotations
@@ -32,6 +40,7 @@ from typing import Any
 from graphrag_mtg.etl.cards import Card, load_oracle_cards
 from graphrag_mtg.etl.cr_parser import CRDocument, parse_cr
 from graphrag_mtg.etl.download import MANIFEST_PATH, load_manifest
+from graphrag_mtg.etl.normalize import normalize_name
 from graphrag_mtg.graph.connection import driver_session
 
 DEFAULT_BATCH_SIZE = 1_000
@@ -84,6 +93,7 @@ MERGE_CARD_KEYWORDS = """
 UNWIND $rows AS row
 MATCH (c:Card {oracle_id: row.oracle_id})
 MERGE (k:Keyword {name: row.keyword})
+SET k.display_name = coalesce(k.display_name, row.display_name)
 MERGE (c)-[e:HAS_KEYWORD]->(k)
 SET e.source = 'deterministic'
 """
@@ -118,7 +128,8 @@ MERGE_KEYWORD_DEFINITIONS = """
 UNWIND $rows AS row
 MATCH (r:Rule {number: row.rule})
 MERGE (k:Keyword {name: row.keyword})
-SET k.glossary_text = row.definition
+SET k.glossary_text = row.definition,
+    k.display_name = row.display_name
 MERGE (k)-[e:DEFINED_BY]->(r)
 SET e.source = 'deterministic'
 """
@@ -286,9 +297,11 @@ def legality_rows(cards: list[Card]) -> list[dict[str, Any]]:
 
 
 def card_keyword_rows(cards: list[Card]) -> list[dict[str, Any]]:
-    """One row per (card, keyword) edge."""
+    """One row per (card, keyword) edge, keyed on the normalized keyword name."""
     return [
-        {"oracle_id": c.oracle_id, "keyword": kw} for c in cards for kw in c.keywords
+        {"oracle_id": c.oracle_id, "keyword": normalize_name(kw), "display_name": kw}
+        for c in cards
+        for kw in c.keywords
     ]
 
 
@@ -334,7 +347,12 @@ def keyword_definition_rows(doc: CRDocument) -> list[dict[str, Any]]:
     is that only what a question uses enters the schema.
     """
     return [
-        {"keyword": entry.term, "definition": entry.definition, "rule": rule}
+        {
+            "keyword": normalize_name(entry.term),
+            "display_name": entry.term,
+            "definition": entry.definition,
+            "rule": rule,
+        }
         for entry in doc.glossary
         for rule in entry.references
         if rule.split(".")[0] in KEYWORD_RULE_CHAPTERS
