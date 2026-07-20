@@ -106,9 +106,22 @@ class CRDocument:
         return {rule.number: rule for rule in self.rules}
 
     def subtree(self, number: str) -> list[Rule]:
-        """Return ``number`` and every rule beneath it, in document order."""
-        prefix = f"{number}."
-        return [r for r in self.rules if r.number == number or r.number.startswith(prefix)]
+        """Return ``number`` and every rule beneath it, in document order.
+
+        Walks the parent chain rather than matching number prefixes. Prefixes
+        are wrong twice over here: lettered subrules append their letter with
+        no separator ("613.4" -> "613.4b", which does not start with "613.4."),
+        while a plain prefix would wrongly pull "613.41" into "613.4"'s
+        subtree. Rules are emitted in document order, so a parent is always
+        seen before its children.
+        """
+        members = {number}
+        found: list[Rule] = []
+        for rule in self.rules:
+            if rule.number == number or rule.parent in members:
+                members.add(rule.number)
+                found.append(rule)
+        return found
 
 
 def parent_of(number: str) -> str | None:

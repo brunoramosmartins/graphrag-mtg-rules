@@ -19,6 +19,7 @@ import pytest
 
 from graphrag_mtg.etl.cr_parser import (
     CRDocument,
+    Rule,
     extract_references,
     level_of,
     parent_of,
@@ -130,6 +131,30 @@ def test_subtree_returns_the_chapter_and_its_descendants(doc):
         "613", "613.3", "613.4", "613.4a", "613.4b", "613.4c", "613.7", "613.8",
     ]
     assert [r.number for r in doc.subtree("613.4")] == ["613.4", "613.4a", "613.4b", "613.4c"]
+
+
+def test_chapter_subtrees_partition_every_rule(doc):
+    # Each rule must be reachable from exactly one chapter: no orphans, no
+    # double counting. Holds on the real document too (3,266 = 3,266).
+    covered = sum(len(doc.subtree(r.number)) for r in doc.rules if r.level == 1)
+    assert covered == len(doc.rules)
+
+
+def test_subtree_follows_the_tree_not_number_prefixes():
+    # Two traps in one: "613.4b" does not start with "613.4." (lettered subrules
+    # append with no separator), and a plain "613.4" prefix would wrongly swallow
+    # "613.41". Built by hand so the frozen excerpt stays a real excerpt.
+    rules = [
+        Rule(number="613", level=1, text="", parent=None, section="s"),
+        Rule(number="613.4", level=2, text="", parent="613", section="s"),
+        Rule(number="613.4a", level=3, text="", parent="613.4", section="s"),
+        Rule(number="613.41", level=2, text="", parent="613", section="s"),
+    ]
+    document = CRDocument(effective_date=None, rules=rules, glossary=[])
+
+    assert [r.number for r in document.subtree("613.4")] == ["613.4", "613.4a"]
+    assert [r.number for r in document.subtree("613")] == ["613", "613.4", "613.4a", "613.41"]
+    assert document.subtree("999") == []
 
 
 def test_glossary_entries_are_parsed_with_their_definitions(doc):
