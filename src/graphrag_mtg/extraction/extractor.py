@@ -183,8 +183,9 @@ def main() -> int:
     parser.add_argument(
         "--grounded",
         action="store_true",
-        help="round-2 mode: keyword directory in the system prompt plus the host "
-        "card's keyword rules as per-ruling candidates (parsed from the local CR)",
+        help="grounded mode: CR chapter map + keyword directory in the system "
+        "prompt, plus the host card's keyword rules as per-ruling candidates "
+        "(all parsed from the local CR, no API)",
     )
     parser.add_argument(
         "--cards", type=Path, default=Path("data/raw/scryfall_oracle_cards.json")
@@ -221,12 +222,11 @@ def main() -> int:
         from graphrag_mtg.etl.cr_parser import parse_cr
         from graphrag_mtg.extraction.grounding import (
             candidate_rules_for_keywords,
-            directory_block,
-            keyword_directory,
+            grounding_block,
         )
 
         doc = parse_cr(args.cr)
-        system = SYSTEM_PROMPT + "\n\n" + directory_block(keyword_directory(doc))
+        system = SYSTEM_PROMPT + "\n\n" + grounding_block(doc)
         with args.cards.open(encoding="utf-8") as fh:
             cards = json.load(fh)
         keywords_by_oracle = {c["oracle_id"]: c.get("keywords", []) for c in cards}

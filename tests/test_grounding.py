@@ -5,7 +5,9 @@ from __future__ import annotations
 from graphrag_mtg.etl.cr_parser import CRDocument, GlossaryEntry, Rule
 from graphrag_mtg.extraction.grounding import (
     candidate_rules_for_keywords,
+    chapter_map,
     directory_block,
+    grounding_block,
     keyword_directory,
 )
 
@@ -54,6 +56,23 @@ class TestKeywordDirectory:
         block = directory_block(keyword_directory(doc()))
         assert "702.131 Connive" in block
         assert "never invent" in block
+
+
+class TestChapterMap:
+    def test_only_level_one_rules(self) -> None:
+        assert chapter_map(doc()) == [("702", "Keyword Abilities"), ("601", "Casting Spells")]
+
+
+class TestGroundingBlock:
+    def test_chapters_precede_keywords(self) -> None:
+        # Round 2's finding: leading with keyword names collapses every
+        # citation onto 701/702, so the chapter map must come first.
+        block = grounding_block(doc())
+        assert block.index("601 Casting Spells") < block.index("702.131 Connive")
+
+    def test_names_procedural_chapters_explicitly(self) -> None:
+        block = grounding_block(doc())
+        assert "608" in block and "613" in block
 
 
 class TestCandidates:

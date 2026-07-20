@@ -29,6 +29,22 @@ _CR_SUBRULE = re.compile(r"^(\d{3}\.\d+[a-z]?)\.?\s", re.MULTILINE)
 _CR_CHAPTER = re.compile(r"^(\d{3})\.\s", re.MULTILINE)
 
 
+# Chapter -> readable family, coarse enough to see a collapse at a glance.
+_FAMILIES = {
+    "601": "casting (601)",
+    "608": "resolving (608)",
+    "613": "layers (613)",
+    "701": "keyword action (701)",
+    "702": "keyword ability (702)",
+    "704": "state-based (704)",
+}
+
+
+def _family(rule_number: str) -> str:
+    chapter = rule_number.split(".")[0]
+    return _FAMILIES.get(chapter, f"other ({chapter})")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidates", type=Path, default=CANDIDATES_PATH)
@@ -61,6 +77,17 @@ def main() -> int:
     accepted_keys = {(t.source_key, t.target_key) for t in result.accepted}
     rules_cited = Counter(t.target_key for t in result.accepted)
     print(f"distinct rules cited: {len(rules_cited)}; top: {rules_cited.most_common(5)}")
+
+    # Shape of the output, not just its error rate. Round 2 passed the gate
+    # at 90% while citing keyword rules exclusively — a topical collapse the
+    # rejection count alone could never show.
+    families = Counter(_family(t.target_key) for t in result.accepted)
+    total = sum(families.values()) or 1
+    print("cited rule families:")
+    for family, n in families.most_common():
+        print(f"  {family:<24} {n:>3}  ({n / total:.0%})")
+    covered = len({t.source_key for t in result.accepted})
+    print(f"rulings with >=1 accepted citation: {covered}")
 
     shown = 0
     for candidate in candidates:

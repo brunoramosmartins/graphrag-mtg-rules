@@ -14,6 +14,14 @@ giving the model the numbers it keeps guessing at:
   keywords (via the CR glossary), quoted with a text snippet in the
   per-ruling prompt.
 
+Round 2 then measured the cost of that fix: invented numbers fell to
+~0, but **every** citation became a 701/702 keyword rule — the correct
+procedural citations round 1 produced (601.2c, 608.2, 613.x) vanished.
+A directory of only keyword names is a prompt that says "cite keywords".
+So the grounding block also carries the **chapter map**: all 146 level-1
+CR chapters with their titles (~700 tokens), which gives the model the
+document's whole skeleton instead of one wing of it.
+
 Everything here is derived deterministically from the parsed CR
 (`etl.cr_parser`); no LLM, no network.
 """
@@ -59,6 +67,31 @@ def directory_block(directory: list[tuple[str, str]]) -> str:
         "Keyword rule directory (the ONLY valid rule numbers under 701/702 — "
         "when citing a keyword's rule, use its number or a lettered subrule "
         "of it; never invent 701/702 numbers not derived from this list):\n" + lines
+    )
+
+
+def chapter_map(doc: CRDocument) -> list[tuple[str, str]]:
+    """Return (number, title) for every CR chapter (level-1 rule)."""
+    return [(rule.number, rule.text.strip()) for rule in doc.rules if rule.level == 1]
+
+
+def grounding_block(doc: CRDocument) -> str:
+    """The full system-prompt grounding: chapter map + keyword directory.
+
+    Order matters. The chapter map comes first so the model reads the CR
+    as a whole document before it reaches the keyword names — round 2
+    showed that leading with keywords collapses every citation onto
+    701/702.
+    """
+    chapters = "\n".join(f"{number} {title}" for number, title in chapter_map(doc))
+    return (
+        "Comprehensive Rules chapter map (the document's full structure — many "
+        "rulings are governed by procedural chapters such as 601 casting, 608 "
+        "resolving spells, 613 layers, or 704 state-based actions, NOT by a "
+        "keyword rule; cite whichever chapter actually governs the ruling):\n"
+        + chapters
+        + "\n\n"
+        + directory_block(keyword_directory(doc))
     )
 
 

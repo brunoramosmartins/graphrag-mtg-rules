@@ -71,6 +71,24 @@ as designed: round 2 grounds the prompt in candidate rules retrieved
 from the graph. What the gate cannot catch — existing-but-wrong numbers
 — is exactly what the manual annotations will measure.
 
+## 2026-07-20 — Grounding fixed hallucinated numbers and induced a topical bias
+
+Round 2 (keyword directory in the system prompt) did what it was
+designed to do: nonexistent rule numbers fell from 7 of 31 to 1 of 21.
+It also did something it was not designed to do: **all 21 citations
+became 701/702 keyword rules**, losing the correct procedural citations
+round 1 produced (601.2c, 608.2, 613.1). A prompt whose only rule
+inventory is keyword names is a prompt that asks for keywords.
+
+Decision: keep grounding, but lead the block with the full CR chapter
+map (146 chapters) and name the procedural chapters explicitly, so the
+model sees the whole document rather than one wing of it. Recorded
+because the lesson generalizes past this prompt: the metric that
+improved (gate rejection rate) was not the metric that mattered, and
+only inspecting the *shape* of the output caught it. Every prompt round
+now reports the distribution of cited rule families, not just error
+rates.
+
 ## 2026-07-20 — Correction: 25 rulings (3 cards) cite rule numbers, not 1
 
 The Phase 3 sampling stratifier re-measured with the pattern
