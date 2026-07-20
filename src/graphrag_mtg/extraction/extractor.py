@@ -12,11 +12,13 @@ Two operating modes, chosen per call:
 
 - **open** — the model proposes rule numbers from its own knowledge of
   the CR. Cheap, hallucination-prone; the gate's existence check is the
-  only net. Used for the week-1 G3 assessment on the 30-ruling dev sample.
-- **grounded** — the prompt includes candidate rules (number + text
-  snippet) retrieved from the graph via the host card's keywords and the
-  glossary. The model may only cite from that closed list. This is the
-  mode the F1 target is expected to need; prompt iterations are logged in
+  only net. Round 1 (G3 assessment) measured 23% nonexistent numbers.
+- **grounded** — the system prompt carries the keyword directory
+  (`extraction/grounding.py`) and the per-ruling prompt lists the host
+  card's keyword rules as preferred candidates. Citation stays open —
+  round 1's good citations (601.2c, 608.2) were not keyword rules and a
+  closed list would forbid them — but inventing 701/702 numbers is
+  explicitly ruled out. Prompt iterations are logged in
   `notes/phase3-extraction.md`.
 
 CLI (prints the cost estimate and refuses to spend without ``--yes``):
@@ -93,7 +95,8 @@ def build_prompt(text: str, candidate_rules: list[tuple[str, str]] | None = None
     if candidate_rules:
         listing = "\n".join(f"- {number}: {snippet}" for number, snippet in candidate_rules)
         parts.append(
-            "Candidate rules — cite ONLY from this list (empty array if none apply):\n" + listing
+            "Rules likely relevant to this ruling (prefer citing from here; you may "
+            "cite other rules only when certain they exist):\n" + listing
         )
     parts.append(f'Ruling: "{text}"')
     return "\n\n".join(parts)
@@ -142,11 +145,12 @@ def extract_citations(
     client: LlmClient,
     *,
     candidate_rules: list[tuple[str, str]] | None = None,
+    system: str = SYSTEM_PROMPT,
 ) -> ExtractionReport:
     """Run one ruling through the extractor (one API call)."""
     prompt = build_prompt(text, candidate_rules)
     try:
-        raw = client.complete_json(prompt, system=SYSTEM_PROMPT)
+        raw = client.complete_json(prompt, system=system)
     except ValueError:
         report = ExtractionReport()
         report.dropped["unparseable_response"] += 1
@@ -161,8 +165,31 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rulings", type=Path, default=Path("data/raw/scryfall_rulings.json"))
     parser.add_argument("--limit", type=int, default=30, help="extract from at most N rulings")
-    parser.add_argument("--ids", type=Path, default=None, help="JSON file of ruling ids to keep")
+    parser.add_argument(
+        "--ids",
+        type=Path,
+        default=None,
+        help="ruling ids to keep: a JSON list, or the frozen sample manifest "
+        "(data/golden/extraction_sample_ids.json) combined with --split",
+    )
+    parser.add_argument(
+        "--split",
+        choices=("dev", "annotation"),
+        default="dev",
+        help="which split to take when --ids points at the sample manifest "
+        "(default dev — the annotation split is off-limits until its labels freeze)",
+    )
     parser.add_argument("--out", type=Path, default=CITATIONS_CANDIDATES_PATH)
+    parser.add_argument(
+        "--grounded",
+        action="store_true",
+        help="round-2 mode: keyword directory in the system prompt plus the host "
+        "card's keyword rules as per-ruling candidates (parsed from the local CR)",
+    )
+    parser.add_argument(
+        "--cards", type=Path, default=Path("data/raw/scryfall_oracle_cards.json")
+    )
+    parser.add_argument("--cr", type=Path, default=Path("data/raw/comprehensive_rules.txt"))
     parser.add_argument("--yes", action="store_true", help="actually spend after the estimate")
     args = parser.parse_args()
 
@@ -173,21 +200,46 @@ def main() -> int:
         rulings = json.load(fh)
     keep: set[str] | None = None
     if args.ids is not None:
-        keep = set(json.loads(args.ids.read_text(encoding="utf-8")))
+        ids_payload = json.loads(args.ids.read_text(encoding="utf-8"))
+        # A dict is the frozen sample manifest; a list is bare ruling ids.
+        keep = (
+            set(ids_payload[args.split]) if isinstance(ids_payload, dict) else set(ids_payload)
+        )
 
-    selected: list[tuple[str, str]] = []
+    selected: list[tuple[str, str, str]] = []
     for raw in rulings:
         rid = make_ruling_id(raw)
         if keep is not None and rid not in keep:
             continue
-        selected.append((rid, raw.get("comment", "")))
+        selected.append((rid, raw.get("comment", ""), raw.get("oracle_id", "")))
         if keep is None and len(selected) >= args.limit:
             break
 
+    system = SYSTEM_PROMPT
+    candidates_by_ruling: dict[str, list[tuple[str, str]]] = {}
+    if args.grounded:
+        from graphrag_mtg.etl.cr_parser import parse_cr
+        from graphrag_mtg.extraction.grounding import (
+            candidate_rules_for_keywords,
+            directory_block,
+            keyword_directory,
+        )
+
+        doc = parse_cr(args.cr)
+        system = SYSTEM_PROMPT + "\n\n" + directory_block(keyword_directory(doc))
+        with args.cards.open(encoding="utf-8") as fh:
+            cards = json.load(fh)
+        keywords_by_oracle = {c["oracle_id"]: c.get("keywords", []) for c in cards}
+        for rid, _text, oracle_id in selected:
+            candidates_by_ruling[rid] = candidate_rules_for_keywords(
+                keywords_by_oracle.get(oracle_id, []), doc
+            )
+
     model = get_settings().llm_model
-    prompts = (build_prompt(text) for _, text in selected)
-    estimate = estimate_cost(prompts, model=model, system=SYSTEM_PROMPT)
-    print(f"Model {model}: {estimate}")
+    prompts = (build_prompt(text, candidates_by_ruling.get(rid)) for rid, text, _ in selected)
+    estimate = estimate_cost(prompts, model=model, system=system)
+    mode = "grounded" if args.grounded else "open"
+    print(f"Model {model} ({mode} mode): {estimate}")
     if not args.yes:
         print("Dry run (pass --yes to extract).")
         return 0
@@ -196,8 +248,10 @@ def main() -> int:
     report = ExtractionReport()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", encoding="utf-8") as out:
-        for rid, text in selected:
-            one = extract_citations(rid, text, client)
+        for rid, text, _oracle_id in selected:
+            one = extract_citations(
+                rid, text, client, candidate_rules=candidates_by_ruling.get(rid), system=system
+            )
             report.merge(one)
             for candidate in one.candidates:
                 out.write(candidate.model_dump_json() + "\n")

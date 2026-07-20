@@ -65,7 +65,7 @@ First extraction run (open mode, gpt-4o-mini, 30 dev rulings, ~$0.01):
 31 candidates, 2 fabricated quotes killed by the parser, 7 of 31
 (23%) citing **plausible but nonexistent** rule numbers — all caught by
 the gate's existence check. Spans and concepts look right; the numbers
-are invented (e.g. 702.74b for connive, which is 702.131). Neither
+are invented (e.g. 702.74b for connive, which is 701.50). Neither
 trivial nor infeasible under E-003's decision rule, so Phase 3 proceeds
 as designed: round 2 grounds the prompt in candidate rules retrieved
 from the graph. What the gate cannot catch — existing-but-wrong numbers

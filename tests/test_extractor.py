@@ -10,12 +10,12 @@ TEXT = "Trample damage is assigned only after lethal damage is assigned to all b
 class TestBuildPrompt:
     def test_open_mode_has_no_candidate_list(self) -> None:
         prompt = build_prompt(TEXT)
-        assert "Candidate rules" not in prompt
+        assert "likely relevant" not in prompt
         assert TEXT in prompt
 
     def test_grounded_mode_lists_candidates(self) -> None:
         prompt = build_prompt(TEXT, candidate_rules=[("702.19e", "trample assignment…")])
-        assert "Candidate rules" in prompt
+        assert "likely relevant" in prompt
         assert "702.19e" in prompt
 
 

@@ -75,9 +75,10 @@ class CostEstimate:
     usd: float
 
     def __str__(self) -> str:
+        # ASCII only: this string hits consoles that cannot encode "≈" (cp1252).
         return (
             f"{self.n_calls:,} calls, ~{self.input_tokens:,} input + "
-            f"~{self.output_tokens:,} output tokens ≈ ${self.usd:,.2f} "
+            f"~{self.output_tokens:,} output tokens = ~${self.usd:,.2f} "
             "(chars/4 heuristic; verify current pricing before a full run)"
         )
 
