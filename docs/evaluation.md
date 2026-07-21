@@ -96,6 +96,32 @@ works" is separable from "the domain is hard".
 **Operational** — p50/p95 latency per stage from OTel spans, and token cost per
 question, for both systems.
 
+## Extraction cost model (Phase 3)
+
+Nothing runs on the full corpus before its cost is projected from a sample
+(`scripts/extraction_cost_report.py`, `--sample N`, chars/4 token heuristic).
+The pipeline is up to two LLM calls per ruling: **disambiguation** (only for the
+24.8% of rulings carrying a single-word homonym) and **citation** (every
+ruling). Projected over all 77,999 rulings, seed 20260720:
+
+| Mode | $/1000 rulings | Full corpus (gpt-4o-mini) | Full corpus (Opus 4.8) |
+|---|---|---|---|
+| open | $0.29 | ~$23 | ~$2,700 |
+| grounded | $0.59 | ~$46 | ~$5,000 |
+
+Two decisions fall out of the numbers, not taste:
+
+1. **Model choice is ~100×.** The corpus run uses `gpt-4o-mini`; a frontier
+   model is reserved for spot re-runs where the annotation shows it is needed.
+2. **Grounded mode costs ~2×** — the CR chapter map + keyword directory in the
+   system prompt is ~2,375 input tokens/call versus ~364 open. That premium is
+   only spent if the annotation-measured F1 justifies it (see the round-by-round
+   log in `notes/phase3-extraction.md`); grounding is not assumed to win, it has
+   to earn its cost.
+
+Numbers are budgeting ceilings, refreshed against measured token counts once a
+full run exists.
+
 ## Reporting rules
 
 - Results are published **including where the graph loses**. The limitations
