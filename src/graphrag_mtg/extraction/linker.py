@@ -3,7 +3,12 @@
 Cascade (ADR-004), cheapest stage first, each stage only seeing what the
 previous one could not resolve:
 
-1. **exact** — normalized multi-word name match (`normalize_name`).
+1. **exact** — normalized multi-word name match (`normalize_name`),
+   gated on capitalization: at least one word of the match must be
+   capitalized. Multi-word names are *not* automatically unambiguous —
+   "card draw", "deal damage", "too many" are real card names and
+   ordinary phrases both, so an all-lowercase match is a phrase, not a
+   mention (measured on the dev annotations, 5 false positives).
 2. **loose** — punctuation-insensitive match (`loose_name`), so
    "Lim-Dul's Vault" is found even typed "Lim Duls Vault".
 3. **surface** — single-word card names ("Opt", "Fear", "Terror") are
@@ -180,6 +185,15 @@ def _longest_match_at(
     for width in range(limit, 1, -1):
         start, end = tokens[i][1], tokens[i + width - 1][2]
         surface = text[start:end]
+        # A card name is a proper noun: at least one of its words is
+        # capitalized wherever it appears. An all-lowercase multi-word match
+        # is a generic English phrase that merely collides with a card name
+        # ("card draw", "deal damage", "too many") — real cards, but not what
+        # the ruling names. Requiring one capitalized word (not the initial,
+        # so "the Ring" survives its lowercase article) killed 5 such false
+        # positives at the cost of none, measured on the dev annotations.
+        if not any(word[:1].isupper() for word in surface.split()):
+            continue
         targets, method = _lookup_multiword(surface, lexicon)
         targets = targets - ({host_oracle_id} if host_oracle_id else set())
         if len(targets) == 1:

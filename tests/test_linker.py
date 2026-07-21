@@ -11,6 +11,8 @@ CARDS = [
     ("Opt", "opt-1"),
     ("Fire // Ice", "fi-1"),
     ("Nissa, Who Shakes the World", "nissa-1"),
+    ("Card Draw", "cd-1"),  # a real card whose name is a generic phrase
+    ("The Ring", "ring-1"),
 ]
 
 
@@ -50,6 +52,27 @@ class TestScanExact:
         text = "Giant Growth targets a single creature."
         resolved, pending = scan_ruling("r1", text, lexicon(), host_oracle_id="gg-1")
         assert resolved == [] and pending == []
+
+
+class TestMultiwordCapitalization:
+    def test_all_lowercase_generic_phrase_is_not_a_mention(self) -> None:
+        # "card draw" collides with the card "Card Draw" but names nothing.
+        text = "This gives you extra card draw each turn."
+        resolved, pending = scan_ruling("r1", text, lexicon())
+        assert resolved == [] and pending == []
+
+    def test_capitalized_significant_word_survives_lowercase_article(self) -> None:
+        # "the Ring" — the article stays lowercase, but "Ring" is the name.
+        text = "Abilities that cause the Ring to tempt you trigger."
+        resolved, _ = scan_ruling("r1", text, lexicon())
+        (m,) = resolved
+        assert m.oracle_id == "ring-1"
+        assert m.span.text == "the Ring"
+
+    def test_titlecase_phrase_still_matches(self) -> None:
+        text = "Extra Card Draw is the theme here."
+        resolved, _ = scan_ruling("r1", text, lexicon())
+        assert [m.oracle_id for m in resolved] == ["cd-1"]
 
 
 class TestScanLoose:

@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field, model_validator
 class LinkMethod(StrEnum):
     """Which stage of the linking/extraction cascade produced a candidate."""
 
-    EXACT = "exact"  # normalized full-name match, multi-word (unambiguous)
+    EXACT = "exact"  # normalized multi-word match with a capitalized word
     LOOSE = "loose"  # punctuation-insensitive match (Lim-Dul's ~ Lim Duls)
     SURFACE = "surface"  # single-word name seen capitalized — needs LLM
     LLM = "llm"  # LLM-disambiguated or LLM-extracted

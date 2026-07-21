@@ -71,6 +71,22 @@ as designed: round 2 grounds the prompt in candidate rules retrieved
 from the graph. What the gate cannot catch — existing-but-wrong numbers
 — is exactly what the manual annotations will measure.
 
+## 2026-07-20 — Multi-word card names are not unambiguous; capitalization gate added
+
+The first linking measurement against 24 dev annotations disproved a
+design premise: the linker treated any multi-word name match as certain,
+but "card draw", "deal damage", "too many", "max speed" are real card
+names *and* ordinary English phrases, giving 8 false positives
+(multiword precision 0.47). Fix: require at least one capitalized word in
+the match — not the initial, so "the Ring" survives its lowercase
+article. Overall F1 0.69 -> 0.83, no true positive lost. The three
+residual false positives are capitalized-but-generic names (Nicol Bolas,
+Soul Shatter, Max Speed), which are the LLM stage's job. The frozen
+sample's strata labels predate this change and are kept as the sampling
+record, not re-derived. Finding surfaced only because the annotation
+recorded the negatives — evidence for why the manual gold is the phase's
+core work.
+
 ## 2026-07-20 — Grounding fixed hallucinated numbers and induced a topical bias
 
 Round 2 (keyword directory in the system prompt) did what it was
