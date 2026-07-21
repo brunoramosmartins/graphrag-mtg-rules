@@ -46,11 +46,35 @@ multiple-comparison correction when strata are tested jointly.
   academic multi-hop benchmark with an answer key, to separate "the
   pipeline works" from "the domain is hard" before any claim on MTG.
 
-## E-003 — Extraction gate quality (Phase 3)
+## E-003 — Linking and extraction quality against manual annotations
 
-- **Registered:** _not yet — to be registered together with the
-  annotation of ~100–120 rulings, before `extractor.py` runs on
-  them._
-- **Objective (declared intent only):** measure precision/recall of
-  LLM-extracted relations against manual annotations; only
-  gate-passing edges enter the graph.
+- **Registered:** 2026-07-20 (a priori — the sample froze first at seed
+  `20260720` in `data/golden/extraction_sample_ids.json`; no extractor
+  has run on either split, and the annotation labels do not exist yet).
+- **Objective:** measure card-mention linking and `CITES_RULE`
+  extraction P/R/F1 against 125 manually annotated rulings; only
+  gate-passing edges ever enter the graph.
+- **Configuration:** frozen sample 30 dev / 125 annotation (strata:
+  homonym 60, multiword 50, plain 40, explicit 5); linker cascade v1
+  (exact → loose → surface + LLM disambiguation); extractor v1 (open
+  and grounded modes); gate `min_confidence = 0.7`; metrics = micro
+  P/R/F1 with per-document bootstrap CIs (`evaluation/metrics.py`),
+  stratified by sampling stratum. Model pinned in the run log at run
+  time.
+- **Blinding rule:** annotation labels are written without ever running
+  the extractor on the annotation split; prompt iteration happens on
+  the dev split only. The annotation split is touched by the system
+  exactly once, after `check_extraction_annotations.py --publish`.
+- **Hypothesis / predictions:** deterministic stages near ceiling on
+  the multiword stratum (F1 ≥ 0.95); the homonym stratum is the open
+  question and predicted hardest; `CITES_RULE` F1 predicted below
+  linking F1. Pass thresholds (roadmap DoD): linking F1 ≥ 0.9 overall,
+  `CITES_RULE` F1 ≥ 0.75.
+- **Decision rule (gate G3, week 1, on the dev split):** trivial
+  (F1 > 0.95 with no prompt effort) → shift Phase 3 weight to implicit
+  CR cross-references; infeasible (F1 < 0.5 after 3 documented prompt
+  iterations) → reduce the schema and report the negative result.
+  Threshold changes after seeing annotation-split results are not
+  permitted; any adjustment needs a dated decision-journal entry
+  *before* the run it applies to.
+- **Actual result:** _pending._
