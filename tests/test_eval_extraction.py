@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from eval_extraction import (  # noqa: E402
+from eval_extraction import (
     load_gold,
     load_predicted_citations,
     load_predicted_mentions,
