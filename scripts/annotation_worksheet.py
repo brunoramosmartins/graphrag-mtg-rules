@@ -42,7 +42,7 @@ RULE = "-" * 78
 
 
 def load_card_index(path: Path) -> dict[str, dict]:
-    """oracle_id -> {name, type_line, oracle_text} for worksheet context."""
+    """oracle_id -> {name, type_line, oracle_text, keywords} for context."""
     with path.open(encoding="utf-8") as fh:
         cards = json.load(fh)
     return {
@@ -50,6 +50,7 @@ def load_card_index(path: Path) -> dict[str, dict]:
             "name": c["name"],
             "type_line": c.get("type_line", ""),
             "oracle_text": c.get("oracle_text", ""),
+            "keywords": c.get("keywords", []),
         }
         for c in cards
     }
@@ -93,10 +94,14 @@ def render_ruling(row: dict, cards: dict[str, dict]) -> str:
                 lines.append(f"      {cand['oracle_id']}")
                 lines.append(f"        {info.get('type_line', '?')} — {oracle}")
 
+    lines += ["", "CITED RULES (liberal: cite the rule that governs the interaction):"]
+    host_keywords = host.get("keywords", []) if host else []
+    if host_keywords:
+        lines.append(f"  host card keywords (their 701/702 rules may apply): {host_keywords}")
     lines += [
-        "",
-        "CITED RULES: read the ruling, look each number up in the CR, quote the clause.",
-        "  (empty is correct when the ruling just restates card text)",
+        "  look the number up in the CR (grep data/raw/comprehensive_rules.txt);",
+        "  common chapters: 601 cast, 608 resolve, 613 layers, 700-704 SBA/keywords.",
+        "  empty only if the ruling turns on no rule at all.",
         f"Then set annotator + verified:true.  [currently verified={row['verified']}]",
     ]
     return "\n".join(lines)

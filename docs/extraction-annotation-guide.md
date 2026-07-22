@@ -81,7 +81,16 @@ Rules of thumb:
 
 ## Step 2 — cited rules
 
-For each rule the ruling actually *turns on* (not merely brushes past):
+**Interpretation: liberal (decided 2026-07-21, see the decision journal).**
+Cite the CR rule that *governs* the interaction the ruling describes, even
+when the ruling never states the number. A ruling about a spell fizzling
+because its only target became illegal cites `608.2b`, though it says
+"the spell won't resolve" in players' language. This is the whole premise
+of `CITES_RULE`: the rulings are written without numbers, and the value is
+recovering the rule they lean on. Under-citing (leaving the governing rule
+blank because it was not spelled out) makes the gold measure nothing.
+
+For each rule the ruling *turns on*:
 
 - `rule_number` — the most specific rule that carries the point; the
   lettered leaf (`613.4b`) beats the parent (`613.4`). Look numbers up in
@@ -90,11 +99,25 @@ For each rule the ruling actually *turns on* (not merely brushes past):
 - `start`/`end` — the passage that invokes the rule (usually one clause,
   never the whole ruling). `quote` repeats it verbatim, trimmed to the
   clause.
-- A ruling that just restates card text cites **nothing**. Empty
-  `cited_rules` is a common, correct answer — these negatives keep the
-  extractor honest.
+- Empty `cited_rules` is correct **only** when the ruling turns on no rule
+  at all — a pure restatement of card text with no interaction ("This
+  triggers once per turn."). If you can name the governing rule, cite it.
 - Two to three rules is a lot for one ruling. At four, re-read: you are
   probably citing scenery.
+
+**Finding the number without memorizing the CR.** The ruling's language
+points at a chapter; grep it:
+
+```bash
+# a targeting/resolution ruling -> chapter 608 (resolving spells)
+grep -nE "^608\.[0-9]+" data/raw/comprehensive_rules.txt | head
+# a keyword -> look the keyword up, then its 701/702 rule
+grep -niE "^70[12]\.[0-9]+\. Trample" data/raw/comprehensive_rules.txt
+```
+
+Common chapters: 601 casting, 608 resolving, 613 layers, 700–704
+state-based actions / keywords, 509 combat. The worksheet prints the host
+card's keywords so you know which keyword rules might apply.
 
 Finish every session with the guard:
 

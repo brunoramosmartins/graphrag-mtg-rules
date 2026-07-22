@@ -71,6 +71,23 @@ as designed: round 2 grounds the prompt in candidate rules retrieved
 from the graph. What the gate cannot catch — existing-but-wrong numbers
 — is exactly what the manual annotations will measure.
 
+## 2026-07-21 — `cited_rules` interpreted liberally: cite the governing rule
+
+After the full 155-ruling annotation, the gold held only 6 citations,
+all in the 5 "explicit" rulings that literally print a rule number; every
+other ruling — including the guide's own Crib Swap worked example that
+should cite 608.2b — was left empty. That is a conservative reading of
+"the rule the ruling turns on", and against a near-empty citation gold
+the extractor's inferred citations would all score as false positives,
+measuring nothing. Decision: cite the rule that *governs* the interaction
+even when the ruling states no number, because recovering the unstated
+rule is the entire premise of `CITES_RULE` (Phase 2 measured that rulings
+almost never cite numbers). Requires a citation pass over ~150 rulings.
+The annotation guide and worksheet were updated to make the liberal
+reading explicit and to help find numbers by grepping the CR rather than
+from memory. The alternative — declaring CITES_RULE genuinely sparse —
+was rejected: the sparsity was an annotation artifact, not a measurement.
+
 ## 2026-07-20 — Multi-word card names are not unambiguous; capitalization gate added
 
 The first linking measurement against 24 dev annotations disproved a
