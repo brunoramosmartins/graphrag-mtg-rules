@@ -90,15 +90,32 @@ of `CITES_RULE`: the rulings are written without numbers, and the value is
 recovering the rule they lean on. Under-citing (leaving the governing rule
 blank because it was not spelled out) makes the gold measure nothing.
 
-For each rule the ruling *turns on*:
+The minimal cited-rule entry is **just the number**:
+
+```json
+{"rule_number": "608.2b"}
+```
+
+Optionally add a short quote **from the ruling** (never from the CR) with
+its offsets, as provenance:
+
+```json
+{"rule_number": "608.2b", "start": 0, "end": 76, "quote": "If the target creature is an illegal target by the time Crib Swap tries to resolve"}
+```
+
+**Never paste the CR rule's own text into the annotation.** The golden
+file is public and Comprehensive Rules text is not committed (IP rule);
+the checker rejects any cited rule carrying a `text` field. The number is
+the label the evaluation scores on — that is all the gold needs.
+
+Field notes:
 
 - `rule_number` — the most specific rule that carries the point; the
   lettered leaf (`613.4b`) beats the parent (`613.4`). Look numbers up in
   the CR text; never cite from memory. Layer-system trap: layer 7b is
   `613.4b`, **not** `613.7` (see the golden-set guide, step 4).
-- `start`/`end` — the passage that invokes the rule (usually one clause,
-  never the whole ruling). `quote` repeats it verbatim, trimmed to the
-  clause.
+- `start`/`end`/`quote` (optional) — a clause **from the ruling** that
+  invokes the rule, verbatim. Omit if you are only recording the number.
 - Empty `cited_rules` is correct **only** when the ruling turns on no rule
   at all — a pure restatement of card text with no interaction ("This
   triggers once per turn."). If you can name the governing rule, cite it.

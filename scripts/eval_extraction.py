@@ -58,7 +58,9 @@ def load_gold(path: Path, split: str) -> tuple[dict, dict, dict]:
                 for m in row["mentions"]
                 if m["target_oracle_id"] is not None
             }
-            citations[rid] = {(rid, c["rule_number"]) for c in row["cited_rules"]}
+            citations[rid] = {
+                (rid, c.get("rule_number") or c.get("rule")) for c in row["cited_rules"]
+            }
     return mentions, citations, strata
 
 

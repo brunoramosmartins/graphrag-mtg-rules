@@ -72,8 +72,22 @@ def main() -> int:
             print(f"  {r['ruling_id']}: {todo}")
 
     clean = [r for r in verified if is_clean(r)]
-    citations = sum(len(r["cited_rules"]) for r in clean)
-    print(f"\nClean rows ready to score: {len(clean)}  (cited rules so far: {citations})")
+
+    # Citation pass — the second read-through, tracked separately from
+    # linking's `verified` because it runs over already-verified rows.
+    reviewed = [r for r in rows if r.get("citations_reviewed")]
+    citations = sum(len(r["cited_rules"]) for r in rows)
+    print(
+        f"\nCitation pass: {len(reviewed)}/{len(rows)} rulings citation-reviewed, "
+        f"{citations} rules cited so far."
+    )
+    if len(reviewed) < len(rows):
+        print(
+            "  Next batch:  python scripts/annotation_worksheet.py "
+            "--citation-pass --needs-citations --out data/interim/cite.txt"
+        )
+
+    print(f"\nClean rows ready to score: {len(clean)}")
     if not clean:
         print("Annotate and clear UNDECIDED to see the linking preview.")
         return 0

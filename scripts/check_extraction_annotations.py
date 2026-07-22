@@ -54,16 +54,43 @@ def row_errors(row: dict, rules: set[str]) -> list[str]:
         if text[m["start"] : m["end"]] != m["surface"]:
             errors.append(f"mention offsets broken for {m['surface']!r} at {m['start']}")
     for c in row.get("cited_rules", []):
-        if c["rule_number"] not in rules:
-            errors.append(f"cited rule {c['rule_number']} not in the CR")
+        number = cited_number(c)
+        if number is None:
+            errors.append("a cited rule has no 'rule_number'")
+            continue
+        if number not in rules:
+            errors.append(f"cited rule {number} not in the CR")
+        # IP guard: a cited rule must not carry Comprehensive Rules text.
+        # The gold needs only the number; a short verbatim quote must come
+        # from the RULING, never the CR (see the annotation guide).
+        if "text" in c:
+            errors.append(f"cited rule {number} carries a 'text' field — drop it (CR text is not committed)")
         quote = c.get("quote")
-        if quote and text[c["start"] : c["end"]] != quote:
-            errors.append(f"citation offsets broken for rule {c['rule_number']}")
+        if quote and "start" in c and "end" in c and text[c["start"] : c["end"]] != quote:
+            errors.append(f"citation offsets broken for rule {number}")
     return errors
 
 
+def cited_number(c: dict) -> str | None:
+    """Rule number from a cited-rule dict, accepting 'rule_number' or 'rule'."""
+    return c.get("rule_number") or c.get("rule")
+
+
+def _golden_citation(c: dict) -> dict:
+    """Committed shape of a cited rule: the number, plus a *ruling* quote if given.
+
+    Never carries the rule's CR text — the golden file is public and CR
+    text is not committed (IP rule). The evaluation keys on the number
+    alone; the optional quote is provenance from the ruling.
+    """
+    out: dict = {"rule_number": cited_number(c)}
+    if c.get("quote") and "start" in c and "end" in c:
+        out.update({"start": c["start"], "end": c["end"], "quote": c["quote"]})
+    return out
+
+
 def golden_row(row: dict) -> dict:
-    """The committed shape: ids, offsets, decisions — no ruling text."""
+    """The committed shape: ids, offsets, decisions — no ruling or CR text."""
     return {
         "ruling_id": row["ruling_id"],
         "split": row["split"],
@@ -73,7 +100,7 @@ def golden_row(row: dict) -> dict:
             {k: m[k] for k in ("surface", "start", "end", "target_oracle_id")}
             for m in row.get("mentions", [])
         ],
-        "cited_rules": row.get("cited_rules", []),
+        "cited_rules": [_golden_citation(c) for c in row.get("cited_rules", [])],
         "notes": row.get("notes", ""),
         "annotator": row.get("annotator", ""),
         "verified": True,

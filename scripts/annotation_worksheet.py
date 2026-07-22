@@ -107,6 +107,27 @@ def render_ruling(row: dict, cards: dict[str, dict]) -> str:
     return "\n".join(lines)
 
 
+def render_citation_block(row: dict, cards: dict[str, dict]) -> str:
+    """Compact citation-pass view: only what a rule citation needs.
+
+    The linking pass is already done, so this skips mention details and
+    shows the ruling text, the host card's keywords (an unbiased lookup
+    aid — a fact about the card, not a rule suggestion), and the current
+    ``cited_rules`` so a batch can be resumed across days.
+    """
+    host = cards.get(row.get("oracle_id") or "", {})
+    reviewed = row.get("citations_reviewed", False)
+    cited = [c.get("rule_number") or c.get("rule") for c in row["cited_rules"]]
+    lines = [
+        RULE,
+        f"{row['ruling_id']}  {row['stratum']}  reviewed={reviewed}  cited={cited or '[]'}",
+        textwrap.fill(row["text"], width=78),
+    ]
+    if host.get("keywords"):
+        lines.append(f"  host: {host['name']} — keywords {host['keywords']}")
+    return "\n".join(lines)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--draft", type=Path, default=DRAFT_PATH)
@@ -114,6 +135,16 @@ def main() -> int:
     parser.add_argument("--split", choices=("dev", "annotation"), default=None)
     parser.add_argument("--ruling", type=str, default=None, help="one ruling id")
     parser.add_argument("--unverified-only", action="store_true")
+    parser.add_argument(
+        "--citation-pass",
+        action="store_true",
+        help="compact citation-only view (linking already done)",
+    )
+    parser.add_argument(
+        "--needs-citations",
+        action="store_true",
+        help="only rows not yet citation-reviewed (with --citation-pass)",
+    )
     parser.add_argument("--out", type=Path, default=None, help="write to a file instead of stdout")
     args = parser.parse_args()
 
@@ -129,16 +160,27 @@ def main() -> int:
                 continue
             if args.unverified_only and row["verified"]:
                 continue
+            if args.needs_citations and row.get("citations_reviewed"):
+                continue
+            if args.citation_pass:
+                blocks.append(render_citation_block(row, cards))
+                continue
             blocks.append(render_ruling(row, cards))
             homonyms += sum(1 for m in row["mentions"] if m["target_oracle_id"] == UNDECIDED)
             seeded += sum(
                 1 for m in row["mentions"] if m["target_oracle_id"] not in (None, UNDECIDED)
             )
 
-    footer = (
-        f"\n{RULE}\n{len(blocks)} rulings shown — "
-        f"{seeded} seeded mentions to confirm, {homonyms} homonyms to decide."
-    )
+    if args.citation_pass:
+        footer = (
+            f"\n{RULE}\n{len(blocks)} rulings shown. For each: add cited_rules "
+            "(liberal — the governing rule), then set citations_reviewed:true."
+        )
+    else:
+        footer = (
+            f"\n{RULE}\n{len(blocks)} rulings shown — "
+            f"{seeded} seeded mentions to confirm, {homonyms} homonyms to decide."
+        )
     output = "\n".join(blocks) + footer
     if args.out:
         args.out.write_text(output + "\n", encoding="utf-8")
