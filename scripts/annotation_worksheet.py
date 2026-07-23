@@ -99,10 +99,11 @@ def render_ruling(row: dict, cards: dict[str, dict]) -> str:
     if host_keywords:
         lines.append(f"  host card keywords (their 701/702 rules may apply): {host_keywords}")
     lines += [
-        "  look the number up in the CR (grep data/raw/comprehensive_rules.txt);",
-        "  common chapters: 601 cast, 608 resolve, 613 layers, 700-704 SBA/keywords.",
+        f"  find candidates:  python scripts/cite_search.py --ruling {row['ruling_id']}",
+        "  (ranks CR rules by overlap; READ the top ones, cite the one that governs)",
         "  empty only if the ruling turns on no rule at all.",
-        f"Then set annotator + verified:true.  [currently verified={row['verified']}]",
+        f"Then add cited_rules + set citations_reviewed:true.  "
+        f"[reviewed={row.get('citations_reviewed', False)}]",
     ]
     return "\n".join(lines)
 

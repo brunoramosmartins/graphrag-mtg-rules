@@ -71,6 +71,25 @@ as designed: round 2 grounds the prompt in candidate rules retrieved
 from the graph. What the gate cannot catch — existing-but-wrong numbers
 — is exactly what the manual annotations will measure.
 
+## 2026-07-21 — Lexical CR search aids the citation pass without contaminating the gold
+
+The liberal citation pass requires naming the CR rule each ruling invokes,
+which by hand means grepping 3,000+ rules. Built `cite_search.py`: a
+deterministic TF-IDF ranking of CR rules by term overlap with a ruling, so
+the annotator reads ~8 candidates instead of the whole document (for the
+Crib Swap example it ranks 608.2b first; for connive, 701.50b first).
+
+Why this is allowed where an LLM suggester would not be: the distinction is
+"accelerate the search" vs "generate the answer". The tool ranks candidates;
+the human reads the actual rule text and decides which one *governs*. It is
+lexical, so it shares no mechanism with the LLM extractor under evaluation,
+nor with the semantic retrieval the vector baseline will use — gold
+citations found with its help do not correlate with either system, so the
+CITES_RULE F1 and the Phase 6 baseline comparison stay honest. An LLM
+suggester was rejected precisely because it would grade the extractor
+against a gold it helped write. Embedding retrieval was deferred to Phase 4
+for the same correlation reason plus its infrastructure cost.
+
 ## 2026-07-21 — `cited_rules` interpreted liberally: cite the governing rule
 
 After the full 155-ruling annotation, the gold held only 6 citations,
