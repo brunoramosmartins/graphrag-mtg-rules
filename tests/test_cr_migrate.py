@@ -43,7 +43,7 @@ def draft_row(ruling_id: str, *rule_numbers: str) -> dict:
 
 
 def test_normalize_collapses_non_breaking_space_and_runs() -> None:
-    assert normalize("a b   c\n d") == "a b c d"
+    assert normalize("a\u00a0b   c\n d") == "a b c d"
 
 
 def test_identical_text_is_unchanged() -> None:
@@ -52,7 +52,7 @@ def test_identical_text_is_unchanged() -> None:
 
 
 def test_whitespace_only_change_is_not_reported_as_edited() -> None:
-    old = {"205.4c": normalize("ten damage")}
+    old = {"205.4c": normalize("ten\u00a0damage")}
     new = {"205.4c": normalize("ten damage")}
     assert judge("205.4c", old, new).status == "unchanged"
 
@@ -73,7 +73,16 @@ def test_edited_in_place_is_not_relocated() -> None:
     assert verdict.status == "edited"
     assert verdict.new_number is None
     assert verdict.similarity is not None
-    assert verdict.similarity >= RELOCATION_FLOOR
+
+
+def test_a_weak_neighbouring_match_is_not_relocated() -> None:
+    """Below the floor the tool must say "edited", not invent a destination."""
+    old = {"725.1": INITIATIVE}
+    new = {"725.1": MONARCH, "726.1": "Some unrelated provision about combat damage."}
+    verdict = judge("725.1", old, new)
+    assert verdict.status == "edited"
+    assert verdict.new_number is None
+    assert (verdict.similarity or 0.0) < RELOCATION_FLOOR
 
 
 def test_number_gone_without_a_text_match_is_orphaned() -> None:
