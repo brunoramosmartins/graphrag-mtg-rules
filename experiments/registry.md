@@ -77,4 +77,13 @@ multiple-comparison correction when strata are tested jointly.
   Threshold changes after seeing annotation-split results are not
   permitted; any adjustment needs a dated decision-journal entry
   *before* the run it applies to.
+- **Amendment 2026-08-08 (before the run, no results seen):** the CR
+  corpus moved from the 2026-02-27 release to 2026-08-07, because the
+  rulings snapshot (2026-07-17) was newer than the CR and some rulings
+  cited rules absent from it. Labels were migrated by rule text via
+  `scripts/cr_migrate.py` (71 of 79 cited rules unchanged, 4 relocated,
+  4 edited without semantic change, 0 orphaned) and every row now carries
+  `cr_version`. No threshold, sample, cascade, or metric changed; the
+  annotation split still has not been touched by the extractor. Rationale
+  in `docs/decision-journal.md` (2026-08-08).
 - **Actual result:** _pending._

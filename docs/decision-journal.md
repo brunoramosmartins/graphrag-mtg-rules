@@ -90,6 +90,49 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-08 — CR upgraded mid-annotation; citations migrated by text, not by number
+
+The corpus was internally inconsistent: the CR snapshot was effective
+2026-02-27 while the Scryfall rulings snapshot was 2026-07-17, so rulings
+for sets released in between could cite rules that did not exist in our
+CR. This surfaced during the manual citation pass as a ruling whose
+governing rule was simply absent. Upgraded to the 2026-08-07 CR at 64/155
+rulings reviewed rather than after, because the mismatch is structural and
+would otherwise have hit the remaining 91 as well — and because a gold with
+half its labels authored against one CR and half against another cannot be
+read: a low `CITES_RULE` F1 would not distinguish model error from version
+artifact.
+
+Numbers are not a safe anchor. Measured between the two versions: 111 rules
+added, 70 removed, and three silent displacements that a number-based
+migration would have corrupted — `initiative` moved 725.1/725.2 to
+726.1/726.2 to make room for `monarch`, so the old numbers still resolve
+but now mean something else entirely; `310.10` shifted to `310.11` and
+`704.5w` to `704.5x`. The migration in `scripts/cr_migrate.py` is therefore
+anchored on rule *text*: the annotator chose a rule by what it says, so the
+tool relocates that choice to wherever the text now lives, and only when the
+match is near-exact and clearly better than at the original number.
+
+Result: of 79 distinct cited rules, 71 unchanged, 4 relocated (5 citations
+remapped, `migrated_from` kept on each), 4 edited in place with no semantic
+change (`205.3g` and `205.3m` gained new types, `506.4` gained "or
+protector", `702.142a` was reworded editorially), 0 orphaned. No manual
+decision was lost. `edited` and `orphaned` are never auto-applied — guessing
+there would corrupt the gold silently, which is the one failure this whole
+apparatus exists to prevent.
+
+Provenance added as the durable fix: every draft row now carries
+`cr_version`, without which no future migration is auditable. Prior CR kept
+as `data/raw/comprehensive_rules-20260227.txt`.
+
+Two collateral findings, both from the same "living documentation" class.
+The Scryfall bulk ETL is broken — the API replaced `download_uri` with
+`jsonl_download_uri` and now serves JSONL, so `etl/download.py` raises
+`KeyError` and nothing can currently be re-ingested. And the 2026-08-07 CR
+replaced empty separator lines with lines holding U+00A0; the parser
+survives it, but `normalize()` folds NBSP so formatting churn is never read
+as a text change.
+
 ## 2026-07-21 — `cited_rules` interpreted liberally: cite the governing rule
 
 After the full 155-ruling annotation, the gold held only 6 citations,
