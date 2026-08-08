@@ -90,6 +90,34 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-08 — Scryfall bulk ETL: read three formats rather than force a re-download
+
+Scryfall retired `download_uri` (one uncompressed JSON array) in favour of
+`jsonl_download_uri` (gzipped JSONL). `etl/download.py` raised
+`KeyError: 'download_uri'` before resolving anything, so re-ingestion was
+impossible — a silent break, since nothing re-downloads on a normal working
+day and the failure only appears when you try.
+
+The reader (`etl/bulk.py`) accepts gzipped JSONL, plain JSONL, *and* the legacy
+array, and `bulk_path` prefers the newest format that exists on disk. The
+alternative — cut over to JSONL only and re-download — was rejected for the
+same reason the CR upgrade was handled carefully on the same day: a 180 MB
+oracle bulk already on disk is real work, and stranding it in the middle of the
+citation pass would trade a latent bug for an immediate one. Format is detected
+from the first non-whitespace character, not from the file name, because the
+name is only a convention.
+
+Two things improve as a side effect. JSONL is streamed record by record instead
+of held whole in memory (the legacy array still cannot be, which is an argument
+for letting the next download replace it), and the compressed artifact is ~24 MB
+against ~180 MB. The resolver now also warns and skips when an entry exposes no
+known download key, rather than dying — the next contract change should degrade,
+not crash.
+
+Deliberately *not* done: re-downloading now. The rulings snapshot would jump
+mid-annotation, which is the corpus-consistency problem this same day's CR entry
+argues against. The download happens after the citation pass closes.
+
 ## 2026-08-08 — CR upgraded mid-annotation; citations migrated by text, not by number
 
 The corpus was internally inconsistent: the CR snapshot was effective

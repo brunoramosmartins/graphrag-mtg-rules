@@ -1,8 +1,10 @@
 """Unit tests for etl.download pure logic (no network, no Neo4j).
 
-The resolvers and streaming download hit the network and are exercised
-manually / in integration, not here. These cover the hashing, manifest
-round-trip, and incremental change-detection predicate.
+The streaming download hits the network and is exercised manually / in
+integration, not here. These cover the hashing, manifest round-trip, the
+incremental change-detection predicate, and the Scryfall resolver — which is
+fed a stubbed index rather than the live API, since it was a silent upstream
+key change there that broke ingestion outright.
 """
 
 from __future__ import annotations
@@ -14,9 +16,64 @@ from graphrag_mtg.etl.download import (
     ResolvedSource,
     is_current,
     load_manifest,
+    resolve_scryfall,
     save_manifest,
     sha256_of_file,
 )
+
+
+class StubClient:
+    """Returns one canned bulk-data index; no network."""
+
+    def __init__(self, payload: dict) -> None:
+        self._payload = payload
+
+    def get(self, url: str) -> StubClient:
+        return self
+
+    def raise_for_status(self) -> StubClient:
+        return self
+
+    def json(self) -> dict:
+        return self._payload
+
+
+def index(*items: dict) -> StubClient:
+    return StubClient({"data": list(items)})
+
+
+def test_resolver_reads_the_current_jsonl_key():
+    client = index(
+        {
+            "type": "rulings",
+            "jsonl_download_uri": "https://data.scryfall.io/rulings/rulings-1.jsonl.gz",
+            "updated_at": "2026-08-08T09:00:36.304+00:00",
+        }
+    )
+    (source,) = [s for s in resolve_scryfall(client) if s.name == "scryfall_rulings"]
+    assert source.url.endswith(".jsonl.gz")
+    assert source.filename == "scryfall_rulings.jsonl.gz"
+    assert source.version == "2026-08-08T09:00:36.304+00:00"
+
+
+def test_resolver_still_accepts_the_retired_array_key():
+    """Old key, old extension — a mirror or a rollback must not crash the run."""
+    client = index(
+        {
+            "type": "rulings",
+            "download_uri": "https://data.scryfall.io/rulings/rulings-1.json",
+            "updated_at": "2026-07-17T21:00:36.799+00:00",
+        }
+    )
+    (source,) = [s for s in resolve_scryfall(client) if s.name == "scryfall_rulings"]
+    assert source.filename == "scryfall_rulings.json"
+
+
+def test_resolver_skips_an_entry_with_no_known_download_key(capsys):
+    """The bug this replaces was a KeyError; a warning and a skip is the fix."""
+    client = index({"type": "rulings", "updated_at": "2026-08-08T09:00:36.304+00:00"})
+    assert [s for s in resolve_scryfall(client) if s.name == "scryfall_rulings"] == []
+    assert "no known download key" in capsys.readouterr().out
 
 
 def test_sha256_of_file_matches_hashlib(tmp_path):

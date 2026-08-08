@@ -31,12 +31,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from graphrag_mtg.etl.bulk import RULINGS_STEM, bulk_path, load_bulk
 from graphrag_mtg.etl.cards import Card, load_oracle_cards
 from graphrag_mtg.etl.cr_parser import CRDocument, parse_cr
 from graphrag_mtg.etl.download import MANIFEST_PATH, load_manifest
@@ -44,7 +44,7 @@ from graphrag_mtg.etl.normalize import normalize_name
 from graphrag_mtg.graph.connection import driver_session
 
 DEFAULT_BATCH_SIZE = 1_000
-RULINGS_PATH = Path("data/raw/scryfall_rulings.json")
+RULINGS_PATH = bulk_path(RULINGS_STEM)
 
 # CR chapters that define keywords: 701 keyword actions, 702 keyword abilities.
 # A glossary entry citing anything else is a general definition, not a keyword.
@@ -522,7 +522,7 @@ def load_all(
         if not force and limit is None and _source_is_current(session, RULINGS_SOURCE, sha):
             reports.append(LoadReport(RULINGS_SOURCE, skipped=True, reason="unchanged"))
         else:
-            raw = json.loads(RULINGS_PATH.read_text(encoding="utf-8"))
+            raw = load_bulk(RULINGS_PATH)
             counts = load_rulings(session, raw, sha, size=batch_size)
             if limit is None:
                 _record_source_load(session, RULINGS_SOURCE, sha, counts["Ruling"].rows)

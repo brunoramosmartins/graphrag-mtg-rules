@@ -21,7 +21,6 @@ the top level because they live on the faces (~92% top-level presence).
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator
 from enum import StrEnum
 from pathlib import Path
@@ -29,9 +28,10 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
 from graphrag_mtg.etl.normalize import normalize_name
 
-ORACLE_CARDS_PATH = Path("data/raw/scryfall_oracle_cards.json")
+ORACLE_CARDS_PATH = bulk_path(ORACLE_CARDS_STEM)
 
 # Layouts that are not deck-legal objects: tokens, emblems, and the assorted
 # oversized/supplementary card types. Canonical definition — scripts import
@@ -158,21 +158,21 @@ def load_oracle_cards(
 ) -> Iterator[Card]:
     """Stream validated cards from the Scryfall oracle bulk.
 
-    The bulk is ~180 MB and is parsed in one read (it is a single JSON array),
-    then yielded card by card so callers can batch without holding models for
-    the whole corpus.
+    Records are yielded one at a time so callers can batch without holding
+    models for the whole corpus. Gzipped JSONL (Scryfall's current format) is
+    also read record by record; a legacy JSON array still has to be parsed in
+    one ~180 MB read, since an array cannot be streamed.
 
     Args:
-        path: The downloaded oracle bulk.
+        path: The downloaded oracle bulk, in any format `iter_bulk` accepts.
         playable_only: Skip tokens, emblems and other non-deck objects.
         limit: Stop after this many cards — cost discipline for dry runs.
 
     Yields:
         One validated :class:`Card` per record.
     """
-    raw_cards = json.loads(path.read_text(encoding="utf-8"))
     yielded = 0
-    for raw in raw_cards:
+    for raw in iter_bulk(path):
         if playable_only and not is_playable(raw):
             continue
         yield parse_card(raw)

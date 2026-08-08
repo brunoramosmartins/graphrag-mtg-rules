@@ -33,11 +33,12 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
 from graphrag_mtg.evaluation.metrics import evaluate_by_stratum
 from graphrag_mtg.extraction.linker import Lexicon, scan_ruling
 
 DRAFT_PATH = Path("data/interim/extraction_annotations_draft.jsonl")
-CARDS_PATH = Path("data/raw/scryfall_oracle_cards.json")
+CARDS_PATH = bulk_path(ORACLE_CARDS_STEM)
 UNDECIDED = "UNDECIDED"
 
 
@@ -92,9 +93,9 @@ def main() -> int:
         print("Annotate and clear UNDECIDED to see the linking preview.")
         return 0
 
-    with args.cards.open(encoding="utf-8") as fh:
-        cards = json.load(fh)
-    lexicon = Lexicon.build((c["name"], c["oracle_id"]) for c in cards)
+    lexicon = Lexicon.build(
+        (c["name"], c["oracle_id"]) for c in iter_bulk(args.cards)
+    )
 
     gold: dict[str, frozenset] = {}
     predicted: dict[str, frozenset] = {}

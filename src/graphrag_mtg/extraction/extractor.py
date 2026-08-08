@@ -37,6 +37,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, RULINGS_STEM, bulk_path, iter_bulk
 from graphrag_mtg.extraction.llm import LlmClient, estimate_cost
 from graphrag_mtg.extraction.schemas import EvidenceSpan, LinkMethod, RuleCitation
 
@@ -163,7 +164,7 @@ def extract_citations(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rulings", type=Path, default=Path("data/raw/scryfall_rulings.json"))
+    parser.add_argument("--rulings", type=Path, default=bulk_path(RULINGS_STEM))
     parser.add_argument("--limit", type=int, default=30, help="extract from at most N rulings")
     parser.add_argument(
         "--ids",
@@ -188,7 +189,7 @@ def main() -> int:
         "(all parsed from the local CR, no API)",
     )
     parser.add_argument(
-        "--cards", type=Path, default=Path("data/raw/scryfall_oracle_cards.json")
+        "--cards", type=Path, default=bulk_path(ORACLE_CARDS_STEM)
     )
     parser.add_argument("--cr", type=Path, default=Path("data/raw/comprehensive_rules.txt"))
     parser.add_argument("--yes", action="store_true", help="actually spend after the estimate")
@@ -197,8 +198,7 @@ def main() -> int:
     from graphrag_mtg.config import get_settings
     from graphrag_mtg.graph.loader import ruling_id as make_ruling_id
 
-    with args.rulings.open(encoding="utf-8") as fh:
-        rulings = json.load(fh)
+    rulings = iter_bulk(args.rulings)
     keep: set[str] | None = None
     if args.ids is not None:
         ids_payload = json.loads(args.ids.read_text(encoding="utf-8"))
@@ -227,9 +227,9 @@ def main() -> int:
 
         doc = parse_cr(args.cr)
         system = SYSTEM_PROMPT + "\n\n" + grounding_block(doc)
-        with args.cards.open(encoding="utf-8") as fh:
-            cards = json.load(fh)
-        keywords_by_oracle = {c["oracle_id"]: c.get("keywords", []) for c in cards}
+        keywords_by_oracle = {
+            c["oracle_id"]: c.get("keywords", []) for c in iter_bulk(args.cards)
+        }
         for rid, _text, oracle_id in selected:
             candidates_by_ruling[rid] = candidate_rules_for_keywords(
                 keywords_by_oracle.get(oracle_id, []), doc

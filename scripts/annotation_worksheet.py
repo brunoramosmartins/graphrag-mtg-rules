@@ -29,13 +29,15 @@ import sys
 import textwrap
 from pathlib import Path
 
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
+
 # Card text carries em-dashes and other non-cp1252 characters; force UTF-8 so
 # the worksheet is readable in a default Windows console, not mojibake.
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 DRAFT_PATH = Path("data/interim/extraction_annotations_draft.jsonl")
-CARDS_PATH = Path("data/raw/scryfall_oracle_cards.json")
+CARDS_PATH = bulk_path(ORACLE_CARDS_STEM)
 
 UNDECIDED = "UNDECIDED"
 RULE = "-" * 78
@@ -43,8 +45,7 @@ RULE = "-" * 78
 
 def load_card_index(path: Path) -> dict[str, dict]:
     """oracle_id -> {name, type_line, oracle_text, keywords} for context."""
-    with path.open(encoding="utf-8") as fh:
-        cards = json.load(fh)
+    cards = iter_bulk(path)
     return {
         c["oracle_id"]: {
             "name": c["name"],

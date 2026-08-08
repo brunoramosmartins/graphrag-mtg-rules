@@ -35,6 +35,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, RULINGS_STEM, bulk_path, load_bulk
 from graphrag_mtg.extraction.gate import DEFAULT_MIN_CONFIDENCE, GatedTriple, gate_candidates
 from graphrag_mtg.extraction.linker import Lexicon, scan_ruling
 from graphrag_mtg.extraction.schemas import ExtractionCandidate
@@ -181,10 +182,8 @@ def _select(rulings: list[dict], ids_path: Path | None, split: str, limit: int) 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rulings", type=Path, default=Path("data/raw/scryfall_rulings.json"))
-    parser.add_argument(
-        "--cards", type=Path, default=Path("data/raw/scryfall_oracle_cards.json")
-    )
+    parser.add_argument("--rulings", type=Path, default=bulk_path(RULINGS_STEM))
+    parser.add_argument("--cards", type=Path, default=bulk_path(ORACLE_CARDS_STEM))
     parser.add_argument("--cr", type=Path, default=Path("data/raw/comprehensive_rules.txt"))
     parser.add_argument("--ids", type=Path, default=None, help="ids list or sample manifest")
     parser.add_argument("--split", choices=("dev", "annotation"), default="dev")
@@ -199,16 +198,13 @@ def main() -> int:
     from graphrag_mtg.etl.cr_parser import parse_cr
     from graphrag_mtg.extraction.extractor import EXTRACTOR_VERSION
 
-    with args.cards.open(encoding="utf-8") as fh:
-        cards = json.load(fh)
+    cards = load_bulk(args.cards)
     lexicon = Lexicon.build((c["name"], c["oracle_id"]) for c in cards)
     known_cards = {c["oracle_id"] for c in cards}
     doc = parse_cr(args.cr)
     known_rules = set(doc.by_number)
 
-    with args.rulings.open(encoding="utf-8") as fh:
-        rulings = json.load(fh)
-    selected = _select(rulings, args.ids, args.split, args.limit)
+    selected = _select(load_bulk(args.rulings), args.ids, args.split, args.limit)
 
     if not args.yes:
         # Free preview: deterministic edges only, real gate, no API.

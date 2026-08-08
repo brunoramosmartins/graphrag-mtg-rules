@@ -147,12 +147,23 @@ def resolve_scryfall(client: httpx.Client) -> list[ResolvedSource]:
         if item is None:
             print(f"[scryfall] WARNING: bulk type {bulk_type!r} not in index; skipping")
             continue
+        # Scryfall retired `download_uri` (a plain JSON array) in favour of
+        # `jsonl_download_uri` (gzipped JSONL). Read the new key, and say so
+        # plainly if it is gone too rather than dying on a KeyError.
+        url = item.get("jsonl_download_uri") or item.get("download_uri")
+        if not url:
+            print(
+                f"[scryfall] WARNING: bulk type {bulk_type!r} exposes no known "
+                f"download key (saw {sorted(item)}); skipping"
+            )
+            continue
+        suffix = ".jsonl.gz" if url.endswith(".jsonl.gz") else Path(url).suffix or ".json"
         resolved.append(
             ResolvedSource(
                 name=f"scryfall_{bulk_type}",
-                url=item["download_uri"],
-                version=item.get("updated_at", item["download_uri"]),
-                filename=f"scryfall_{bulk_type}.json",
+                url=url,
+                version=item.get("updated_at", url),
+                filename=f"scryfall_{bulk_type}{suffix}",
             )
         )
     return resolved

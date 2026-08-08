@@ -37,11 +37,11 @@ import argparse
 import json
 import re
 from collections import Counter
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, RULINGS_STEM, bulk_path, iter_bulk
 from graphrag_mtg.etl.normalize import loose_name, normalize_name, split_faces
 from graphrag_mtg.extraction.schemas import CardMention, EvidenceSpan, LinkMethod
 
@@ -272,17 +272,10 @@ def build_disambiguation_prompt(pending: PendingMention, ruling_text: str) -> st
 # ── CLI: deterministic pass over the raw rulings, stats + candidates file ──
 
 
-def _iter_rulings(path: Path) -> Iterator[dict[str, Any]]:
-    with path.open(encoding="utf-8") as fh:
-        yield from json.load(fh)
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rulings", type=Path, default=Path("data/raw/scryfall_rulings.json"))
-    parser.add_argument(
-        "--cards", type=Path, default=Path("data/raw/scryfall_oracle_cards.json")
-    )
+    parser.add_argument("--rulings", type=Path, default=bulk_path(RULINGS_STEM))
+    parser.add_argument("--cards", type=Path, default=bulk_path(ORACLE_CARDS_STEM))
     parser.add_argument("--limit", type=int, default=None, help="scan at most N rulings")
     parser.add_argument("--out", type=Path, default=MENTIONS_CANDIDATES_PATH)
     args = parser.parse_args()
@@ -290,14 +283,14 @@ def main() -> int:
     # Local imports keep module import safe without the raw data present.
     from graphrag_mtg.graph.loader import ruling_id as make_ruling_id
 
-    with args.cards.open(encoding="utf-8") as fh:
-        cards = json.load(fh)
-    lexicon = Lexicon.build((c["name"], c["oracle_id"]) for c in cards)
+    lexicon = Lexicon.build(
+        (c["name"], c["oracle_id"]) for c in iter_bulk(args.cards)
+    )
 
     stats: Counter[str] = Counter()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", encoding="utf-8") as out:
-        for n, raw in enumerate(_iter_rulings(args.rulings)):
+        for n, raw in enumerate(iter_bulk(args.rulings)):
             if args.limit is not None and n >= args.limit:
                 break
             rid = make_ruling_id(raw)
