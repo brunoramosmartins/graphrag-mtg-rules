@@ -32,16 +32,20 @@ _WORD = re.compile(r"[a-z][a-z']+")
 # Words too common in rules text to carry signal — English function words plus
 # Magic's ever-present vocabulary. A shared "creature" means nothing; a shared
 # "regenerate" means a lot.
-_STOPWORDS = frozenset(
-    """
-    the a an and or of to in on for with as if then that this these those is are be
-    it its it's they them their there when while any all each no not only also may
-    can will would could must has have had do does can't rule rules see
-    player players card cards permanent permanents object objects creature creatures
-    spell spells ability abilities effect effects game turn control controls controlled
-    battlefield one two number put onto into from by at up out
-    """.split()
-)
+_STOPWORDS = frozenset({
+    # English function words
+    "the", "a", "an", "and", "or", "of", "to", "in", "on", "for", "with", "as",
+    "if", "then", "that", "this", "these", "those", "is", "are", "be", "it",
+    "its", "it's", "they", "them", "their", "there", "when", "while", "any",
+    "all", "each", "no", "not", "only", "also", "may", "can", "will", "would",
+    "could", "must", "has", "have", "had", "do", "does", "can't", "by", "at",
+    "up", "out", "from", "onto", "into", "one", "two", "number", "put",
+    # Magic's ever-present vocabulary
+    "rule", "rules", "see", "player", "players", "card", "cards", "permanent",
+    "permanents", "object", "objects", "creature", "creatures", "spell",
+    "spells", "ability", "abilities", "effect", "effects", "game", "turn",
+    "control", "controls", "controlled", "battlefield",
+})
 
 
 @dataclass(frozen=True)
@@ -57,6 +61,31 @@ def _terms(text: str) -> list[str]:
     return [w for w in _WORD.findall(text.lower()) if w not in _STOPWORDS and len(w) > 2]
 
 
+def _fold(word: str) -> str:
+    """Fold a trailing plural / third-person ``-s`` off ``word``.
+
+    Rulings and rule text disagree constantly on inflection — a ruling says
+    "the creature connives", the rule says "to connive" — and without this the
+    two share no term at all and the rule never surfaces. Deliberately limited
+    to ``-s``/``-es``/``-ies``: it is the inflection that actually differs
+    across the two registers, and a fuller stemmer would start conflating
+    distinct rules vocabulary ("counter" and "countered" are not the same
+    concept in Magic) for no gain.
+    """
+    if len(word) > 4 and word.endswith("ies"):
+        return word[:-3] + "y"
+    if len(word) > 4 and word.endswith(("ses", "xes", "zes", "ches", "shes")):
+        return word[:-2]
+    if len(word) > 3 and word.endswith("s") and not word.endswith("ss"):
+        return word[:-1]
+    return word
+
+
+def _folded_terms(text: str) -> list[str]:
+    """Indexable terms: distinctive words, inflection folded."""
+    return [_fold(w) for w in _terms(text)]
+
+
 class CiteSearch:
     """A TF-IDF index over CR rule text (levels 2 and 3, the ones with content)."""
 
@@ -65,7 +94,7 @@ class CiteSearch:
             r for r in doc.rules if r.level in (2, 3) and r.text.strip()
         ]
         self._snippet_chars = snippet_chars
-        self._doc_terms: list[Counter[str]] = [Counter(_terms(r.text)) for r in self._rules]
+        self._doc_terms: list[Counter[str]] = [Counter(_folded_terms(r.text)) for r in self._rules]
         n = len(self._rules)
         df: Counter[str] = Counter()
         for counts in self._doc_terms:
@@ -79,7 +108,7 @@ class CiteSearch:
         share rare vocabulary (a keyword name, "regenerate", "protection")
         rank above rules sharing only common words.
         """
-        query = set(_terms(text))
+        query = set(_folded_terms(text))
         if not query:
             return []
         scored: list[RuleHit] = []

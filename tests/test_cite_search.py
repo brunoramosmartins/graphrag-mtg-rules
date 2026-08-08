@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from graphrag_mtg.etl.cr_parser import CRDocument, Rule
-from graphrag_mtg.extraction.cite_search import CiteSearch, _terms
+from graphrag_mtg.extraction.cite_search import CiteSearch, _fold, _terms
 
 
 def rule(number: str, text: str) -> Rule:
@@ -29,6 +29,23 @@ class TestTerms:
         assert "connives" in terms
         assert "creature" not in terms  # ubiquitous MTG stopword
         assert "the" not in terms
+
+
+class TestFold:
+    """Rulings inflect where rule text does not; folding is what makes them meet."""
+
+    def test_plural_and_third_person_s_are_folded(self) -> None:
+        assert _fold("connives") == "connive"
+        assert _fold("draws") == "draw"
+        assert _fold("discards") == "discard"
+
+    def test_es_and_ies_forms_are_folded(self) -> None:
+        assert _fold("matches") == "match"
+        assert _fold("abilities") == "ability"
+
+    def test_words_that_merely_end_in_s_are_left_alone(self) -> None:
+        assert _fold("loss") == "loss"
+        assert _fold("its") == "its"
 
 
 class TestSearch:
