@@ -129,3 +129,98 @@ full run exists.
 - Any stratum whose outcome contradicts its prediction gets a written analysis,
   not a quiet edit to the prediction.
 - The whole report must be reproducible with one command.
+
+---
+
+# Results — E-003, extraction quality (2026-08-09)
+
+Reproduce with:
+
+```bash
+python -m graphrag_mtg.extraction.pipeline --ids data/golden/extraction_sample_ids.json --split annotation --grounded --yes --out data/interim/gated_triples.annotation.jsonl
+```
+
+```bash
+python scripts/eval_extraction.py --split annotation --gated data/interim/gated_triples.annotation.jsonl
+```
+
+Configuration: linker cascade v2, citation prompt v3 with the keyword
+directory, grounded mode, gate `min_confidence = 0.7`, temperature 0,
+`gpt-4o-mini`. Gold: 125 rulings, hand-annotated, CR 2026-08-07. Scored on
+gate-passing edges only — what would actually enter the graph. Micro P/R/F1
+with per-document bootstrap CIs. **Figures below are pre-adjudication**, which
+is the headline figure under the E-003 adjudication rule.
+
+## Both thresholds fail
+
+| Task | F1 | 95% CI | Threshold | Verdict |
+|---|---|---|---|---|
+| Card-mention linking | **0.634** | [0.491, 0.750] | ≥ 0.90 | **fail** |
+| Rule citations (primary) | **0.125** | [0.073, 0.180] | ≥ 0.75 | **fail** |
+| Rule citations (family, secondary) | 0.252 | [0.188, 0.323] | — | diagnosis |
+
+Linking: tp=26, fp=26, fn=4. Citations: tp=19, fp=121, fn=146.
+
+The two failures are not the same kind. Linking **finds** what it should —
+recall 0.867 [0.737, 0.973] — and emits an equal quantity of things it should
+not: precision 0.500. Citations fail on both sides at once, and the interval
+does not come within 0.5 of the threshold. No amount of tuning closes that gap;
+it is the wrong instrument for the task.
+
+## By stratum
+
+| Stratum | Linking F1 | Citation F1 |
+|---|---|---|
+| multiword (40) | 0.760 [0.611, 0.871] | 0.140 [0.042, 0.246] |
+| homonym (50) | 0.438 [0.138, 0.667] | 0.132 [0.053, 0.226] |
+| plain (30) | — (no gold mentions) | 0.054 [0.000, 0.137] |
+| explicit (5) | — (no gold mentions) | 0.400 [0.000, 0.727] |
+
+## Against the a-priori predictions
+
+- **"Deterministic stages near ceiling on multiword (F1 ≥ 0.95)" — falsified.**
+  Multiword linking reached 0.760, and the interval's upper bound (0.871) sits
+  below the predicted floor. Exact name matching is not the solved problem the
+  prediction assumed: the failures are card names used as ordinary words and
+  names embedded in longer names, neither of which a lexicon settles.
+- **"The homonym stratum is the open question and predicted hardest" —
+  confirmed.** Homonym linking F1 0.438 against multiword's 0.760, and its
+  precision (0.304) carries 16 of the 26 false positives.
+- **"`CITES_RULE` F1 below linking F1" — confirmed**, by a wider margin than
+  anticipated: 0.125 against 0.634.
+- The `explicit` stratum is the one place citations work at all (F1 0.400 on 5
+  rulings, interval far too wide to lean on). Those are the rulings that state
+  a rule number in their own text, so the model is reading rather than
+  inferring — which is precisely the distinction the whole task turns on.
+
+## What this means, and what it does not
+
+Gate **G3 fires on the pre-registered rule**: citation F1 is below the 0.5
+infeasibility line after three documented prompt iterations, so the schema is
+reduced and the negative result reported rather than tuned toward. `CITES_RULE`
+by a single grounded LLM call does not reach production quality and should not
+be loaded into the graph as though it did.
+
+This is a result about **one mechanism**, not about the thesis. The CR tree,
+its explicit cross-references, and the card–ruling backbone remain
+deterministic and unaffected. What Phase 3 establishes is the boundary: the
+deterministic parser reaches further than expected, and LLM inference of a
+*governing* rule — a rule the ruling never names — reaches much less far.
+
+## Limitations, stated because they bound every number above
+
+- **Gold reliability is unmeasured.** Intra-annotator agreement was deferred
+  (2026-08-08), so the ceiling these F1s are measured against is unknown. A
+  single annotator produced all 125 rulings.
+- **No retrieval was given to the citation extractor.** The obvious remedy —
+  feeding it candidate rules, as `cite_search.py` does for the annotator — was
+  refused deliberately: that tool helped build the gold, so using it inside the
+  system under measurement would make agreement a family resemblance. It is
+  registered as future work with its own pre-registration, not folded in here.
+- **The dev estimates were optimistic and noisy.** Dev linking read 0.727
+  against 0.634 here, and dev citations swung between 0.057 and 0.167 across
+  runs of the same configuration before temperature was pinned. Fifteen
+  citation-annotated dev rulings cannot separate a treatment from noise; the
+  125-ruling intervals above are the ones to read.
+- **The three prompt iterations are unattributable** and are not claimed as
+  improvements — they ran before temperature was pinned.

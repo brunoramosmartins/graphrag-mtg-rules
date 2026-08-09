@@ -148,4 +148,12 @@ multiple-comparison correction when strata are tested jointly.
   type/keyword stoplist, were measured against the dev gold and rejected — both
   cost as many true positives as they won. The annotation-split run will use
   cascade v2, prompt v3 with the keyword directory, temperature 0.
-- **Actual result:** _pending — annotation split not yet run._
+- **Actual result (2026-08-09, annotation split, single run, pre-adjudication):**
+  linking F1 **0.634 [0.491, 0.750]** (tp=26 fp=26 fn=4) against a 0.90
+  threshold — **fail**; citation F1 **0.125 [0.073, 0.180]** (tp=19 fp=121
+  fn=146) against 0.75 — **fail**; citation family F1 0.252 [0.188, 0.323].
+  Predictions: multiword-at-ceiling **falsified** (0.760, upper bound 0.871
+  below the predicted 0.95 floor); homonym-hardest **confirmed** (0.438, and 16
+  of 26 linking false positives); citations-below-linking **confirmed** (0.125
+  vs 0.634). G3 fires: reduce the schema, report the negative. Full write-up
+  with limitations in `docs/evaluation.md`.
