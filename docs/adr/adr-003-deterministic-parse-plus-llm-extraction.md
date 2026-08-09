@@ -1,6 +1,10 @@
 # ADR-003 — Deterministic parse first, LLM extraction second
 
-- **Status:** Accepted
+- **Status:** Accepted — the `APPLIES_RULE` clause superseded by
+  [ADR-006](./adr-006-cites-rule-reduced-to-explicit.md) (2026-08-09),
+  which measured that edge at F1 0.125 and made it deterministic. The
+  deterministic-first principle, the gate, and the linking decision all
+  stand.
 - **Date:** 2026-07-17
 - **Deciders:** Bruno Ramos Martins
 

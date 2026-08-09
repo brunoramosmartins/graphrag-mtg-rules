@@ -90,6 +90,41 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — Phase 3 closed on a failed DoD, deliberately
+
+Both Phase 3 thresholds failed: linking F1 0.634 against 0.90, citations
+0.125 against 0.75. The roadmap allows the thresholds to be adjusted
+"with justification in the ADR", and they were **not** adjusted. E-003
+was pre-registered; moving a threshold after seeing the result is
+adjusting the ruler, and the option existing in the roadmap does not make
+it honest to use. The phase closes with the DoD marked as failed rather
+than met.
+
+What makes that defensible instead of merely disappointing is that the
+two comfortable explanations were measured and excluded rather than
+argued: the gold's ceiling (E-003a, 0.815) and the composition of the
+disagreements (E-003b, 40/40 model error, bound ≤0.091 on anything else).
+G3 then fired as registered and the schema was reduced (ADR-006).
+
+Deliverable audit: everything in the roadmap's Phase 3 list exists except
+two items carried forward rather than dropped. Implicit CR
+cross-references (`extraction/crossref.py`) were built and gated but
+never wired into the pipeline — no unmeasured LLM edge ever reached the
+graph, which is the right outcome by accident rather than by design.
+`notes/phase3-extraction.md` stops at 2026-07-20 and does not yet cover
+the CR migration, the annotation-split run, the retired iterations, the
+temperature defect, E-003a/E-003b, or the reduction; its Lessons Learned
+and Failed Attempts are the author's to write.
+
+Also found while writing ADR-006, and worth its own line: **ADR-003
+already required that a cited rule number be present in its evidence
+span.** The gate checked that only when the span happened to contain a
+number, which made the requirement vacuous for exactly the inferred
+citations it was meant to constrain. The written contract was right and
+the implementation had drifted from it; E-003 measured the cost of the
+drift. The reduction brings the code back in line with the ADR as much as
+it narrows the schema.
+
 ## 2026-08-09 — Schema reduced: CITES_RULE now means "the ruling says so"
 
 G3's registered consequence, executed. `(:Ruling)-[:CITES_RULE]->(:Rule)`
