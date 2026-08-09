@@ -15,7 +15,7 @@ stays light, and 120 annotated rulings do not need numpy.
 from __future__ import annotations
 
 import random
-from collections.abc import Callable, Hashable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
 DEFAULT_RESAMPLES = 2000
@@ -105,6 +105,78 @@ def bootstrap_ci(
     lo_idx = int((alpha / 2) * n_resamples)
     hi_idx = min(n_resamples - 1, int((1 - alpha / 2) * n_resamples))
     return Interval(point=statistic(pairs), low=stats[lo_idx], high=stats[hi_idx], n_docs=n)
+
+
+SUBRULE_LETTERS = "abcdefghijkmnpqrstuvwxyz"  # the CR skips l and o
+
+
+def rule_family(number: str) -> str:
+    """Drop a rule's trailing subrule letter: ``"702.33d"`` -> ``"702.33"``.
+
+    Used only by the secondary citation score. Naming `608.2` where the gold
+    says `608.2b` is the right rule at the wrong depth, and exact match counts
+    that twice against — once as a miss, once as a spurious edge. Collapsing to
+    the family separates "wrong rule" from "right rule, wrong leaf", which are
+    different failures needing different fixes.
+
+    Lives here rather than in a script because two different measurements use
+    it — the E-003 score and the intra-annotator ceiling it is read against.
+    Two copies could drift, and then the ceiling would no longer bound the
+    score.
+    """
+    return number.rstrip(SUBRULE_LETTERS)
+
+
+def by_family(scored: Mapping[str, Iterable[Hashable]]) -> dict[str, frozenset[Hashable]]:
+    """Re-key ``(ruling_id, rule_number)`` items onto their rule family."""
+    return {
+        rid: frozenset((r, rule_family(str(n))) for r, n in items) for rid, items in scored.items()
+    }
+
+
+def cluster_proportion_ci(
+    clusters: Sequence[Sequence[bool]],
+    *,
+    n_resamples: int = DEFAULT_RESAMPLES,
+    alpha: float = 0.05,
+    seed: int = DEFAULT_SEED,
+) -> Interval:
+    """Proportion of true flags, bootstrapped over clusters rather than items.
+
+    Same reason the P/R/F1 intervals resample documents: several
+    disagreements can come from one ruling, and they are not independent
+    — misreading a ruling produces a run of correlated errors. Resampling
+    items would treat those as separate evidence and report an interval
+    that is too narrow.
+
+    Args:
+        clusters: One sequence of flags per cluster (e.g. per ruling).
+        n_resamples: Bootstrap draws.
+        alpha: Two-sided miss probability (0.05 -> 95% CI).
+        seed: Fixed, so the interval is a property of the data.
+
+    Returns:
+        The pooled proportion with its percentile interval; ``n_docs`` is
+        the number of clusters, not the number of items.
+    """
+    flat = [flag for cluster in clusters for flag in cluster]
+    if not flat:
+        return Interval(point=0.0, low=0.0, high=0.0, n_docs=0)
+
+    def proportion(sample: Sequence[Sequence[bool]]) -> float:
+        items = [flag for cluster in sample for flag in cluster]
+        return sum(items) / len(items) if items else 0.0
+
+    rng = random.Random(seed)
+    n = len(clusters)
+    stats = sorted(
+        proportion([clusters[rng.randrange(n)] for _ in range(n)]) for _ in range(n_resamples)
+    )
+    lo_idx = int((alpha / 2) * n_resamples)
+    hi_idx = min(n_resamples - 1, int((1 - alpha / 2) * n_resamples))
+    return Interval(
+        point=sum(flat) / len(flat), low=stats[lo_idx], high=stats[hi_idx], n_docs=n
+    )
 
 
 @dataclass(frozen=True)

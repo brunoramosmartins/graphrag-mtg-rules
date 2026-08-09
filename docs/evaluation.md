@@ -211,7 +211,19 @@ deterministic parser reaches further than expected, and LLM inference of a
 
 - **Gold reliability is unmeasured.** Intra-annotator agreement was deferred
   (2026-08-08), so the ceiling these F1s are measured against is unknown. A
-  single annotator produced all 125 rulings.
+  single annotator produced all 125 rulings. Now registered as **E-003a** and
+  in progress: 20 rulings, seed `20260809`, re-cited blind and scored with the
+  same citation metric (`scripts/reannotate.py`). Until it reports, read the
+  citation F1 as measured against an unknown ceiling, not against 1.0 —
+  `cited_rules` asks for the rule that *governs* a ruling, and more than one
+  rule can defensibly govern the same one.
+- **What the citation gap is made of is unknown.** Exact match scores a wrong
+  rule and a differently defensible rule identically, so 0.125 is consistent
+  with several different failures. Registered as **E-003b**: a seeded sample of
+  the disagreements, classified into `gold_right` / `both_defensible` /
+  `gold_wrong` / `unclear` and reported as four proportions with intervals. It
+  is measurement, not repair — it changes no gold label, and the adjudication
+  rule of 2026-08-08 still governs any that ever change.
 - **No retrieval was given to the citation extractor.** The obvious remedy —
   feeding it candidate rules, as `cite_search.py` does for the annotator — was
   refused deliberately: that tool helped build the gold, so using it inside the

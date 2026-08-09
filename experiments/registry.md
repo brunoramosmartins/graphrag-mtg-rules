@@ -157,3 +157,66 @@ multiple-comparison correction when strata are tested jointly.
   of 26 linking false positives); citations-below-linking **confirmed** (0.125
   vs 0.634). G3 fires: reduce the schema, report the negative. Full write-up
   with limitations in `docs/evaluation.md`.
+
+### E-003a — intra-annotator agreement (the ceiling)
+
+- **Registered:** 2026-08-09, before the second pass is written. Closes the
+  known limitation recorded 2026-08-08.
+- **Objective:** measure how much the annotator agrees with themself, so the
+  E-003 citation F1 can be read against a ceiling instead of against 1.0. If a
+  second blind pass over the same rulings cites different rules, the task is
+  ambiguous and no system could have scored higher.
+- **Configuration:** 20 rulings drawn from the citation-reviewed rows of the
+  annotation split, stratified proportionally, seed `20260809`, frozen in
+  `data/golden/reannotation_sample_ids.json`. Pass 2 is written into a blinded
+  copy (`scripts/reannotate.py draw`) carrying the ruling text and mentions but
+  no `cited_rules`, using the same tools as pass 1 (`cite_search.py`,
+  `annotation_worksheet.py --citation-pass`, `cite.py`) — a different tool would
+  measure the tool, not the annotator. Metric: the E-003 citation metric
+  unchanged, micro P/R/F1 on `(ruling_id, rule_number)` with per-document
+  bootstrap CIs, pass 1 as reference; family score reported beside it. Micro F1
+  is symmetric, so the direction is presentational only.
+- **Ordering constraint (binding):** pass 2 must be written **before** the
+  annotator inspects any E-003 disagreement (E-003b). Re-reading rulings that
+  were just re-litigated against the model's output is recall, not an
+  independent second pass.
+- **Hypothesis / prediction:** agreement F1 well below 1.0 and well above the
+  measured 0.125 — the author's stated reason is that two rules can both
+  support a ruling. No threshold: this is a measurement, not a test.
+- **Use and non-use:** the figure is reported in `docs/evaluation.md` beside the
+  E-003 result and replaces the "agreement unmeasured" limitation. It does
+  **not** license changing any gold label, does not change the E-003 thresholds,
+  and is not used to rescale any reported score.
+- **Known limitation:** the rulings were annotated in the days before the draw,
+  so memory inflates agreement; the figure is an optimistic bound on the
+  ceiling. `reannotate.py compare` prints the elapsed days and says so.
+- **Actual result:** _pending._
+
+### E-003b — composition of the E-003 disagreements
+
+- **Registered:** 2026-08-09, before any disagreement is inspected.
+- **Objective:** decompose the citation F1 gap. Exact match scores a wrong rule
+  and a *differently defensible* rule identically, so 0.125 is consistent with
+  several different worlds and by itself names none of them.
+- **Configuration:** a seeded random sample of the annotation-split
+  disagreements (false positives and false negatives) from the recorded E-003
+  run, sized so each proportion below carries a usable interval. Each sampled
+  disagreement is classified into exactly one bucket:
+  - `gold_right` — the gold is correct and the prediction is wrong: model error.
+  - `both_defensible` — the predicted rule also governs the interaction: an
+    artifact of exact match, neither a model error nor a gold error.
+  - `gold_wrong` — the gold is wrong on its own terms under
+    `docs/extraction-annotation-guide.md`: adjudicable.
+  - `unclear` — parked, and counted, rather than forced into a bucket.
+- **Reported as:** the four proportions with confidence intervals. Not an F1,
+  and not a correction to one.
+- **Relation to adjudication (important):** this is measurement, not repair. It
+  changes no gold label. A sample cannot patch the gold — a partly-patched gold
+  makes both the pre- and post-adjudication figures meaningless — so the
+  pre-registered adjudication rule (2026-08-08) continues to govern any change,
+  including its 10% cap and its requirement that a label be wrong on its own
+  terms. If `gold_wrong` comes back high, the honest response is the one that
+  rule already names: void and re-annotate, not patch.
+- **Hypothesis / prediction:** `both_defensible` is the largest bucket after
+  `gold_right`, and `gold_wrong` is small. Recorded before any case is read.
+- **Actual result:** _pending._

@@ -6,8 +6,11 @@ from typing import ClassVar
 
 from graphrag_mtg.evaluation.metrics import (
     bootstrap_ci,
+    by_family,
+    cluster_proportion_ci,
     evaluate_by_stratum,
     micro_prf,
+    rule_family,
 )
 
 
@@ -85,3 +88,42 @@ class TestEvaluateByStratum:
         assert set(by_name) == {"overall", "multiword", "homonym"}
         assert by_name["multiword"].counts.f1 == 1.0
         assert by_name["homonym"].counts.fn == 1
+
+
+class TestRuleFamily:
+    """The secondary citation key: right rule, wrong leaf is its own failure."""
+
+    def test_subrule_letter_is_dropped(self) -> None:
+        assert rule_family("702.33d") == "702.33"
+        assert rule_family("608.2b") == "608.2"
+
+    def test_a_letterless_rule_is_its_own_family(self) -> None:
+        assert rule_family("101.4") == "101.4"
+        assert rule_family("704") == "704"
+
+    def test_items_are_rekeyed_onto_the_family(self) -> None:
+        scored = {"r1": {("r1", "608.2b"), ("r1", "608.2d")}}
+        assert by_family(scored) == {"r1": frozenset({("r1", "608.2")})}
+
+    def test_a_depth_error_scores_as_a_family_hit(self) -> None:
+        gold = by_family({"r1": {("r1", "702.33d")}})
+        predicted = by_family({"r1": {("r1", "702.33")}})
+        assert gold == predicted
+
+
+class TestClusterProportionCi:
+    def test_the_point_estimate_pools_over_items(self) -> None:
+        interval = cluster_proportion_ci([[True, False], [True, True]])
+        assert interval.point == 0.75
+
+    def test_clusters_not_items_are_the_sample_size(self) -> None:
+        """Correlated cases inside one ruling are one draw, not several."""
+        interval = cluster_proportion_ci([[True, True, True], [False]])
+        assert interval.n_docs == 2
+
+    def test_unanimity_gives_a_degenerate_interval(self) -> None:
+        interval = cluster_proportion_ci([[True], [True]])
+        assert (interval.point, interval.low, interval.high) == (1.0, 1.0, 1.0)
+
+    def test_no_cases_is_not_a_crash(self) -> None:
+        assert cluster_proportion_ci([]).n_docs == 0

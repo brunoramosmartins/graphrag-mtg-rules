@@ -33,7 +33,7 @@ import json
 from collections.abc import Hashable
 from pathlib import Path
 
-from graphrag_mtg.evaluation.metrics import StratumReport, evaluate_by_stratum
+from graphrag_mtg.evaluation.metrics import StratumReport, by_family, evaluate_by_stratum
 from graphrag_mtg.extraction.schemas import CardMention, RuleCitation
 
 GOLD_PATH = Path("data/golden/extraction_annotations.jsonl")
@@ -141,26 +141,6 @@ def load_gated(path: Path, mention_docs: set[str], citation_docs: set[str]) -> t
             elif triple["edge_type"] == "CITES_RULE" and rid in citation_docs:
                 citations.setdefault(rid, set()).add((rid, triple["target_key"]))
     return mentions, citations
-
-
-def rule_family(number: str) -> str:
-    """Drop a rule's trailing subrule letter: ``"702.33d"`` -> ``"702.33"``.
-
-    Used only by the secondary citation score. Naming `608.2` where the gold
-    says `608.2b` is the right rule at the wrong depth, and exact match counts
-    that twice against — once as a miss, once as a spurious edge. Collapsing to
-    the family separates "wrong rule" from "right rule, wrong leaf", which are
-    different failures needing different fixes.
-    """
-    return number.rstrip("abcdefghijkmnpqrstuvwxyz")
-
-
-def by_family(scored: dict[str, set[Hashable]]) -> dict[str, frozenset]:
-    """Re-key ``(ruling_id, rule_number)`` items onto their rule family."""
-    return {
-        rid: frozenset((r, rule_family(str(n))) for r, n in items)
-        for rid, items in scored.items()
-    }
 
 
 def print_report(title: str, reports: list[StratumReport]) -> None:

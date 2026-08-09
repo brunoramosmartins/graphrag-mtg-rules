@@ -90,6 +90,51 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — The gold gets a ceiling before the disagreements get read
+
+E-003 reports citation F1 0.125 against a gold written once, by one
+person, under an instruction to cite the rule that *governs* the
+interaction. That number is currently read against 1.0, which assumes
+the task has one right answer. The author's objection is the reason it
+may not: two rules can both support a ruling, and choosing between them
+is interpretation, not lookup.
+
+Two measurements registered, in this order (E-003a, E-003b):
+
+1. **Intra-annotator agreement.** 20 rulings, seed `20260809`,
+   stratified proportionally, re-cited into a blinded copy that carries
+   the ruling text and mentions but no `cited_rules`
+   (`scripts/reannotate.py`). Pass 2 uses the *same* tools as pass 1 —
+   a better tool would measure the tool, not the annotator. Scored with
+   the E-003 citation metric unchanged, so the ceiling and the score sit
+   on one scale. `rule_family` moved from the scorer into
+   `evaluation/metrics.py` for exactly that reason: two copies could
+   drift, and a drifting definition would stop the ceiling from bounding
+   the score.
+2. **Composition of the disagreements**, by seeded sample rather than
+   exhaustively, into four buckets: `gold_right`, `both_defensible`,
+   `gold_wrong`, `unclear`. Reported as four proportions with intervals.
+
+The ordering is binding, and it is the part worth recording: agreement
+must be measured *before* any disagreement is inspected. Re-reading
+rulings that were just re-litigated against the model's output is recall,
+not an independent second pass, and it would silently inflate the
+ceiling.
+
+Also recorded: sampling was chosen for (2) by *changing the goal*, not
+by doing less of the same work. Adjudicating a sample would leave the
+gold half-patched and make both the pre- and post-adjudication figures
+uninterpretable. Estimating what the gap is *made of* is sound on a
+sample, needs no cap, and answers the question that motivated the
+request. The pre-registered adjudication rule (2026-08-08) is untouched
+and still governs any actual change to a label — including its 10% cap,
+above which the honest response is to void and re-annotate rather than
+patch.
+
+A same-day second pass is memory, not judgement; `reannotate.py compare`
+prints the days elapsed since the draw and labels a same-day figure as an
+optimistic bound.
+
 ## 2026-08-09 — The dev iterations were run at a sampling temperature; pinned to 0
 
 `LlmClient` never set `temperature`, so both providers sampled at their own

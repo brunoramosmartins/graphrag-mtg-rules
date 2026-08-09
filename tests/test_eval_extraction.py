@@ -11,11 +11,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from eval_extraction import (
-    by_family,
     load_gold,
     load_predicted_citations,
     load_predicted_mentions,
-    rule_family,
 )
 
 GOLD_ROWS = [
@@ -70,27 +68,6 @@ class TestLoadGold:
         mentions, citations, strata = load_gold(gold_file, "annotation")
         assert strata == {"r2": "plain"}
         assert mentions["r2"] == set() and citations["r2"] == set()
-
-
-class TestRuleFamily:
-    """The secondary citation key: right rule, wrong leaf is its own failure."""
-
-    def test_subrule_letter_is_dropped(self) -> None:
-        assert rule_family("702.33d") == "702.33"
-        assert rule_family("608.2b") == "608.2"
-
-    def test_a_letterless_rule_is_its_own_family(self) -> None:
-        assert rule_family("101.4") == "101.4"
-        assert rule_family("704") == "704"
-
-    def test_items_are_rekeyed_onto_the_family(self) -> None:
-        scored = {"r1": {("r1", "608.2b"), ("r1", "608.2d")}}
-        assert by_family(scored) == {"r1": frozenset({("r1", "608.2")})}
-
-    def test_a_depth_error_scores_as_a_family_hit(self) -> None:
-        gold = by_family({"r1": {("r1", "702.33d")}})
-        predicted = by_family({"r1": {("r1", "702.33")}})
-        assert gold == predicted
 
 
 class TestUnreviewedCitations:
