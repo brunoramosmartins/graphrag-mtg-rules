@@ -11,9 +11,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from eval_extraction import (
+    by_family,
     load_gold,
     load_predicted_citations,
     load_predicted_mentions,
+    rule_family,
 )
 
 GOLD_ROWS = [
@@ -68,6 +70,76 @@ class TestLoadGold:
         mentions, citations, strata = load_gold(gold_file, "annotation")
         assert strata == {"r2": "plain"}
         assert mentions["r2"] == set() and citations["r2"] == set()
+
+
+class TestRuleFamily:
+    """The secondary citation key: right rule, wrong leaf is its own failure."""
+
+    def test_subrule_letter_is_dropped(self) -> None:
+        assert rule_family("702.33d") == "702.33"
+        assert rule_family("608.2b") == "608.2"
+
+    def test_a_letterless_rule_is_its_own_family(self) -> None:
+        assert rule_family("101.4") == "101.4"
+        assert rule_family("704") == "704"
+
+    def test_items_are_rekeyed_onto_the_family(self) -> None:
+        scored = {"r1": {("r1", "608.2b"), ("r1", "608.2d")}}
+        assert by_family(scored) == {"r1": frozenset({("r1", "608.2")})}
+
+    def test_a_depth_error_scores_as_a_family_hit(self) -> None:
+        gold = by_family({"r1": {("r1", "702.33d")}})
+        predicted = by_family({"r1": {("r1", "702.33")}})
+        assert gold == predicted
+
+
+class TestUnreviewedCitations:
+    """An unreviewed ruling has no citation gold — it is absent, not empty.
+
+    Scoring it as empty would make every citation the extractor produces there
+    a false positive, deflating precision for a reason that has nothing to do
+    with the extractor.
+    """
+
+    @pytest.fixture
+    def mixed_gold(self, tmp_path: Path) -> Path:
+        rows = [
+            {
+                "ruling_id": "done",
+                "split": "dev",
+                "stratum": "plain",
+                "mentions": [],
+                "cited_rules": [],
+                "citations_reviewed": True,
+                "verified": True,
+            },
+            {
+                "ruling_id": "pending",
+                "split": "dev",
+                "stratum": "plain",
+                "mentions": [{"surface": "Opt", "start": 0, "end": 3, "target_oracle_id": "o1"}],
+                "cited_rules": [],
+                "citations_reviewed": False,
+                "verified": True,
+            },
+        ]
+        path = tmp_path / "mixed.jsonl"
+        path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+        return path
+
+    def test_reviewed_row_with_no_citation_is_gold_saying_none(self, mixed_gold: Path) -> None:
+        _, citations, _ = load_gold(mixed_gold, "dev")
+        assert citations["done"] == set()
+
+    def test_unreviewed_row_is_absent_from_citation_gold(self, mixed_gold: Path) -> None:
+        _, citations, _ = load_gold(mixed_gold, "dev")
+        assert "pending" not in citations
+
+    def test_unreviewed_row_still_counts_for_linking(self, mixed_gold: Path) -> None:
+        """The citation pass being incomplete must not cost us linking coverage."""
+        mentions, _, strata = load_gold(mixed_gold, "dev")
+        assert mentions["pending"] == {("pending", 0, "o1")}
+        assert set(strata) == {"done", "pending"}
 
 
 class TestLoadPredictions:

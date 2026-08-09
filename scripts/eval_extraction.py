@@ -39,6 +39,7 @@ from graphrag_mtg.extraction.schemas import CardMention, RuleCitation
 GOLD_PATH = Path("data/golden/extraction_annotations.jsonl")
 MENTIONS_PATH = Path("data/interim/mentions_candidates.jsonl")
 CITATIONS_PATH = Path("data/interim/citations_candidates.jsonl")
+GATED_TRIPLES_PATH = Path("data/interim/gated_triples.jsonl")
 
 
 def load_gold(path: Path, split: str) -> tuple[dict, dict, dict]:
@@ -58,9 +59,15 @@ def load_gold(path: Path, split: str) -> tuple[dict, dict, dict]:
                 for m in row["mentions"]
                 if m["target_oracle_id"] is not None
             }
-            citations[rid] = {
-                (rid, c.get("rule_number") or c.get("rule")) for c in row["cited_rules"]
-            }
+            # Only rulings whose citations were actually reviewed carry citation
+            # gold. A row still awaiting the citation pass has no gold to be
+            # right or wrong against, so it is absent here rather than empty.
+            # (A gold file predating the flag was reviewed in full by
+            # construction, hence the True default.)
+            if row.get("citations_reviewed", True):
+                citations[rid] = {
+                    (rid, c.get("rule_number") or c.get("rule")) for c in row["cited_rules"]
+                }
     return mentions, citations, strata
 
 
@@ -100,6 +107,62 @@ def load_predicted_citations(path: Path, docs: set[str]) -> dict[str, set[Hashab
     return predicted
 
 
+def load_gated(path: Path, mention_docs: set[str], citation_docs: set[str]) -> tuple[
+    dict[str, set[Hashable]], dict[str, set[Hashable]]
+]:
+    """Predictions as they leave the gate, keyed like the gold.
+
+    E-003 measures what reaches the graph, and only gate-passing edges do.
+    Scoring the pre-gate candidate files would credit the extractor for
+    proposals the gate rejects and penalise it for none of them.
+
+    Args:
+        path: `gated_triples.jsonl` from `extraction.pipeline`.
+        mention_docs: Rulings with linking gold.
+        citation_docs: Rulings with citation gold — usually the smaller set.
+
+    Returns:
+        ``(mentions, citations)``, each keyed by ruling id.
+    """
+    mentions: dict[str, set[Hashable]] = {}
+    citations: dict[str, set[Hashable]] = {}
+    if not path.exists():
+        return mentions, citations
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            triple = json.loads(line)
+            rid = triple["source_key"]
+            if triple["edge_type"] == "MENTIONS" and rid in mention_docs:
+                mentions.setdefault(rid, set()).add(
+                    (rid, triple["span_start"], triple["target_key"])
+                )
+            elif triple["edge_type"] == "CITES_RULE" and rid in citation_docs:
+                citations.setdefault(rid, set()).add((rid, triple["target_key"]))
+    return mentions, citations
+
+
+def rule_family(number: str) -> str:
+    """Drop a rule's trailing subrule letter: ``"702.33d"`` -> ``"702.33"``.
+
+    Used only by the secondary citation score. Naming `608.2` where the gold
+    says `608.2b` is the right rule at the wrong depth, and exact match counts
+    that twice against — once as a miss, once as a spurious edge. Collapsing to
+    the family separates "wrong rule" from "right rule, wrong leaf", which are
+    different failures needing different fixes.
+    """
+    return number.rstrip("abcdefghijkmnpqrstuvwxyz")
+
+
+def by_family(scored: dict[str, set[Hashable]]) -> dict[str, frozenset]:
+    """Re-key ``(ruling_id, rule_number)`` items onto their rule family."""
+    return {
+        rid: frozenset((r, rule_family(str(n))) for r, n in items)
+        for rid, items in scored.items()
+    }
+
+
 def print_report(title: str, reports: list[StratumReport]) -> None:
     """Print one task's stratified table, overall row first."""
     print(f"\n{title}")
@@ -116,8 +179,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gold", type=Path, default=GOLD_PATH)
     parser.add_argument("--split", choices=("dev", "annotation"), default="annotation")
+    parser.add_argument("--gated", type=Path, default=GATED_TRIPLES_PATH)
     parser.add_argument("--mentions", type=Path, default=MENTIONS_PATH)
     parser.add_argument("--citations", type=Path, default=CITATIONS_PATH)
+    parser.add_argument(
+        "--pre-gate",
+        action="store_true",
+        help="score the raw candidate files instead of gated triples (diagnostic only)",
+    )
     args = parser.parse_args()
 
     if not args.gold.exists():
@@ -132,8 +201,31 @@ def main() -> int:
     docs = set(strata)
     print(f"Split {args.split!r}: {len(docs)} annotated rulings.")
 
-    predicted_mentions = load_predicted_mentions(args.mentions, docs)
-    predicted_citations = load_predicted_citations(args.citations, docs)
+    # Citations are scored over their own, possibly smaller, set of rulings —
+    # the ones whose citation pass is done. Predictions on any other ruling are
+    # dropped rather than counted against an absent gold.
+    citation_docs = set(gold_citations)
+    citation_strata = {rid: strata[rid] for rid in citation_docs}
+
+    if args.pre_gate:
+        print(f"Scoring PRE-GATE candidates: {args.mentions}, {args.citations}")
+        predicted_mentions = load_predicted_mentions(args.mentions, docs)
+        predicted_citations = load_predicted_citations(args.citations, citation_docs)
+    else:
+        if not args.gated.exists():
+            print(f"No gated triples at {args.gated}. Run the pipeline first:")
+            print("  python -m graphrag_mtg.extraction.pipeline --ids ... --split ... --yes")
+            return 1
+        print(f"Scoring gate-passing edges: {args.gated}")
+        predicted_mentions, predicted_citations = load_gated(
+            args.gated, docs, citation_docs
+        )
+
+    if citation_docs != docs:
+        print(
+            f"Citations scored over {len(citation_docs)} of {len(docs)} rulings "
+            f"({len(docs) - len(citation_docs)} still awaiting the citation pass)."
+        )
 
     print_report(
         "Card-mention linking (ruling, offset, oracle_id)",
@@ -148,11 +240,21 @@ def main() -> int:
         evaluate_by_stratum(
             {k: frozenset(v) for k, v in predicted_citations.items()},
             {k: frozenset(v) for k, v in gold_citations.items()},
-            stratum_by_doc=strata,
+            stratum_by_doc=citation_strata,
+        ),
+    )
+    print_report(
+        "Rule citations, SECONDARY — family only (ruling, rule without subrule letter)",
+        evaluate_by_stratum(
+            by_family(predicted_citations),
+            by_family(gold_citations),
+            stratum_by_doc=citation_strata,
         ),
     )
     print(
-        "\nThresholds (E-003 / roadmap DoD): linking F1 >= 0.9, citation F1 >= 0.75.\n"
+        "\nThresholds (E-003 / roadmap DoD): linking F1 >= 0.9, citation F1 >= 0.75,\n"
+        "applied to the PRIMARY citation score. The family score is diagnosis only:\n"
+        "a gap between the two is depth error, not the wrong rule.\n"
         "Read the interval, not the point estimate."
     )
     return 0

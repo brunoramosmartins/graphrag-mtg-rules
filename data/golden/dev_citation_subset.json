@@ -1,0 +1,21 @@
+{
+  "seed": 20260808,
+  "strategy": "5 per dev stratum, sorted then sampled",
+  "ruling_ids": [
+    "f2aeacb5e83b267b1c8648bbba4f7144",
+    "12451a86992faa54321bb1cef96144ec",
+    "92deaa6285d8844e65be7eea91dc94a0",
+    "b249ba06fc61997eb23d984b3c261b02",
+    "e0a686f5a7a43afba81754f13f62edb9",
+    "bde7370ffb0678a62e837e31668b6165",
+    "80ee122e9073b599eba37256d2add7b8",
+    "01f52d5a53d8fb3ee940b6bf77713b86",
+    "5b60d81b8a97ad843ec8c6b06e977234",
+    "99442bd2485909da38daea04ae940148",
+    "e2aec83a4fb1d0bfd72d9c85601e9d9f",
+    "66d4be136a044ec0986ab45d64107550",
+    "063d25aa47e6bf77014026d44a76d42c",
+    "e8a43f081c2306cfdfc644476d7ebe7a",
+    "1afa0d74dd8769bf3651ac7587232d28"
+  ]
+}

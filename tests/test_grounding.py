@@ -74,6 +74,15 @@ class TestGroundingBlock:
         block = grounding_block(doc())
         assert "608" in block and "613" in block
 
+    def test_keyword_directory_can_be_dropped(self) -> None:
+        """E-003 iteration 2 ran without it; the chapter map must survive alone."""
+        block = grounding_block(doc(), include_keywords=False)
+        assert "702.131 Connive" not in block
+        assert "601 Casting Spells" in block
+
+    def test_directory_is_included_by_default(self) -> None:
+        assert "702.131 Connive" in grounding_block(doc())
+
 
 class TestCandidates:
     def test_keyword_resolves_through_glossary_with_subrules(self) -> None:

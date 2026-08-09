@@ -43,7 +43,12 @@ from graphrag_mtg.extraction.schemas import EvidenceSpan, LinkMethod, RuleCitati
 
 CITATIONS_CANDIDATES_PATH = Path("data/interim/citations_candidates.jsonl")
 
-EXTRACTOR_VERSION = "v1"
+#: Bumped whenever the citation prompt changes, so a loaded edge names the
+#: prompt that produced it. v2 (2026-08-08, E-003 iteration 1) removed the
+#: "cite the parent rule you are sure of" fallback: the first dev run spent
+#: most of its errors naming the right rule at the wrong depth, and that
+#: instruction was the licence to do it.
+EXTRACTOR_VERSION = "v3"
 
 SYSTEM_PROMPT = """\
 You extract Comprehensive Rules citations from official Magic: The Gathering rulings.
@@ -54,14 +59,25 @@ Given one ruling, return a JSON array (possibly empty) of objects:
    "rationale": "<one sentence: why this passage means this rule>",
    "confidence": <0.0-1.0>}
 
+Work in this order, and let it decide the answer:
+1. Name the game concept the ruling actually turns on (replacing a draw,
+   declaring blockers, copying a permanent, ordering state-based actions).
+2. From the chapter map, pick the chapter that governs that concept. Most
+   rulings are governed by a procedural chapter, not by a keyword's own rule:
+   a ruling that mentions a keyword is usually about what happens *around* it.
+3. Only then choose the rule inside that chapter.
+
 Hard requirements:
 - "quote" must be copied character-for-character from the ruling text.
 - Cite the most specific rule that carries the point (a lettered leaf like
   702.19b beats its parent 702.19).
 - Only cite rules the ruling actually turns on. An empty array is a good
   answer for a ruling that just restates card text.
-- Never invent rule numbers. If unsure between two numbers, cite the parent
-  rule you are sure of, with lower confidence.
+- Never invent rule numbers.
+- A parent rule is not a safer answer, it is a different one. If you are torn
+  between two subrules of the same rule, pick the one you think most likely
+  and lower the confidence — do NOT retreat to the parent. Cite a bare parent
+  only when the point genuinely rests on the parent's own text.
 Return the JSON array and nothing else."""
 
 # Few-shot examples use invented rulings (no WotC text) about real rule

@@ -67,6 +67,11 @@ RELOCATION_MARGIN = 0.15
 #: rules by one or two chapters (725 -> 726), never across the document.
 CHAPTER_WINDOW = 2
 
+#: U+00A0. Built with ``chr`` rather than written out: an invisible character
+#: in source is exactly what nobody catches in review, which is the same reason
+#: ruff flags it.
+NBSP = chr(0x00A0)
+
 
 def normalize(text: str) -> str:
     """Collapse whitespace so formatting churn is not read as a text change.
@@ -75,7 +80,7 @@ def normalize(text: str) -> str:
     single non-breaking space, and uses U+00A0 inside two rule bodies. Without
     this, every such rule would be reported as edited.
     """
-    return " ".join(text.replace(" ", " ").split())
+    return " ".join(text.replace(NBSP, " ").split())
 
 
 def rule_bodies(path: Path) -> dict[str, str]:

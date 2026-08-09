@@ -75,24 +75,39 @@ def chapter_map(doc: CRDocument) -> list[tuple[str, str]]:
     return [(rule.number, rule.text.strip()) for rule in doc.rules if rule.level == 1]
 
 
-def grounding_block(doc: CRDocument) -> str:
-    """The full system-prompt grounding: chapter map + keyword directory.
+def grounding_block(doc: CRDocument, *, include_keywords: bool = True) -> str:
+    """The system-prompt grounding: chapter map, optionally + keyword directory.
 
     Order matters. The chapter map comes first so the model reads the CR
     as a whole document before it reaches the keyword names — round 2
     showed that leading with keywords collapses every citation onto
     701/702.
+
+    Ordering alone did not cure that collapse. The first E-003 dev run still
+    put 7 of its citations in 702 and 6 in 608 while the gold spread across
+    509, 707, 616 and 614, so ``include_keywords=False`` drops the directory
+    entirely and leaves only the chapter map. Per-ruling candidates from
+    :func:`candidate_rules_for_keywords` are unaffected — those exist to stop
+    invented numbers, which is a different job.
+
+    Args:
+        doc: The parsed CR.
+        include_keywords: Append the keyword rule directory.
+
+    Returns:
+        The grounding text for the system prompt.
     """
     chapters = "\n".join(f"{number} {title}" for number, title in chapter_map(doc))
-    return (
+    block = (
         "Comprehensive Rules chapter map (the document's full structure — many "
         "rulings are governed by procedural chapters such as 601 casting, 608 "
         "resolving spells, 613 layers, or 704 state-based actions, NOT by a "
         "keyword rule; cite whichever chapter actually governs the ruling):\n"
         + chapters
-        + "\n\n"
-        + directory_block(keyword_directory(doc))
     )
+    if include_keywords:
+        block += "\n\n" + directory_block(keyword_directory(doc))
+    return block
 
 
 def candidate_rules_for_keywords(

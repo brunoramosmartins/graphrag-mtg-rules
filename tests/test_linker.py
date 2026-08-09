@@ -106,3 +106,48 @@ class TestScanHomonyms:
         _, (p,) = scan_ruling("r1", text, lexicon())
         span = p.mention.span
         assert text[span.start : span.end] == span.text == "Opt"
+
+
+class TestHostFragmentSuppression:
+    """A match inside a longer occurrence of the host's own name is not a mention.
+
+    The narrowness is the point. Every broader rule tried on the E-003 dev
+    subset cost real mentions: a substring test would drop "The Ring" on the
+    host *Call of the Ring*, and a prefix test would drop "Brutal Cathar" on
+    the host *Brutal Cathar // Moonrage Brute*. Both are gold mentions.
+    """
+
+    def lexicon(self) -> Lexicon:
+        return Lexicon.build(
+            [
+                ("Kemba's Legion", "host-kemba"),
+                ("Legion", "oid-legion"),
+                ("Brutal Cathar // Moonrage Brute", "host-cathar"),
+                ("The Ring", "oid-ring"),
+                ("Call of the Ring", "host-call"),
+            ]
+        )
+
+    def test_fragment_of_the_host_name_is_dropped(self) -> None:
+        text = "The number of creatures Kemba's Legion can block is fixed."
+        resolved, pending = scan_ruling("r1", text, self.lexicon(), host_oracle_id="host-kemba")
+        assert all(m.oracle_id != "oid-legion" for m in resolved)
+        assert all(p.mention.surface != "Legion" for p in pending)
+
+    def test_the_host_named_in_full_is_still_a_mention(self) -> None:
+        """Equality is not containment: the gold records these as true positives."""
+        text = "Brutal Cathar returns transformed."
+        resolved, pending = scan_ruling("r2", text, self.lexicon(), host_oracle_id="host-cathar")
+        surfaces = [m.surface for m in resolved] + [p.mention.surface for p in pending]
+        assert "Brutal Cathar" in surfaces
+
+    def test_a_card_whose_name_the_host_contains_survives(self) -> None:
+        text = "The Ring won't tempt you."
+        resolved, pending = scan_ruling("r3", text, self.lexicon(), host_oracle_id="host-call")
+        surfaces = [m.surface for m in resolved] + [p.mention.surface for p in pending]
+        assert "The Ring" in surfaces
+
+    def test_no_host_means_no_suppression(self) -> None:
+        text = "Kemba's Legion can block."
+        resolved, pending = scan_ruling("r4", text, self.lexicon())
+        assert resolved or pending

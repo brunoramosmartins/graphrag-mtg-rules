@@ -90,6 +90,11 @@ class Lexicon:
     loose: dict[str, set[str]] = field(default_factory=dict)
     single_word: dict[str, set[str]] = field(default_factory=dict)
     first_tokens: dict[str, int] = field(default_factory=dict)
+    #: oracle_id -> combined name, so a scan can recognise the host card by
+    #: name and not only by id. Dropping self-mentions by id alone missed
+    #: "Soul Shatter" on a Soul Shatter ruling, because the name resolved to a
+    #: different printing's oracle_id than the one the ruling hangs on.
+    name_by_oracle: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def build(
@@ -105,6 +110,7 @@ class Lexicon:
         """
         lex = cls()
         for name, oracle_id in names:
+            lex.name_by_oracle.setdefault(oracle_id, name)
             for form in {name, *split_faces(name)}:
                 lex._add(form, oracle_id)
         for alias, oracle_id in aliases:
@@ -156,6 +162,7 @@ def scan_ruling(
     tokens = _tokens_with_offsets(text)
     resolved: list[CardMention] = []
     pending: list[PendingMention] = []
+    host_faces = _host_faces(lexicon, host_oracle_id)
     i = 0
     while i < len(tokens):
         match = _longest_match_at(tokens, i, text, lexicon, ruling_id, host_oracle_id)
@@ -163,12 +170,69 @@ def scan_ruling(
             i += 1
             continue
         mention_or_pending, consumed = match
+        candidate = (
+            mention_or_pending.mention
+            if isinstance(mention_or_pending, PendingMention)
+            else mention_or_pending
+        )
+        span = candidate.span
+        if names_the_host(span.text, span.start, span.end, text, host_faces):
+            i += consumed
+            continue
         if isinstance(mention_or_pending, PendingMention):
             pending.append(mention_or_pending)
         else:
             resolved.append(mention_or_pending)
         i += consumed
     return resolved, pending
+
+
+def _host_faces(lexicon: Lexicon, host_oracle_id: str | None) -> list[str]:
+    """Face names of the card a ruling hangs on, or empty when unknown."""
+    if not host_oracle_id:
+        return []
+    name = lexicon.name_by_oracle.get(host_oracle_id)
+    return split_faces(name) if name else []
+
+
+def names_the_host(
+    surface: str, start: int, end: int, text: str, host_faces: list[str]
+) -> bool:
+    """True when a match is a fragment of the host card's name in the text.
+
+    Only one shape qualifies: the match sits **inside a full occurrence of the
+    host's name in the ruling text** — "Legion" matched inside "Kemba's Legion".
+    That is a tokenization error with no judgement in it, and the greedy scan
+    should have consumed the longer name.
+
+    Everything broader was tried on dev and rejected by the annotations:
+
+    * A plain substring test is wrong — "The Ring" is a substring of the host
+      *Call of the Ring* and is nonetheless a real mention of the card
+      **The Ring**.
+    * Suppressing a surface that merely *prefixes* a host face is also wrong.
+      It would catch "Nicol Bolas" on *Nicol Bolas, the Ravager*, which the
+      gold does treat as a non-mention — but it equally catches "Brutal Cathar"
+      and "Moonrage Brute" on the host *Brutal Cathar // Moonrage Brute*, which
+      the gold records as genuine mentions. Two won, two lost, so the rule
+      encodes a judgement the annotations do not share and is left out.
+    """
+    if not normalize_name(surface):
+        return False
+    lowered = text.lower()
+    for face in host_faces:
+        needle = face.lower()
+        position = lowered.find(needle)
+        while position != -1:
+            finish = position + len(needle)
+            # Strictly inside: the occurrence has to extend past the match on at
+            # least one side. Equality means the ruling names the host in full,
+            # and the gold records that as a real mention — "Brutal Cathar" on
+            # the host *Brutal Cathar // Moonrage Brute* is a true positive.
+            if position <= start and end <= finish and (position < start or end < finish):
+                return True
+            position = lowered.find(needle, position + 1)
+    return False
 
 
 def _longest_match_at(

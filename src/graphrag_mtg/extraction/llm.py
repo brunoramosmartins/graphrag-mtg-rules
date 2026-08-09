@@ -144,10 +144,18 @@ class LlmClient:
             ``LLM_PROVIDER`` names an unknown provider.
     """
 
-    def __init__(self, model: str | None = None, max_tokens: int = 1024) -> None:
+    def __init__(
+        self, model: str | None = None, max_tokens: int = 1024, temperature: float = 0.0
+    ) -> None:
         settings = get_settings()
         self.provider = settings.llm_provider.lower()
         self.max_tokens = max_tokens
+        # Pinned to 0 by default. Left unset, both providers sample at their
+        # own default and two runs of the *same* configuration disagree: on the
+        # E-003 dev subset the identical prompt scored 0.167 and then 0.114,
+        # a spread as large as the differences between prompt iterations. An
+        # experiment cannot attribute a change it cannot reproduce.
+        self.temperature = temperature
         self.model = resolve_model(self.provider, model or settings.llm_model)
 
         if self.provider == "anthropic":
@@ -191,6 +199,7 @@ class LlmClient:
             message = self._anthropic.messages.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
+                temperature=self.temperature,
                 system=system or None,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -203,6 +212,7 @@ class LlmClient:
                 json={
                     "model": self.model,
                     "max_completion_tokens": self.max_tokens,
+                    "temperature": self.temperature,
                     "messages": messages,
                 },
             )

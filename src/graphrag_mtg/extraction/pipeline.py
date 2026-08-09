@@ -189,6 +189,11 @@ def main() -> int:
     parser.add_argument("--split", choices=("dev", "annotation"), default="dev")
     parser.add_argument("--limit", type=int, default=30)
     parser.add_argument("--grounded", action="store_true", help="ground citation extraction")
+    parser.add_argument(
+        "--no-keyword-dir",
+        action="store_true",
+        help="drop the keyword rule directory from the grounding (E-003 iteration 2)",
+    )
     parser.add_argument("--out", type=Path, default=GATED_TRIPLES_PATH)
     parser.add_argument("--yes", action="store_true", help="spend on the two LLM stages")
     parser.add_argument("--load", action="store_true", help="load gated triples into Neo4j")
@@ -240,7 +245,7 @@ def main() -> int:
     if args.grounded:
         from graphrag_mtg.extraction.grounding import candidate_rules_for_keywords, grounding_block
 
-        extract_system = grounding_block(doc)
+        extract_system = grounding_block(doc, include_keywords=not args.no_keyword_dir)
         keywords_by_oracle = {c["oracle_id"]: c.get("keywords", []) for c in cards}
         candidate_rules_fn = lambda oid: candidate_rules_for_keywords(  # noqa: E731
             keywords_by_oracle.get(oid, []), doc

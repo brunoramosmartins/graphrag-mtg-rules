@@ -86,4 +86,66 @@ multiple-comparison correction when strata are tested jointly.
   `cr_version`. No threshold, sample, cascade, or metric changed; the
   annotation split still has not been touched by the extractor. Rationale
   in `docs/decision-journal.md` (2026-08-08).
-- **Actual result:** _pending._
+- **Secondary metric added 2026-08-08, after the first dev run, before the
+  annotation split was touched:** citations are also scored on
+  `(ruling_id, rule_family)`, where `rule_family` drops the trailing subrule
+  letter (`702.33d` → `702.33`). The first dev run showed the extractor
+  routinely naming the right rule at the wrong depth — gold `608.2b`, predicted
+  `608.2` — which exact match counts twice against, as a false positive and a
+  false negative. `(ruling_id, rule_number)` **remains the primary metric and
+  the one the E-003 threshold of 0.75 applies to**; the family score is
+  reported beside it as diagnosis, never in place of it. Loosening the primary
+  key after seeing that the errors are depth errors would be fitting the ruler
+  to the result.
+- **Prompt-iteration budget, fixed 2026-08-08 (before any run):** citation
+  extraction gets at most 3 documented prompt iterations, judged against a
+  **15-ruling subset of the dev split** — 5 per dev stratum, chosen with seed
+  `20260808` and frozen in `data/golden/dev_citation_subset.json`. The dev split
+  carries verified `mentions` for all 30 rulings, so linking iteration is
+  unaffected. The subset was drawn before any citation was annotated on it, and
+  the annotation split remains untouched. Deliberately a subset, not the whole
+  dev split: enough signal to tell two prompts apart, at half the manual cost.
+- **Adjudication rule, pre-registered 2026-08-08 (before any run, no results
+  seen):** after the annotation-split run, the annotator may inspect the rows
+  where the system and the gold disagree. A gold label may be changed **only**
+  when it is wrong on its own terms under `docs/extraction-annotation-guide.md`
+  — the rule number does not exist, does not govern the question the ruling
+  answers, or contradicts the annotator's own note. It may never be changed
+  because the model disagrees with it, and never to move a metric. Every change
+  is logged in `docs/decision-journal.md` with ruling id, before, after, and
+  reason. `docs/evaluation.md` reports **both** the pre-adjudication and the
+  post-adjudication figures, and the pre-adjudication figure is the headline.
+  If adjudication would touch more than **10% of the gold**, the gold is not
+  reliable enough to measure against: the run is void and the sample is
+  re-annotated rather than patched.
+- **Known limitation, recorded 2026-08-08:** intra-annotator agreement has not
+  been measured — the annotator has not blind-re-annotated a subsample. The
+  reliability of the gold is therefore unquantified and the attainable ceiling
+  on F1 is unknown. `docs/evaluation.md` must state this beside the results.
+  Deferred by the author, not overlooked.
+- **Iterations spent (dev only, 2026-08-08):** 3 of 3. (1) removed the "cite the
+  parent you are sure of" fallback: 0.054 → 0.118. (2) dropped the keyword
+  directory and added three-step reasoning: 0.118 → 0.000. (3) restored the
+  directory, kept the reasoning: **0.167 [0.000, 0.333]** primary, 0.312
+  [0.121, 0.529] family. Best configuration: prompt `v3` with the keyword
+  directory. Linking unchanged throughout at 0.706 [0.444, 0.868].
+- **Gate G3, decided 2026-08-08 on the dev split:** citation F1 0.167 after three
+  documented iterations is below the 0.5 infeasibility line, so the registered
+  rule applies — reduce the schema and report the negative result. The
+  annotation-split run still happens, to report that negative with the sample
+  and intervals it was registered for, and to measure linking.
+- **Amendment 2026-08-09 (dev only; annotation split still untouched):** two
+  defects found while diagnosing linking. (1) `LlmClient` set no `temperature`,
+  so no run was reproducible — the same configuration scored citation F1 0.167
+  and 0.114 on consecutive runs, a spread the size of the iteration effects.
+  Temperature is now pinned to 0 and **the three prompt iterations are retired
+  as unattributable**; the reproducible figure for the best configuration is
+  citation F1 **0.057 [0.000, 0.176]** primary, **0.250 [0.067, 0.437]** family.
+  G3's infeasibility call stands and is firmer. (2) Linker cascade v1 → **v2**:
+  a match strictly inside a longer occurrence of the host card's name is
+  dropped ("Legion" inside "Kemba's Legion"), lifting linking F1 to **0.727
+  [0.476, 0.889]**, tp=12 fp=6 fn=3. Broader forms of the rule, and a
+  type/keyword stoplist, were measured against the dev gold and rejected — both
+  cost as many true positives as they won. The annotation-split run will use
+  cascade v2, prompt v3 with the keyword directory, temperature 0.
+- **Actual result:** _pending — annotation split not yet run._

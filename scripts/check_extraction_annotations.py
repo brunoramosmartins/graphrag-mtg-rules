@@ -101,6 +101,11 @@ def golden_row(row: dict) -> dict:
             for m in row.get("mentions", [])
         ],
         "cited_rules": [_golden_citation(c) for c in row.get("cited_rules", [])],
+        # Without this flag an empty `cited_rules` is ambiguous: it could mean
+        # "the annotator read this ruling and no rule governs it" or "nobody has
+        # looked yet". Scoring the second as gold would turn every citation the
+        # extractor produces there into a false positive.
+        "citations_reviewed": bool(row.get("citations_reviewed")),
         "notes": row.get("notes", ""),
         "annotator": row.get("annotator", ""),
         "verified": True,

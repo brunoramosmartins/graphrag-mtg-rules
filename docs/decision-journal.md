@@ -90,6 +90,118 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — The dev iterations were run at a sampling temperature; pinned to 0
+
+`LlmClient` never set `temperature`, so both providers sampled at their own
+default and no run was reproducible. It surfaced by accident: the *same*
+configuration, re-run while diagnosing linking, scored citation F1 **0.167 and
+then 0.114** — a spread as wide as the differences between the three prompt
+iterations it was supposed to be measuring. With 15 citation-annotated dev
+rulings, run-to-run noise and treatment effect are the same size.
+
+Temperature is now pinned to 0 by default. Re-measured there, the best
+configuration scores citation F1 **0.057 [0.000, 0.176]** primary and
+**0.250 [0.067, 0.437]** family — below the 0.167 that iteration 3 appeared to
+reach. The 0.167 was a favourable sample, not an improvement.
+
+This does not rescue the iteration series; it retires it. The ordering
+0.054 → 0.118 → 0.000 → 0.167 cannot be attributed to the prompt changes, and
+the honest summary is that no prompt iteration was shown to help. It does not
+change gate G3 either — every figure is far below the 0.5 infeasibility line,
+and the reproducible one is the lowest of them. If anything the conclusion is
+firmer than when it was made.
+
+Linking, meanwhile, improved on a deterministic fix. A match sitting inside a
+longer occurrence of the host card's own name — "Legion" inside "Kemba's
+Legion" — is a tokenization error the greedy scan should have consumed, and
+suppressing it took one false positive with no true positive lost: F1 **0.706 →
+0.727 [0.476, 0.889]**, tp=12 fp=6 fn=3. Still below the 0.9 threshold.
+
+Two broader versions of that rule were built, measured and rejected, both
+because the annotations contradicted them. Suppressing any surface that is a
+substring of the host name would drop "The Ring" on the host *Call of the
+Ring*; suppressing any surface that *prefixes* a host face would drop "Brutal
+Cathar" and "Moonrage Brute" on the host *Brutal Cathar // Moonrage Brute*.
+Both are gold mentions. The measured attempt cost two true positives to win
+two, F1 0.706 → 0.690, and was cut back to the narrow form.
+
+A third idea died the same way. Four of the seven linking false positives are
+game vocabulary that is also a card name — *Frog*, *Vehicle*, *Max speed*, *X* —
+and a type/keyword stoplist would remove them. But two of the three false
+negatives are the same shape — *Shapeshifter*, *The Ring* — and the gold calls
+those genuine mentions. The trade is symmetric, so the class is not separable
+deterministically and no stoplist was written.
+
+## 2026-08-08 — E-003 iterations 2–3 and the G3 decision: citations are infeasible at target
+
+Iteration 2 dropped the keyword rule directory from the citation grounding and
+added a three-step instruction (name the concept, pick the chapter, then the
+rule). It made things worse — primary F1 **0.118 → 0.000** — while doing exactly
+what it was designed to do: the chapter collapse ended, predictions spreading
+over 608, 702, 704, 701, 612, 603 instead of piling onto 702 and 608. The
+directory was anchoring correct answers, not merely biasing; removing it spread
+the errors instead of fixing them.
+
+That iteration bundled two changes, which was an experimental-hygiene mistake:
+with both moving at once, neither was attributable. Iteration 3 isolated them by
+restoring the directory and keeping the three-step instruction, and it is the
+best configuration measured: primary F1 **0.167 [0.000, 0.333]**, family F1
+**0.312 [0.121, 0.529]** — the first interval in this series that excludes zero.
+So the instruction helped (0.118 → 0.167 with the directory held constant) and
+the directory removal was the whole of the damage.
+
+**Gate G3 fires on the pre-registered rule.** Citation F1 is 0.167 after three
+documented prompt iterations, against a 0.5 infeasibility line and a 0.75 pass
+threshold: `CITES_RULE` extraction by a single grounded LLM call does not reach
+the target, and E-003's decision rule says reduce the schema and report the
+negative result rather than keep tuning. This was predicted at registration —
+"`CITES_RULE` F1 predicted below linking F1" — though not this far below.
+
+Linking is untouched by every citation change, as it should be: F1 **0.706
+[0.444, 0.868]** across all four runs, below the 0.9 threshold, with the false
+positives in the homonym (4) and multiword (3) strata. It is neither trivial nor
+infeasible under G3, and it has had no iterations of its own.
+
+The obvious remedy for citations — retrieving candidate rules for the model, as
+`cite_search.py` does for the annotator — is deliberately **not** attempted here.
+That tool helped build the gold, so feeding it to the system under measurement
+would make agreement a family resemblance rather than a result. It is also an
+architecture change, not a prompt change, and so outside E-003's registered
+configuration. Registered as a future experiment instead.
+
+All figures above are dev-split, 15 citation-annotated rulings, intervals wide
+and mostly including zero. They are diagnosis and a gate decision, not results.
+The annotation split has still never been touched.
+
+## 2026-08-08 — E-003 prompt iteration 1, on dev: the depth hypothesis was mostly wrong
+
+First dev run (prompt v1, grounded, 15 citation-annotated rulings) gave a
+primary citation F1 of **0.054** — 1 true positive against 16 false positives
+and 19 false negatives. Inspecting the pairs suggested a depth problem: gold
+`608.2b` against predicted `608.2`, gold `702.33d` against `702.33`. The prompt
+contained the licence for exactly that — *"If unsure between two numbers, cite
+the parent rule you are sure of, with lower confidence."* A parent citation is
+not a safer answer, it is a different one, so the instruction converted possible
+hits into certain misses. Iteration 1 (`EXTRACTOR_VERSION` v1 → v2) replaced it:
+pick the likelier subrule and lower the confidence instead of retreating.
+
+Result: primary F1 **0.054 → 0.118**, family F1 **0.207**. The change helped and
+the diagnosis was still mostly wrong. If depth were the main failure, the family
+score would be high and the gap between the two would carry the error; instead
+the family score is also near the floor, with 14 false negatives. The extractor
+is not naming the right rule at the wrong depth — it is not finding the right
+rule at all, and it collapses onto chapters 702 and 608 while the gold spreads
+across 509, 707, 616, 614. Recorded because the wrong hypothesis is the useful
+part: the remaining budget should not be spent on depth.
+
+Linking is unchanged by the citation prompt, as expected: F1 **0.706
+[0.444, 0.868]**, tp=12 fp=7 fn=3, with the false positives concentrated in the
+homonym (4) and multiword (3) strata — the direction E-003 predicted, at a level
+below the 0.9 threshold.
+
+All figures are dev-split diagnosis over 15 rulings with intervals that include
+zero. They are not results; the annotation split remains untouched.
+
 ## 2026-08-08 — Scryfall bulk ETL: read three formats rather than force a re-download
 
 Scryfall retired `download_uri` (one uncompressed JSON array) in favour of
