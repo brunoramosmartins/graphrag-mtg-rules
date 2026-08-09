@@ -29,6 +29,7 @@ template added later cannot quietly omit either.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 # Clauses that write. Checked against every template by the test suite;
@@ -65,6 +66,37 @@ def _bounded(cypher: str) -> str:
 
 
 @dataclass(frozen=True)
+class Emit:
+    """How one returned column becomes citable evidence.
+
+    Declared beside the query on purpose. A ``RETURN`` clause edited
+    without its mapping is a silent break — the traversal still runs, the
+    rows still arrive, and the evidence quietly stops appearing. Keeping
+    both in one file lets a test assert that every column named here is
+    one the query actually returns.
+
+    Attributes:
+        kind: Evidence kind (``rule``, ``ruling``, ``card``, ...).
+        key: Column holding the citation handle. Inside ``collection``,
+            the key of each map.
+        text: Column holding the text. Same rule inside a collection.
+        path: Citation path, formatted with the row (and the collected
+            item). This is the project's differentiator, so it is data
+            rather than something assembled at the call site.
+        collection: When set, the column holds a list of maps and one
+            piece of evidence is produced per entry.
+        distance: Hops from what the question named. Drives eviction.
+    """
+
+    kind: str
+    key: str
+    text: str
+    path: str
+    collection: str = ""
+    distance: int = 0
+
+
+@dataclass(frozen=True)
 class Template:
     """One named traversal, its parameters, and what it is for.
 
@@ -74,6 +106,7 @@ class Template:
         params: Required parameter names, excluding ``limit``.
         strata: Golden-set strata this traversal is meant to answer.
         description: What the subgraph it returns means.
+        emits: How its rows become evidence.
     """
 
     name: str
@@ -81,6 +114,16 @@ class Template:
     params: tuple[str, ...]
     strata: tuple[str, ...]
     description: str
+    emits: tuple[Emit, ...] = ()
+
+    def columns(self) -> set[str]:
+        """Column names this query returns, read from its ``AS`` aliases.
+
+        Sliced from ``RETURN`` onward, so an ``UNWIND ... AS wanted``
+        earlier in the query is not mistaken for a returned column.
+        """
+        _, _, tail = self.cypher.partition("RETURN")
+        return set(re.findall(r"\bAS\s+([a-z_]+)", tail, re.IGNORECASE))
 
 
 KEYWORD_DEFINITION = _bounded("""
@@ -117,6 +160,7 @@ MATCH (k)-[:DEFINED_BY]->(r:Rule)
 OPTIONAL MATCH (r)-[:HAS_SUBRULE*MAXDEPTH]->(sub:Rule)
 RETURN c.name AS card,
        k.display_name AS keyword,
+       k.glossary_text AS keyword_glossary,
        r.number AS rule_number,
        r.text AS rule_text,
        collect(DISTINCT {number: sub.number, text: sub.text}) AS subrules
@@ -136,20 +180,38 @@ ORDER BY rl.published_at DESC
 LIMIT $limit
 """
 
+# Staged with WITH on purpose, and the staging is not style. The obvious
+# form of the keyword join —
+#     OPTIONAL MATCH (a)-[:HAS_KEYWORD]->(k:Keyword)<-[:HAS_KEYWORD]-(b)
+# — exhausts the server's memory pool on the loaded graph, even when both
+# cards have *no* keywords at all: the planner expands through the Keyword
+# hub, where `flying` alone carries thousands of edges. `$limit` cannot
+# save it, because the blowup happens before aggregation. Collecting after
+# each OPTIONAL MATCH keeps every intermediate result bounded, and
+# intersecting the two keyword sets replaces the two-sided pattern
+# entirely. This is the roadmap's registered "interaction subgraphs
+# explode" risk, found by running the query rather than by reading it.
 CARD_INTERACTION = """
 MATCH (a:Card {normalized_name: $left})
 MATCH (b:Card {normalized_name: $right})
 OPTIONAL MATCH (a)-[:HAS_RULING]->(shared:Ruling)-[:MENTIONS]->(b)
+WITH a, b, collect(DISTINCT {ruling_id: shared.ruling_id, text: shared.text}) AS shared_left
 OPTIONAL MATCH (b)-[:HAS_RULING]->(mirrored:Ruling)-[:MENTIONS]->(a)
-OPTIONAL MATCH (a)-[:HAS_KEYWORD]->(common:Keyword)<-[:HAS_KEYWORD]-(b)
+WITH a, b, shared_left,
+     collect(DISTINCT {ruling_id: mirrored.ruling_id, text: mirrored.text}) AS shared_right
+OPTIONAL MATCH (a)-[:HAS_KEYWORD]->(mine:Keyword)
+WITH a, b, shared_left, shared_right, collect(DISTINCT mine) AS a_keywords
+OPTIONAL MATCH (b)-[:HAS_KEYWORD]->(common:Keyword) WHERE common IN a_keywords
 OPTIONAL MATCH (common)-[:DEFINED_BY]->(shared_rule:Rule)
+WITH a, b, shared_left, shared_right,
+     collect(DISTINCT {keyword: common.display_name, rule: shared_rule.number}) AS shared_kw
 RETURN a.name AS left_card,
        b.name AS right_card,
        a.oracle_text AS left_text,
        b.oracle_text AS right_text,
-       collect(DISTINCT {ruling_id: shared.ruling_id, text: shared.text}) AS left_rulings,
-       collect(DISTINCT {ruling_id: mirrored.ruling_id, text: mirrored.text}) AS right_rulings,
-       collect(DISTINCT {keyword: common.display_name, rule: shared_rule.number}) AS shared_keywords
+       shared_left AS left_rulings,
+       shared_right AS right_rulings,
+       shared_kw AS shared_keywords
 LIMIT $limit
 """
 
@@ -181,6 +243,14 @@ TEMPLATES: tuple[Template, ...] = (
         params=("keyword",),
         strata=("definition_1hop",),
         description="A keyword, its glossary entry, its governing rule and that rule's subrules.",
+        emits=(
+            Emit("keyword", "keyword", "glossary", "(:Keyword {{{keyword}}})"),
+            Emit("rule", "rule_number", "rule_text",
+                 "(:Keyword {{{keyword}}})-[:DEFINED_BY]->(:Rule {{{rule_number}}})", distance=1),
+            Emit("rule", "number", "text",
+                 "(:Rule {{{rule_number}}})-[:HAS_SUBRULE*]->(:Rule)",
+                 collection="subrules", distance=2),
+        ),
     ),
     Template(
         name="card_legality",
@@ -188,6 +258,10 @@ TEMPLATES: tuple[Template, ...] = (
         params=("normalized_name", "format"),
         strata=("legality_1hop",),
         description="A card's legality status per format; $format may be null for all of them.",
+        emits=(
+            Emit("legality", "format", "status",
+                 "(:Card {{{card}}})-[:HAS_LEGALITY]->(:Format {{{format}}})"),
+        ),
     ),
     Template(
         name="deck_legality",
@@ -197,6 +271,10 @@ TEMPLATES: tuple[Template, ...] = (
         description=(
             "The cards in a list that are NOT legal in a format. Returns the violations, "
             "so an empty result is the legal answer and every row is a citable reason."
+        ),
+        emits=(
+            Emit("legality", "card", "status",
+                 "(:Card {{{card}}})-[:HAS_LEGALITY {{{status}}}]->(:Format {{{format}}})"),
         ),
     ),
     Template(
@@ -208,6 +286,15 @@ TEMPLATES: tuple[Template, ...] = (
             "Card -> its keywords -> the rules defining them -> subrules. The seed path "
             "measured by scripts/reachability.py; empty for a card with no keywords."
         ),
+        emits=(
+            Emit("keyword", "keyword", "keyword_glossary",
+                 "(:Card {{{card}}})-[:HAS_KEYWORD]->(:Keyword {{{keyword}}})", distance=1),
+            Emit("rule", "rule_number", "rule_text",
+                 "(:Keyword {{{keyword}}})-[:DEFINED_BY]->(:Rule {{{rule_number}}})", distance=2),
+            Emit("rule", "number", "text",
+                 "(:Rule {{{rule_number}}})-[:HAS_SUBRULE*]->(:Rule)",
+                 collection="subrules", distance=3),
+        ),
     ),
     Template(
         name="card_rulings",
@@ -217,6 +304,12 @@ TEMPLATES: tuple[Template, ...] = (
         description=(
             "A card's official rulings, newest first, with any explicitly cited rule. "
             "Since ADR-006 the citation is present only when the ruling states a number."
+        ),
+        emits=(
+            Emit("ruling", "ruling_id", "ruling_text",
+                 "(:Card {{{card}}})-[:HAS_RULING]->(:Ruling)", distance=1),
+            Emit("rule", "number", "text",
+                 "(:Ruling)-[:CITES_RULE]->(:Rule)", collection="cited_rules", distance=2),
         ),
     ),
     Template(
@@ -228,6 +321,19 @@ TEMPLATES: tuple[Template, ...] = (
             "Two cards, their oracle text, rulings of one that mention the other in "
             "either direction, and keywords they share with the rules defining them."
         ),
+        emits=(
+            Emit("card", "left_card", "left_text", "(:Card {{{left_card}}})"),
+            Emit("card", "right_card", "right_text", "(:Card {{{right_card}}})"),
+            Emit("ruling", "ruling_id", "text",
+                 "(:Card {{{left_card}}})-[:HAS_RULING]->(:Ruling)-[:MENTIONS]->(:Card {{{right_card}}})",
+                 collection="left_rulings", distance=1),
+            Emit("ruling", "ruling_id", "text",
+                 "(:Card {{{right_card}}})-[:HAS_RULING]->(:Ruling)-[:MENTIONS]->(:Card {{{left_card}}})",
+                 collection="right_rulings", distance=1),
+            Emit("rule", "rule", "keyword",
+                 "(:Card {{{left_card}}})-[:HAS_KEYWORD]->(:Keyword)<-[:HAS_KEYWORD]-(:Card {{{right_card}}})",
+                 collection="shared_keywords", distance=2),
+        ),
     ),
     Template(
         name="rule_subtree",
@@ -235,6 +341,12 @@ TEMPLATES: tuple[Template, ...] = (
         params=("rule_number",),
         strata=("keyword_rule_2hop", "interaction_multihop"),
         description="A rule with its descendants — the chain a topic's subrules form.",
+        emits=(
+            Emit("rule", "rule_number", "rule_text", "(:Rule {{{rule_number}}})"),
+            Emit("rule", "number", "text",
+                 "(:Rule {{{rule_number}}})-[:HAS_SUBRULE*]->(:Rule)",
+                 collection="subrules", distance=1),
+        ),
     ),
     Template(
         name="rule_neighbourhood",
@@ -244,6 +356,15 @@ TEMPLATES: tuple[Template, ...] = (
         description=(
             "A rule plus its cross-references in both directions. One hop only: "
             "reachability showed a k=6 ball holding 1515 of 3308 rules."
+        ),
+        emits=(
+            Emit("rule", "rule_number", "rule_text", "(:Rule {{{rule_number}}})"),
+            Emit("rule", "number", "text",
+                 "(:Rule {{{rule_number}}})-[:REFERENCES]->(:Rule)",
+                 collection="references_out", distance=1),
+            Emit("rule", "number", "text",
+                 "(:Rule)-[:REFERENCES]->(:Rule {{{rule_number}}})",
+                 collection="references_in", distance=1),
         ),
     ),
 )

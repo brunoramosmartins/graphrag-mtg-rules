@@ -90,6 +90,48 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — Valid Cypher that kills the server, found by running it
+
+Seven of the eight template traversals ran against the loaded graph on
+the first try. The eighth, `card_interaction`, returned
+`Neo.TransientError.General.MemoryPoolOutOfMemoryError`.
+
+Isolating clause by clause put it on one line:
+
+```
+OPTIONAL MATCH (a)-[:HAS_KEYWORD]->(k:Keyword)<-[:HAS_KEYWORD]-(b)
+```
+
+The surprise is that it fails **regardless of how many keywords the two
+cards have** — *Humility* and *Opalescence* have none between them, and it
+still exhausts the pool. The planner expands through the `Keyword` hub,
+where `flying` alone carries thousands of edges. And `$limit` cannot save
+it: the blowup happens before aggregation, so the bound is applied to a
+result set that was never produced.
+
+The fix stages each `OPTIONAL MATCH` behind a `WITH ... collect(...)` and
+replaces the two-sided pattern with an intersection of the two keyword
+sets. Both pairs now return in ~0.5–0.7 s, and the full set of eight runs
+between 9 ms and 685 ms, comfortably inside the phase's 2 s p95 criterion.
+
+This is the roadmap's registered risk — "interaction subgraphs explode
+(keywords and rules that are very connected)" — arriving exactly where it
+was predicted. What is worth recording is that **no amount of reading
+would have caught it.** The query is valid, its bound is present, and the
+review-level invariants the unit tests enforce (read-only, `$limit`,
+bounded expansion, declared parameters) all passed on the version that
+killed the server. Only execution against a real planner on real
+cardinalities said otherwise, which is the argument for integration
+fixtures rather than a mocked driver.
+
+Two smaller findings from the same run, both now pinned by tests:
+`collect(DISTINCT {number: sub.number})` over a missed `OPTIONAL MATCH`
+yields `[{number: null}]` rather than `[]`, which would have become
+citations reading `rule:None`; and the row-to-evidence mapping is now
+declared beside each query as `Emit` entries, with a test asserting every
+column it names is one the query returns — so a `RETURN` edited without
+its mapping fails loudly instead of quietly emitting nothing.
+
 ## 2026-08-09 — The split caught me within the hour, and the dev data says no
 
 Building ADR-007's text-retrieval half, three golden-set questions were
