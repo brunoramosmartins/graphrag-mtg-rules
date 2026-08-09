@@ -36,6 +36,40 @@ multiple-comparison correction when strata are tested jointly.
   the graph.
 - **Expected result:** graph ≫ vector on `fail`, graph > vector on
   `lose`, no significant difference on `tie`.
+- **Amendment 2026-08-09 (before Phase 4 writes a single traversal, no
+  retrieval result seen) — development split.** Phase 4 would otherwise write
+  its templates against the same 77 questions E-001 measures on, which is
+  fitting the retriever to the test set. **20 questions** (seed `20260809`,
+  stratified proportionally) are frozen as the Phase 4 development subset in
+  `data/golden/phase4_dev_ids.json`; the remaining **57** are the evaluation
+  set and are touched once, in Phase 6. `scripts/split_golden.py` refuses to
+  redraw. Consequence stated rather than hidden: `keyword_rule_2hop` holds 3
+  questions in total, so the split leaves 1 dev and 2 evaluation and **no
+  per-stratum claim about it is reportable from either side**.
+- **Amendment 2026-08-09 (same, before any run) — three arms.** ADR-006
+  removed the ruling→rule bridge and ADR-007 answers with a hybrid, so the
+  "graph pipeline" of the original design no longer names one thing. A hybrid
+  measured only against the vector baseline could win entirely on its text
+  component — the Project 1 pipeline wearing a different hat — and be
+  presented as evidence about the graph. E-001 therefore runs:
+  | arm | what it is | what it tests |
+  |---|---|---|
+  | **A** | vector baseline (Project 1 pipeline, same corpus) | control |
+  | **B** | graph-only traversal | the thesis in `docs/hypothesis.md` |
+  | **C** | hybrid (ADR-007) | the shipped system |
+  **B vs A is the registered prediction above and is not renegotiated.**
+  C vs A is the product; C vs B isolates the text contribution. Three arms
+  across five strata require the multiple-comparison correction this registry
+  already mandates, and paired tests over the shared question set.
+- **Interim evidence recorded 2026-08-09, no decision taken from it:**
+  `scripts/reachability.py` measured deterministic reachability of gold rules
+  from gold entities — 100% at k=2 on `definition_1hop` and
+  `keyword_rule_2hop`; 38% only at k=6 on `interaction_multihop`, where the
+  ball holds 1515 of 3308 rules, and 15 of those 30 questions produce no seed
+  at all (their cards have no keyword abilities). This makes prediction 2
+  look unlikely **for arm B**. The prediction stands as written and is scored
+  as written in Phase 6; it is not amended to match evidence that arrived
+  after it.
 - **Actual result:** _pending (Phase 8)._
 
 ## E-002 — MetaQA calibration

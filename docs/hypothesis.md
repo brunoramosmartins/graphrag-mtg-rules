@@ -59,3 +59,37 @@ result, not a failure to hide — the limitations section is mandatory.
 
 See `docs/evaluation.md` (source of truth, authored in Phase 6) for the
 full metric definitions.
+
+## Interim evidence, 2026-08-09 — nothing above is edited
+
+Everything above stays as declared. This section records evidence that
+arrived in Phase 4 and bears on prediction 2, because hiding it until
+Phase 6 would be worse than reporting it early, and rewriting the
+prediction to match it would be worse than either.
+
+`scripts/reachability.py` measured whether the deterministic graph can
+reach each question's gold CR rules from its gold entities, expanding k
+hops through `REFERENCES` plus the CR tree. On `definition_1hop` and
+`keyword_rule_2hop` it reaches **100%** at k=2 inside ~200 rules. On
+`interaction_multihop` it reaches 38% only at k=6, where the ball holds
+1515 of 3308 rules — and **15 of those 30 questions produce no seed at
+all**, because their cards have no keyword abilities (*Humility*,
+*Opalescence*).
+
+**Prediction 2** — graph Path Recall ≫ vector passage coverage on
+multi-hop interaction — therefore looks unlikely **for the graph-only
+arm**. It is left standing and will be scored as written in Phase 6.
+
+The architectural response is [ADR-007](adr/adr-007-hybrid-retrieval-graph-entities-text-rules.md):
+the graph supplies entities and the structural strata, text retrieval
+supplies rules where the graph cannot seed. That changes what the system
+is, so E-001 now runs three arms — vector (A), graph-only (B), hybrid (C)
+— because a hybrid measured only against vector could win on its text
+component alone and prove nothing about the graph. **B vs A is the
+prediction above.** C vs B is what the text component adds.
+
+The claim this project ends up making is narrower than the one at the
+top of this file and better supported: the graph is at ceiling where the
+question's entities carry structure, and structurally incapable where
+they do not. What connects *Humility* to the layer system is what its
+text means — inference, which E-003 measured at F1 0.125.

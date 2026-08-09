@@ -90,6 +90,44 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — Hybrid retrieval adopted, and the golden set split before any template
+
+Option 2 taken (ADR-007): the graph resolves entities and answers the
+structural strata, text retrieval reaches CR rules where the graph cannot
+seed. Forced by the reachability measurement rather than chosen — option 1
+has no material for the 15 `interaction_multihop` questions whose cards
+carry no keyword, and option 3 is the inference E-003 measured at 0.125.
+
+**The confound this creates is the part worth recording.** E-001 was
+designed as graph vs. vector. A hybrid arm measured only against the
+vector baseline could win entirely on its text component — which *is* the
+Project 1 pipeline — and be presented as evidence about the graph. E-001
+now runs three arms: vector (A), graph-only (B), hybrid (C). B vs A is
+the registered prediction and is not renegotiated; C vs B is what the
+text adds. Without the third arm the hybrid's number would be
+uninterpretable, and the temptation would be to report it anyway.
+
+**The golden set is split before a single traversal exists.** Twenty
+questions (seed `20260809`, stratified) are frozen as the Phase 4
+development subset; the other 57 are E-001's evaluation set. This was a
+pre-existing hole in the roadmap — Phase 4 was to build templates against
+the questions Phase 6 scores — and it is only cheap to fix before the
+first template. `scripts/split_golden.py` refuses to redraw, because a
+split that can be redrawn after the fact is not a split.
+
+Cost accepted and written down: `keyword_rule_2hop` has 3 questions, so
+the split leaves 1 dev and 2 evaluation, and no per-stratum claim about
+it is reportable from either side. The alternative — leaving all 3 in
+evaluation — would mean writing that stratum's template with nothing to
+develop against, trading a reporting limitation for a contamination risk.
+The limitation is the better trade.
+
+`docs/hypothesis.md` was **not** edited. Its a-priori predictions stand;
+a dated section records the reachability evidence and says plainly that
+prediction 2 now looks unlikely for arm B. Recording evidence against a
+prediction is not the same as editing the prediction, and the difference
+is the whole point.
+
 ## 2026-08-09 — Measured the bridge instead of arguing it; implicit cross-refs dropped
 
 Two Phase 4 decisions, one of them correcting me.

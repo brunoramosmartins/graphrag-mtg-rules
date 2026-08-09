@@ -11,3 +11,4 @@ and its consequences. Status values: Proposed · Accepted · Superseded.
 | [004](./adr-004-card-name-linking-strategy.md) | Card-name linking strategy (cascade) | Accepted |
 | [005](./adr-005-templates-first-text2cypher-second.md) | Templates first, text2cypher second | Accepted |
 | [006](./adr-006-cites-rule-reduced-to-explicit.md) | `CITES_RULE` reduced to explicit citations | Accepted |
+| [007](./adr-007-hybrid-retrieval-graph-entities-text-rules.md) | Hybrid retrieval: graph supplies entities, text supplies rules | Accepted |
