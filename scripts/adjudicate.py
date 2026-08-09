@@ -43,7 +43,11 @@ from datetime import date
 from pathlib import Path
 
 from graphrag_mtg.etl.cr_parser import CR_TXT_PATH, parse_cr
-from graphrag_mtg.evaluation.metrics import cluster_proportion_ci
+from graphrag_mtg.evaluation.metrics import (
+    cluster_proportion_ci,
+    rule_family,
+    rule_of_three_upper,
+)
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -280,6 +284,26 @@ def cmd_judge(args: argparse.Namespace) -> int:
     return 0
 
 
+def is_depth_only(case: dict, gold: set[str], predicted: set[str]) -> bool:
+    """Whether this disagreement is a wrong *leaf* rather than a wrong rule.
+
+    True when the other side cited a different member of the same rule
+    family — `608.2` against gold `608.2b`, or `704.5g` against gold
+    `704.5d`. Structural, not semantic: sibling subrules can be genuinely
+    different rules (704.5d and 704.5g are different state-based actions),
+    so this flags a *type* of disagreement, never a verdict.
+
+    It is worth counting because E-003a found this to be the annotator's
+    own most common way of disagreeing with themself. A judge who calls it
+    model error here, having produced it there, is applying two standards —
+    and that asymmetry should be visible in the report rather than argued
+    about later.
+    """
+    other = predicted if case["kind"] == "fn" else gold
+    family = rule_family(case["rule_number"])
+    return case["rule_number"] not in other and family in {rule_family(n) for n in other}
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     """Four proportions with intervals, clustered by ruling."""
     if not args.sample.exists():
@@ -303,11 +327,26 @@ def cmd_report(args: argparse.Namespace) -> int:
     print(f"E-003b — composition of {total} sampled disagreements "
           f"(of {meta['population']}), clustered over {len(clusters)} rulings.")
     print(f"  {'bucket':<18} {'n':>4}  proportion")
+    unanimous = None
     for verdict in VERDICTS:
         flags = [[row["verdict"] == verdict for row in cluster] for cluster in clusters]
         interval = cluster_proportion_ci(flags)
         count = sum(1 for row in judged.values() if row["verdict"] == verdict)
         print(f"  {verdict:<18} {count:>4}  {interval}")
+        if count == total:
+            unanimous = verdict
+
+    if unanimous is not None:
+        bound = rule_of_three_upper(len(clusters))
+        print(
+            f"\n  All {total} verdicts are `{unanimous}`. The intervals above are\n"
+            f"  DEGENERATE, not certain: a percentile bootstrap resamples the observed\n"
+            f"  values, and a sample with no variation resamples to itself. Read the\n"
+            f"  rule-of-three bound instead — over {len(clusters)} clusters, everything\n"
+            f"  other than `{unanimous}` is at most {bound:.3f} (95%). Unanimity is also\n"
+            f"  the result a judge scoring their OWN work would produce if lenient, so\n"
+            f"  it is weaker evidence than the same figure from an independent judge."
+        )
 
     for kind, label in (("fp", "false positives"), ("fn", "false negatives")):
         subset = [row for row in judged.values() if row["kind"] == kind]
@@ -316,6 +355,30 @@ def cmd_report(args: argparse.Namespace) -> int:
             for verdict in VERDICTS:
                 n = sum(1 for row in subset if row["verdict"] == verdict)
                 print(f"    {verdict:<18} {n:>4}")
+
+    rows = read_rows(args.draft)
+    gold = gold_citations(rows, meta["split"])
+    predicted = predicted_citations(args.gated, set(gold))
+    depth = [
+        case
+        for case in meta["cases"]
+        if case["case"] in judged
+        and is_depth_only(case, gold[case["ruling_id"]], predicted[case["ruling_id"]])
+    ]
+    if depth:
+        print(f"\n  {len(depth)} of {total} judged cases are a wrong LEAF, not a wrong rule:")
+        for case in depth:
+            print(
+                f"    case {case['case']:>3} [{case['kind']}] {case['rule_number']:<10} "
+                f"-> {judged[case['case']]['verdict']}"
+            )
+        print(
+            "  E-003a found this to be the annotator's own commonest disagreement with\n"
+            "  themself (3 of 6). Verdicts calling it model error here are not thereby\n"
+            "  wrong — sibling subrules can be genuinely different rules — but the\n"
+            "  asymmetry bounds how far this sample can be pushed. The family score in\n"
+            "  eval_extraction.py already prices depth leniency in full."
+        )
 
     wrong = sum(1 for row in judged.values() if row["verdict"] == "gold_wrong")
     print(

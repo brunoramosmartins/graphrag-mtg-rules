@@ -245,4 +245,49 @@ multiple-comparison correction when strata are tested jointly.
   disagreeing with themself, not about a model disagreeing with a person, and
   in any case a prediction edited after seeing adjacent data is not a
   prediction. It stands as written and will be scored as written.
-- **Actual result:** _pending._
+- **Actual result (2026-08-09, 40 cases over 33 rulings, seed `20260810`):**
+  `gold_right` **40/40**; `both_defensible` 0; `gold_wrong` 0; `unclear` 0.
+  Composition by direction: 16 false positives and 24 false negatives, all
+  `gold_right`. **The registered prediction is falsified** — `both_defensible`
+  was predicted to be the largest bucket after `gold_right` and is empty.
+  - **Interval:** the cluster bootstrap prints `[1.000, 1.000]`, which is
+    degenerate, not certain — a percentile bootstrap on a sample with no
+    variation resamples to itself. The reportable bound is rule-of-three over
+    33 clusters: everything other than `gold_right` is at most **0.091** (95%).
+    `report` now detects unanimity and prints this instead of the false
+    interval; `metrics.rule_of_three_upper` is the shared implementation.
+  - **What it settles:** the citation gap is model error. It is not a metric
+    artifact (`both_defensible` = 0) and not gold error (`gold_wrong` = 0, so
+    the 10% adjudication cap is not approached and no label changes). Together
+    with E-003a's ceiling of 0.815, both alternative explanations for F1 0.125
+    are now measured and excluded.
+- **Threat to validity, recorded because it is not resolved by more sampling:**
+  the judge wrote the gold. Unanimity in one's own favour is exactly what a
+  lenient self-judge produces, and it cannot be distinguished from correctness
+  by this design. A concrete asymmetry is measurable and is now printed by
+  `report`: **9 of the 40 cases are a wrong leaf rather than a wrong rule**
+  (`608.2` against gold `608.2b`, `704.5g` against gold `704.5d`/`704.5f`,
+  sibling subrules of `702.131`, `702.33`, `702.179`, `701.54`), and E-003a
+  found precisely this to be the annotator's commonest disagreement with
+  themself (3 of 6). All 9 were judged model error. That is defensible —
+  sibling subrules can be genuinely different rules — but it is one standard
+  applied to the model and another absorbed as ceiling.
+  **It is bounded and does not change the conclusion:** the family score
+  already prices depth leniency in full, and there the model reads 0.252
+  against a family ceiling of 0.902. Removing the leniency question entirely
+  still leaves the model at roughly a quarter of the attainable score. What
+  would resolve it is an independent judge, not a bigger sample; registered as
+  future work, not attempted here.
+- **Sample coverage gap:** 13 of 125 rulings produced no citation at all,
+  contributing 13 of the 267 disagreements (4.9%); none were drawn into the 40.
+  That failure mode — the extractor returning nothing — is therefore
+  unmeasured by E-003b.
+- **CR-version check (asked 2026-08-09, answered from the data):** the CR
+  upgrade did not contaminate this analysis. All 125 annotation rows carry
+  `cr_version = "August 7, 2026"`, the same release the extractor was grounded
+  on, so gold and system were scored against one document. **0 of the 267
+  disagreements cite a rule number absent from the current CR** — a
+  version-skew artifact would show up here first, and does not. Of the 4
+  citations the migration remapped, exactly one falls inside the 40 sampled
+  cases (`310.10` -> `310.11`, ruling `41f59f3c34ff`) and it was judged with
+  the current rule text on screen.

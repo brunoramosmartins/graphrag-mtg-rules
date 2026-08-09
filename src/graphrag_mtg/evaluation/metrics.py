@@ -179,6 +179,23 @@ def cluster_proportion_ci(
     )
 
 
+def rule_of_three_upper(n_clusters: int) -> float:
+    """95% upper bound on the rate of an event not seen in ``n`` clean trials.
+
+    The companion to :func:`cluster_proportion_ci`, and the reason it needs
+    one. A percentile bootstrap resamples the observed values, so a sample
+    with no variation — 40 verdicts that all came out the same way —
+    resamples to itself every time and reports ``[1.000, 1.000]``. That is
+    arithmetically correct and rhetorically false: it reads as certainty
+    when the data only ever said "not seen yet".
+
+    ``3/n`` is the standard bound for zero events in n trials. Pass the
+    number of *clusters*, not items, for the same reason the intervals
+    resample documents.
+    """
+    return 3.0 / n_clusters if n_clusters else 1.0
+
+
 @dataclass(frozen=True)
 class StratumReport:
     """P/R/F1 with CIs for one stratum (or the overall pool)."""

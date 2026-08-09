@@ -90,6 +90,60 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — E-003b: 40/40 against the model, and why that needs a caveat
+
+The 40 sampled disagreements all came back `gold_right`. The registered
+prediction — `both_defensible` the largest bucket after `gold_right` —
+is falsified, and cleanly: the bucket is empty. `gold_wrong` is also
+empty, so no label changes and the 10% cap is nowhere near.
+
+Two corrections to the reporting had to be made before the number could
+be recorded, and both are the kind that would have been embarrassing to
+leave in:
+
+1. **The interval was a lie.** A percentile bootstrap resamples observed
+   values; a sample with no variation resamples to itself and prints
+   `[1.000, 1.000]`. That reads as certainty and means "not seen yet".
+   `report` now detects unanimity and prints a rule-of-three bound
+   instead — at most 0.091 for everything other than model error, over
+   33 clusters. `metrics.rule_of_three_upper` holds the implementation
+   and the test that pins the degenerate case documents it as a trap.
+2. **The judge wrote the gold.** Unanimity in one's own favour is
+   exactly what a lenient self-judge produces, and the design cannot
+   separate that from being right. Rather than hand-wave it, the
+   asymmetry is now measured and printed: 9 of the 40 cases are a wrong
+   *leaf*, not a wrong rule (`608.2` for gold `608.2b`, `704.5g` for
+   `704.5d`/`704.5f`, siblings under `702.131`, `702.33`, `702.179`,
+   `701.54`) — and E-003a found precisely that to be the annotator's own
+   commonest way of disagreeing with themself. All 9 were judged model
+   error. One standard for the model, another absorbed as ceiling.
+
+The reason this does not sink the result is that the objection was
+already priced. The family score grants full leniency about depth by
+construction, and there the model reads 0.252 against a family ceiling
+of 0.902 — about a quarter of what is attainable. Granting every
+depth case to the model changes the size of the finding, not its sign.
+What would settle it is a second, independent judge; a bigger sample
+would only shrink the sampling error, which was never the binding
+uncertainty. Registered as future work rather than attempted.
+
+Decision: stop at 40. The rule-of-three bound of 0.091 already excludes
+both alternative explanations, and doubling the sample would move it to
+roughly 0.04 — a difference no decision depends on. Phase 3's negative
+result is now supported by three measurements instead of one: the score
+(0.125), the ceiling (0.815), and the composition (40/40 model error).
+
+Also checked, because the author asked whether the CR upgrade could have
+contaminated any of this: it could not, and the check is mechanical
+rather than argued. All 125 annotation rows carry `cr_version =
+"August 7, 2026"`, the same release the extractor was grounded on, and
+**0 of the 267 disagreements cite a rule number absent from that CR** —
+version skew would surface there first. Of the 4 citations the August
+migration remapped, one lands inside the sample (`310.10` -> `310.11`),
+judged with the current rule text on screen. Recorded because "we
+changed the corpus mid-experiment" is the kind of thing a reader should
+not have to take on trust.
+
 ## 2026-08-09 — The ceiling came back at 0.815: the gold is not the story
 
 E-003a reported the same day it was registered. Agreement F1 **0.815

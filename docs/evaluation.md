@@ -227,13 +227,33 @@ deterministic parser reaches further than expected, and LLM inference of a
   citing an additional rule without contradicting the other, and 1 is a genuine
   conflict. Choosing the leaf is the interpretive part of this task; choosing
   the area is not.
-- **What the citation gap is made of is unknown.** Exact match scores a wrong
-  rule and a differently defensible rule identically, so 0.125 is consistent
-  with several different failures. Registered as **E-003b**: a seeded sample of
-  the disagreements, classified into `gold_right` / `both_defensible` /
-  `gold_wrong` / `unclear` and reported as four proportions with intervals. It
-  is measurement, not repair — it changes no gold label, and the adjudication
-  rule of 2026-08-08 still governs any that ever change.
+- **The gap is model error, not a metric artifact and not gold error
+  (E-003b).** Exact match scores a wrong rule and a differently defensible rule
+  identically, so 0.125 was consistent with several different failures. A
+  seeded sample of 40 disagreements over 33 rulings (seed `20260810`) was
+  classified by the annotator: **40/40 `gold_right`**, 0 `both_defensible`, 0
+  `gold_wrong`, 0 `unclear`. The registered prediction — that
+  `both_defensible` would be the largest bucket after `gold_right` — is
+  falsified. The bound is rule-of-three, not the bootstrap interval, which is
+  degenerate on a unanimous sample: everything other than model error is at
+  most **0.091** (95%, over 33 clusters). No gold label changed, and the 10%
+  adjudication cap was never approached.
+- **E-003b's judge wrote the gold, and that bounds it.** Unanimity in one's own
+  favour is what a lenient self-judge produces, and this design cannot tell
+  that apart from correctness. The measurable asymmetry: 9 of the 40 cases are
+  a wrong *leaf* rather than a wrong rule (`608.2` for gold `608.2b`, `704.5g`
+  for `704.5d`/`704.5f`, sibling subrules of `702.131`, `702.33`, `702.179`,
+  `701.54`), and E-003a found exactly that to be the annotator's commonest
+  disagreement with themself — yet all 9 were judged model error. The family
+  score already prices full depth leniency, and reads 0.252 against a family
+  ceiling of 0.902, so the conclusion survives the objection; an independent
+  judge, not a larger sample, is what would settle it.
+- **One failure mode is unsampled.** 13 of 125 rulings produced no citation at
+  all (13 of the 267 disagreements); none were drawn into the 40.
+- **The CR upgrade is not a confound.** All 125 annotation rows carry
+  `cr_version = "August 7, 2026"`, the release the extractor was grounded on,
+  and 0 of the 267 disagreements cite a rule absent from that CR — the first
+  place version skew would surface.
 - **No retrieval was given to the citation extractor.** The obvious remedy —
   feeding it candidate rules, as `cite_search.py` does for the annotator — was
   refused deliberately: that tool helped build the gold, so using it inside the

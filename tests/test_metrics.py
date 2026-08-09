@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+import pytest
+
 from graphrag_mtg.evaluation.metrics import (
     bootstrap_ci,
     by_family,
@@ -11,6 +13,7 @@ from graphrag_mtg.evaluation.metrics import (
     evaluate_by_stratum,
     micro_prf,
     rule_family,
+    rule_of_three_upper,
 )
 
 
@@ -122,8 +125,26 @@ class TestClusterProportionCi:
         assert interval.n_docs == 2
 
     def test_unanimity_gives_a_degenerate_interval(self) -> None:
+        """Pinned because it is a trap, not a feature.
+
+        A percentile bootstrap resamples observed values, so a sample with
+        no variation resamples to itself and reports [1.0, 1.0] — which
+        reads as certainty. Callers must detect this and report
+        ``rule_of_three_upper`` instead.
+        """
         interval = cluster_proportion_ci([[True], [True]])
         assert (interval.point, interval.low, interval.high) == (1.0, 1.0, 1.0)
 
     def test_no_cases_is_not_a_crash(self) -> None:
         assert cluster_proportion_ci([]).n_docs == 0
+
+
+class TestRuleOfThree:
+    def test_the_bound_shrinks_with_the_sample(self) -> None:
+        assert rule_of_three_upper(33) > rule_of_three_upper(80)
+
+    def test_thirty_three_clean_clusters(self) -> None:
+        assert rule_of_three_upper(33) == pytest.approx(0.0909, abs=1e-4)
+
+    def test_no_trials_bounds_nothing(self) -> None:
+        assert rule_of_three_upper(0) == 1.0

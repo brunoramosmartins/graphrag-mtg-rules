@@ -12,6 +12,7 @@ from adjudicate import (
     ceiling_is_measured,
     disagreements,
     gold_citations,
+    is_depth_only,
     load_verdicts,
     predicted_citations,
 )
@@ -131,3 +132,23 @@ class TestVerdicts:
 
     def test_no_file_means_nothing_judged(self, tmp_path: Path) -> None:
         assert load_verdicts(tmp_path / "absent.jsonl") == {}
+
+
+class TestDepthOnly:
+    """Wrong leaf vs wrong rule — a type flag, never a verdict."""
+
+    def test_the_parent_of_a_gold_rule_is_depth_only(self) -> None:
+        case = {"kind": "fn", "rule_number": "608.2b"}
+        assert is_depth_only(case, {"608.2b"}, {"608.2"})
+
+    def test_a_sibling_subrule_is_depth_only(self) -> None:
+        case = {"kind": "fp", "rule_number": "704.5g"}
+        assert is_depth_only(case, {"704.5d", "704.5f"}, {"704.5g"})
+
+    def test_an_unrelated_rule_is_not(self) -> None:
+        case = {"kind": "fn", "rule_number": "709.4"}
+        assert not is_depth_only(case, {"709.4"}, {"202.3d"})
+
+    def test_an_exact_hit_on_the_other_side_is_not_a_disagreement(self) -> None:
+        case = {"kind": "fn", "rule_number": "608.2b"}
+        assert not is_depth_only(case, {"608.2b"}, {"608.2b"})
