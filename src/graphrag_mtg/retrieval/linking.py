@@ -55,7 +55,11 @@ CUED_CHAPTER = re.compile(r"\b(?:rule|cr|comprehensive rules?)\s+(\d{3})\b", re.
 MAX_KEYWORD_TOKENS = 4
 MAX_NAME_TOKENS = 8
 
-_WORD = re.compile(r"[A-Za-z0-9'’/,.-]+")
+#: Typographic apostrophe, spelled by codepoint: a literal one in a pattern
+#: is flagged as an ambiguous character (RUF001) and is invisible in review.
+RIGHT_SINGLE_QUOTE = chr(0x2019)
+
+_WORD = re.compile("[A-Za-z0-9'" + RIGHT_SINGLE_QUOTE + "/,.-]+")
 
 
 class EntityKind(StrEnum):

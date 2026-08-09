@@ -52,6 +52,17 @@ WRITE_CLAUSES = (
 # refusing to become an unbounded walk.
 MAX_TREE_DEPTH = 3
 
+#: Placeholder the queries below carry, substituted by :func:`_bounded`.
+#: Not an f-string and not ``%``: Cypher map literals are full of braces
+#: (``{number: sub.number}``), and either mechanism would need every one of
+#: them doubled — which is how a query becomes unreadable and then wrong.
+DEPTH_MARKER = "*MAXDEPTH"
+
+
+def _bounded(cypher: str) -> str:
+    """Substitute the tree-depth ceiling into a query."""
+    return cypher.replace(DEPTH_MARKER, f"*1..{MAX_TREE_DEPTH}")
+
 
 @dataclass(frozen=True)
 class Template:
@@ -72,16 +83,16 @@ class Template:
     description: str
 
 
-KEYWORD_DEFINITION = """
+KEYWORD_DEFINITION = _bounded("""
 MATCH (k:Keyword {name: $keyword})-[:DEFINED_BY]->(r:Rule)
-OPTIONAL MATCH (r)-[:HAS_SUBRULE*1..%d]->(sub:Rule)
+OPTIONAL MATCH (r)-[:HAS_SUBRULE*MAXDEPTH]->(sub:Rule)
 RETURN k.display_name AS keyword,
        k.glossary_text AS glossary,
        r.number AS rule_number,
        r.text AS rule_text,
        collect(DISTINCT {number: sub.number, text: sub.text}) AS subrules
 LIMIT $limit
-""" % MAX_TREE_DEPTH
+""")
 
 CARD_LEGALITY = """
 MATCH (c:Card {normalized_name: $normalized_name})-[e:HAS_LEGALITY]->(f:Format)
@@ -100,10 +111,10 @@ ORDER BY c.name
 LIMIT $limit
 """
 
-CARD_KEYWORD_RULES = """
+CARD_KEYWORD_RULES = _bounded("""
 MATCH (c:Card {normalized_name: $normalized_name})-[:HAS_KEYWORD]->(k:Keyword)
 MATCH (k)-[:DEFINED_BY]->(r:Rule)
-OPTIONAL MATCH (r)-[:HAS_SUBRULE*1..%d]->(sub:Rule)
+OPTIONAL MATCH (r)-[:HAS_SUBRULE*MAXDEPTH]->(sub:Rule)
 RETURN c.name AS card,
        k.display_name AS keyword,
        r.number AS rule_number,
@@ -111,7 +122,7 @@ RETURN c.name AS card,
        collect(DISTINCT {number: sub.number, text: sub.text}) AS subrules
 ORDER BY k.display_name
 LIMIT $limit
-""" % MAX_TREE_DEPTH
+""")
 
 CARD_RULINGS = """
 MATCH (c:Card {normalized_name: $normalized_name})-[:HAS_RULING]->(rl:Ruling)
@@ -142,15 +153,15 @@ RETURN a.name AS left_card,
 LIMIT $limit
 """
 
-RULE_SUBTREE = """
+RULE_SUBTREE = _bounded("""
 MATCH (r:Rule {number: $rule_number})
-OPTIONAL MATCH (r)-[:HAS_SUBRULE*1..%d]->(sub:Rule)
+OPTIONAL MATCH (r)-[:HAS_SUBRULE*MAXDEPTH]->(sub:Rule)
 RETURN r.number AS rule_number,
        r.text AS rule_text,
        r.section AS section,
        collect(DISTINCT {number: sub.number, text: sub.text, examples: sub.examples}) AS subrules
 LIMIT $limit
-""" % MAX_TREE_DEPTH
+""")
 
 RULE_NEIGHBOURHOOD = """
 MATCH (r:Rule {number: $rule_number})

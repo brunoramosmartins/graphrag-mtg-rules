@@ -12,6 +12,7 @@ import pytest
 
 from graphrag_mtg.retrieval.templates import (
     BY_NAME,
+    DEPTH_MARKER,
     MAX_TREE_DEPTH,
     TEMPLATES,
     WRITE_CLAUSES,
@@ -51,6 +52,15 @@ class TestEveryTemplate:
         """`*` with no ceiling walks the whole component."""
         for hop in re.findall(r"\*([^\]\s]*)", template.cypher):
             assert re.fullmatch(r"1\.\.\d+", hop), f"unbounded expansion: *{hop}"
+
+    def test_the_depth_marker_was_substituted(self, template: Template) -> None:
+        """A template shipping its placeholder would be a syntax error at run time."""
+        assert DEPTH_MARKER not in template.cypher
+
+    def test_expansion_uses_the_shared_ceiling(self, template: Template) -> None:
+        """A hand-written depth would drift from MAX_TREE_DEPTH silently."""
+        for hop in re.findall(r"\*1\.\.(\d+)", template.cypher):
+            assert int(hop) == MAX_TREE_DEPTH
 
     def test_names_only_real_strata(self, template: Template) -> None:
         assert set(template.strata) <= GOLDEN_STRATA

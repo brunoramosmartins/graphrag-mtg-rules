@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from itertools import pairwise
+
 from graphrag_mtg.extraction.linker import Lexicon
 from graphrag_mtg.retrieval.linking import (
     EntityKind,
@@ -131,7 +133,7 @@ class TestSpans:
     def test_overlapping_matches_do_not_double_claim(self) -> None:
         entities = linker().link("Does Serra Angel have Flying?")
         spans = [(e.start, e.end) for e in entities.resolved]
-        assert all(a[1] <= b[0] for a, b in zip(spans, spans[1:], strict=False))
+        assert all(a[1] <= b[0] for a, b in pairwise(spans))
 
     def test_resolved_is_ordered_by_position(self) -> None:
         entities = linker().link("Under rule 613, does Serra Angel have Flying?")
