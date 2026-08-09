@@ -209,14 +209,24 @@ deterministic parser reaches further than expected, and LLM inference of a
 
 ## Limitations, stated because they bound every number above
 
-- **Gold reliability is unmeasured.** Intra-annotator agreement was deferred
-  (2026-08-08), so the ceiling these F1s are measured against is unknown. A
-  single annotator produced all 125 rulings. Now registered as **E-003a** and
-  in progress: 20 rulings, seed `20260809`, re-cited blind and scored with the
-  same citation metric (`scripts/reannotate.py`). Until it reports, read the
-  citation F1 as measured against an unknown ceiling, not against 1.0 —
-  `cited_rules` asks for the rule that *governs* a ruling, and more than one
-  rule can defensibly govern the same one.
+- **The ceiling is measured, and it does not explain the result (E-003a).** A
+  single annotator produced all 125 rulings, so the reliability of the gold
+  bounds every citation number above. Measured 2026-08-09: 20 rulings drawn at
+  seed `20260809`, re-cited into a blinded copy with the same tools, scored
+  with the same metric (`scripts/reannotate.py`). Agreement **F1 0.815 [0.679,
+  0.938]** primary, **0.902 [0.800, 0.980]** family; 14 of 20 rulings cited
+  identically (0.70 [0.48, 0.85]). The citation F1 of 0.125 is therefore not
+  attributable to an unreliable gold — that would require the annotator to
+  disagree with themself about seven times out of eight. Reported beside the
+  result, **not** used to rescale it. Two caveats bound the ceiling itself: the
+  second pass was written the same day, so memory inflates it, and 20 rulings
+  give a wide interval. Neither is close to large enough to change the reading.
+- **The ceiling is not 1.0, and the gap between 0.815 and 0.902 says where it
+  goes.** Of the 6 rulings the two passes cited differently, 3 differ only in
+  granularity (parent versus child, or sibling subrules), 2 differ by one pass
+  citing an additional rule without contradicting the other, and 1 is a genuine
+  conflict. Choosing the leaf is the interpretive part of this task; choosing
+  the area is not.
 - **What the citation gap is made of is unknown.** Exact match scores a wrong
   rule and a differently defensible rule identically, so 0.125 is consistent
   with several different failures. Registered as **E-003b**: a seeded sample of

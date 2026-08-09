@@ -1,0 +1,258 @@
+{
+  "purpose": "E-003b \u2014 composition of the citation disagreements",
+  "gold": "data\\interim\\extraction_annotations_draft.jsonl",
+  "predictions": "data\\interim\\gated_triples.annotation.jsonl",
+  "split": "annotation",
+  "seed": 20260810,
+  "population": 267,
+  "n": 40,
+  "drawn_at": "2026-08-09",
+  "verdicts": [
+    "gold_right",
+    "both_defensible",
+    "gold_wrong",
+    "unclear"
+  ],
+  "cases": [
+    {
+      "ruling_id": "0014d76a4f51e5dd85110f48cfd338aa",
+      "kind": "fn",
+      "rule_number": "709.3",
+      "case": 1
+    },
+    {
+      "ruling_id": "0014d76a4f51e5dd85110f48cfd338aa",
+      "kind": "fn",
+      "rule_number": "709.3c",
+      "case": 2
+    },
+    {
+      "ruling_id": "0014d76a4f51e5dd85110f48cfd338aa",
+      "kind": "fp",
+      "rule_number": "701.9",
+      "case": 3
+    },
+    {
+      "ruling_id": "04d294528377f7c0717521406c596541",
+      "kind": "fp",
+      "rule_number": "702.87b",
+      "case": 4
+    },
+    {
+      "ruling_id": "14f56207ea8c0490b88ca3ccdb9ad211",
+      "kind": "fn",
+      "rule_number": "702.143a",
+      "case": 5
+    },
+    {
+      "ruling_id": "168afd1349a08e464584fc43ec055622",
+      "kind": "fn",
+      "rule_number": "603.2c",
+      "case": 6
+    },
+    {
+      "ruling_id": "2f22b0088c8bbb597304f37d50417284",
+      "kind": "fp",
+      "rule_number": "404",
+      "case": 7
+    },
+    {
+      "ruling_id": "33cc01bf324bf755b3dae3f4f90448bc",
+      "kind": "fp",
+      "rule_number": "704.5",
+      "case": 8
+    },
+    {
+      "ruling_id": "35272595c680f96d761a0923d7093039",
+      "kind": "fn",
+      "rule_number": "113.7a",
+      "case": 9
+    },
+    {
+      "ruling_id": "3b283c724432533966e985f8412a4eea",
+      "kind": "fn",
+      "rule_number": "400.7",
+      "case": 10
+    },
+    {
+      "ruling_id": "3d4f42d964e1fccfb8cb1ed26219a2cf",
+      "kind": "fn",
+      "rule_number": "113.7a",
+      "case": 11
+    },
+    {
+      "ruling_id": "41f59f3c34ffd3c379067ac141869088",
+      "kind": "fn",
+      "rule_number": "310.11",
+      "case": 12
+    },
+    {
+      "ruling_id": "429192e6d72a90fce0643ffdd1128c75",
+      "kind": "fn",
+      "rule_number": "113.7a",
+      "case": 13
+    },
+    {
+      "ruling_id": "47e53d28f60da6c5ce682dce4d2fd579",
+      "kind": "fn",
+      "rule_number": "903.6",
+      "case": 14
+    },
+    {
+      "ruling_id": "4e962a015a32be46fbf46b66290c1fcf",
+      "kind": "fn",
+      "rule_number": "702.88a",
+      "case": 15
+    },
+    {
+      "ruling_id": "5a02e502568c6a566aced1fea26b9e37",
+      "kind": "fp",
+      "rule_number": "708.2",
+      "case": 16
+    },
+    {
+      "ruling_id": "6d8a2f05825580f6f57007ef49999e02",
+      "kind": "fn",
+      "rule_number": "508.1b",
+      "case": 17
+    },
+    {
+      "ruling_id": "74a5a120869c24cc3358e38ccec57b0b",
+      "kind": "fp",
+      "rule_number": "119.3",
+      "case": 18
+    },
+    {
+      "ruling_id": "767f91a87a969cc05e7e7067e795be64",
+      "kind": "fp",
+      "rule_number": "702.5",
+      "case": 19
+    },
+    {
+      "ruling_id": "83a030ba8e04f891c81a8eb584bb6607",
+      "kind": "fp",
+      "rule_number": "701.54b",
+      "case": 20
+    },
+    {
+      "ruling_id": "84da5595dba471c861e5b6e7bee2cba5",
+      "kind": "fn",
+      "rule_number": "702.131a",
+      "case": 21
+    },
+    {
+      "ruling_id": "84da5595dba471c861e5b6e7bee2cba5",
+      "kind": "fp",
+      "rule_number": "702.131c",
+      "case": 22
+    },
+    {
+      "ruling_id": "9aa144dce493123f7ddb01edd3c8effe",
+      "kind": "fn",
+      "rule_number": "702.33a",
+      "case": 23
+    },
+    {
+      "ruling_id": "9c58373cead0770720e43401dacc30fb",
+      "kind": "fn",
+      "rule_number": "707.5",
+      "case": 24
+    },
+    {
+      "ruling_id": "a5e49d37544c0609428cf31ac43d9c04",
+      "kind": "fp",
+      "rule_number": "702.73",
+      "case": 25
+    },
+    {
+      "ruling_id": "a7f5efb5474dd59d94e9d2cf66a97d8d",
+      "kind": "fn",
+      "rule_number": "205.3c",
+      "case": 26
+    },
+    {
+      "ruling_id": "ada4798e0d97b0e55ed97cf6f4326e20",
+      "kind": "fp",
+      "rule_number": "603.3",
+      "case": 27
+    },
+    {
+      "ruling_id": "b85971ab640c0adace2fad2a09dd0b48",
+      "kind": "fn",
+      "rule_number": "608.2b",
+      "case": 28
+    },
+    {
+      "ruling_id": "bf2921198ed1a5d14a7c0c1c044e14c0",
+      "kind": "fn",
+      "rule_number": "702.179d",
+      "case": 29
+    },
+    {
+      "ruling_id": "c3bec05cfc83f4fa94e7a57976c75c1f",
+      "kind": "fn",
+      "rule_number": "608.2b",
+      "case": 30
+    },
+    {
+      "ruling_id": "c3bec05cfc83f4fa94e7a57976c75c1f",
+      "kind": "fp",
+      "rule_number": "603.3",
+      "case": 31
+    },
+    {
+      "ruling_id": "cd63a8244a3cf9fb3afb57ae22837492",
+      "kind": "fn",
+      "rule_number": "601.2c",
+      "case": 32
+    },
+    {
+      "ruling_id": "d081b8440b7a1f4476357f71174b6eca",
+      "kind": "fn",
+      "rule_number": "704.4",
+      "case": 33
+    },
+    {
+      "ruling_id": "d081b8440b7a1f4476357f71174b6eca",
+      "kind": "fn",
+      "rule_number": "704.5d",
+      "case": 34
+    },
+    {
+      "ruling_id": "d081b8440b7a1f4476357f71174b6eca",
+      "kind": "fp",
+      "rule_number": "704.5g",
+      "case": 35
+    },
+    {
+      "ruling_id": "e8dc216d6c350806bca9f3fed3088a59",
+      "kind": "fp",
+      "rule_number": "601.2",
+      "case": 36
+    },
+    {
+      "ruling_id": "e9f3abd66e7d28e1dd1281f9a2660771",
+      "kind": "fn",
+      "rule_number": "614.13a",
+      "case": 37
+    },
+    {
+      "ruling_id": "e9f3abd66e7d28e1dd1281f9a2660771",
+      "kind": "fp",
+      "rule_number": "305.5",
+      "case": 38
+    },
+    {
+      "ruling_id": "f4ac64f3dc94a638dea59663e983b32d",
+      "kind": "fp",
+      "rule_number": "608.2",
+      "case": 39
+    },
+    {
+      "ruling_id": "f64d0e464a9ddb45e835ba9278b3f22d",
+      "kind": "fn",
+      "rule_number": "113.7a",
+      "case": 40
+    }
+  ]
+}

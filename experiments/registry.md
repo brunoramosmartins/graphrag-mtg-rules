@@ -190,7 +190,26 @@ multiple-comparison correction when strata are tested jointly.
 - **Known limitation:** the rulings were annotated in the days before the draw,
   so memory inflates agreement; the figure is an optimistic bound on the
   ceiling. `reannotate.py compare` prints the elapsed days and says so.
-- **Actual result:** _pending._
+- **Actual result (2026-08-09, 20 rulings, same-day second pass):** citation
+  agreement F1 **0.815 [0.679, 0.938]** primary, **0.902 [0.800, 0.980]**
+  family; tp=22 fp=5 fn=5; 14 of 20 rulings cited identically (0.70 [0.48,
+  0.85], Wilson). No decision rule applies — E-003a was registered as a
+  measurement, not a test, so this section is descriptive by construction and
+  no branch is taken. Reproducible from `scripts/reannotate.py compare`, which
+  refuses to report on a partial second pass.
+  **What it settles:** the gold is not the explanation for E-003's citation
+  score. For annotator unreliability to account for F1 0.125, the annotator
+  would have to agree with themself at roughly that rate; the measured
+  agreement is 0.815, and the same-day inflation would have to be worth ~0.69
+  of F1 for the two to meet. Per the registration, the ceiling is reported
+  beside the result and is **not** used to rescale it.
+  **Structure of the disagreement** (all 6 divergent rulings, read from the
+  compare output): 3 are granularity — parent versus child (`303.4a`/`303.4`,
+  `706.2b` dropped with `706.2` kept) or sibling leaves (`603.7b`/`603.7c`);
+  2 are completeness — the second pass adds a rule the first did not cite
+  (`601.2c`, `702.174a`) without contradicting it; 1 is a genuine conflict with
+  no overlap (`709.4` vs `202.3d`). This is what the 0.815/0.902 gap is made
+  of, and it is the same failure the family metric was added to separate.
 
 ### E-003b — composition of the E-003 disagreements
 
@@ -219,4 +238,11 @@ multiple-comparison correction when strata are tested jointly.
   rule already names: void and re-annotate, not patch.
 - **Hypothesis / prediction:** `both_defensible` is the largest bucket after
   `gold_right`, and `gold_wrong` is small. Recorded before any case is read.
+- **Note 2026-08-09, prediction deliberately NOT amended:** E-003a landed first
+  and is weak evidence against the prediction above — of the annotator's own 6
+  divergences, only 1 was a genuine conflict between two different rules, the
+  rest being granularity or completeness. That is evidence about one person
+  disagreeing with themself, not about a model disagreeing with a person, and
+  in any case a prediction edited after seeing adjacent data is not a
+  prediction. It stands as written and will be scored as written.
 - **Actual result:** _pending._

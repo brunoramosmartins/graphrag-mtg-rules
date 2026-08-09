@@ -90,6 +90,44 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — The ceiling came back at 0.815: the gold is not the story
+
+E-003a reported the same day it was registered. Agreement F1 **0.815
+[0.679, 0.938]** primary, **0.902 [0.800, 0.980]** family, 14 of 20
+rulings identical. No decision rule fires — it was registered as a
+measurement, not a test — but it closes the question it was asked.
+
+The comfortable hypothesis was that a single-annotator gold under a
+liberal "governing rule" instruction was too noisy to measure against,
+and that some of the 0.125 was the ruler rather than the system. It is
+not. For the gold to explain that score the annotator would have to
+disagree with themself about seven times in eight; they disagree once in
+four, and mostly about depth.
+
+The useful part is the *shape* of the 6 disagreements, not the F1: 3 are
+granularity (`303.4a` vs `303.4`, `706.2b` dropped with `706.2` kept,
+`603.7b` vs `603.7c`), 2 are one pass citing an extra rule without
+contradicting the other, 1 is a real conflict (`709.4` vs `202.3d`).
+Choosing which *area* of the CR governs a ruling is reproducible;
+choosing the *leaf* is where the interpretation lives. That is the same
+distinction the family metric was added to expose on 2026-08-08, now
+confirmed on the annotator instead of on the model — and it retroactively
+justifies reporting both scores rather than one.
+
+Consequence for the author's lexical search tool: bag-of-words over rule
+text is well matched to finding the governing *area*, and structurally
+blind to depth — a parent and its subrule share nearly the same bag, so
+term overlap cannot separate `706.2` from `706.2b`. The tool is not
+failing at that; the representation has no signal there. Recorded because
+it predicts where a retrieval-augmented citation experiment (E-004) would
+and would not help.
+
+Decision: stop investing in the ceiling (a wider sample would tighten an
+interval that would have to move by ~0.5 to matter) and proceed to
+E-003b. E-003b's registered prediction was deliberately left unamended
+even though E-003a is weak evidence against it — a prediction edited
+after seeing adjacent data is not a prediction.
+
 ## 2026-08-09 — The gold gets a ceiling before the disagreements get read
 
 E-003 reports citation F1 0.125 against a gold written once, by one
