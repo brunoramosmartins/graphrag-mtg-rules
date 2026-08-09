@@ -90,6 +90,85 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — Measured the bridge instead of arguing it; implicit cross-refs dropped
+
+Two Phase 4 decisions, one of them correcting me.
+
+**Implicit CR cross-references are dropped**, not carried. `extraction/
+crossref.py`, its schema and its gate support stay in the tree as
+unwired code; nothing calls them and nothing will in Phase 4. The reason
+is the one Phase 3 just paid for: an inferred edge is worth what its
+measurement says, and measuring this one means another annotation round
+against another hand-made gold. The phase that just spent XL effort
+learning that the *first* inferred edge scored 0.125 is not the phase to
+add a second on faith. If it returns, it returns with its own
+pre-registration and its own gold.
+
+**The reachability claim was asserted, not measured — and the
+measurement changes the argument.** Closing Phase 3 I wrote that
+`interaction_multihop`'s rules have "no deterministic edge from any
+card", inferred from chapter families. That tested direct edges only. It
+said nothing about multi-hop paths through `REFERENCES` and the CR tree,
+which is exactly what a traversal would use. `scripts/reachability.py`
+now measures it, seeding from each question's entities and expanding k
+hops through the undirected union of cross-references and the tree — the
+architecture's best case, deliberately.
+
+| stratum | k=2 | k=4 | k=6 | median ball at k=6 | no seed |
+|---|---|---|---|---|---|
+| `definition_1hop` | **100%** | 100% | 100% | 2228 | 0/15 |
+| `keyword_rule_2hop` | **100%** | 100% | 100% | 2544 | 0/3 |
+| `interaction_multihop` | 10% | 21% | 38% | 1515 | **15/30** |
+| `negative_temporal` | 13% | 33% | 47% | 2206 | 3/9 |
+
+The conclusion survives, for a better reason than the one I gave. At k=2
+the graph reaches **every** gold rule of the 1–2 hop strata inside ~200
+rules — it is at ceiling there. On `interaction_multihop` it reaches 38%
+only by k=6, and a k=6 ball holds 1515 of 3308 rules: reaching almost
+half the document is not retrieval, it is loading the corpus.
+
+The decisive column is the last one. **Fifteen of the thirty
+`interaction_multihop` questions produce no seed at all** — 56 of the
+golden set's gold entities are cards with no keyword abilities
+(*Humility*, *Opalescence*). No traversal depth helps a card with no edge
+into the rule graph, and no new deterministic bridge can be built for
+them either: what connects *Humility* to the layer system is what its
+text *means*, which is inference. That is the same inference E-003
+measured at 0.125.
+
+So option 1 (another deterministic bridge) has no material for half the
+stratum, and option 3 (a re-registered inferred path) is the thing just
+measured and rejected. Recorded before the choice, so the choice is
+forced by the data rather than by preference.
+
+## 2026-08-09 — Phase 4 opened with one decision blocking the first line of code
+
+Gate check on Phase 3: every deliverable exists. One carry-over,
+explicitly carried rather than dropped — implicit CR cross-references
+(`extraction/crossref.py`) are built, schema'd and gated but never wired
+into the pipeline. They enter Phase 4 as a task, or they get dropped with
+a dated entry; not left ambiguous.
+
+The phase does not start with `retrieval/templates.py`. It starts with
+the architectural question Phase 3 left: with `CITES_RULE` reduced
+(ADR-006), `interaction_multihop` needs 61 CR rules of which only 8 are
+keyword rules, and nothing deterministic connects a card to the rest.
+Two Phase 4 deliverables depend on the answer — the `carta→rulings→regras`
+traversal in the ≥7 templates now reaches 25 of 77,999 rulings, and the
+`interação carta×carta` traversal was to lean on shared rulings and
+common rules.
+
+Recorded so the choice is not made by accident while writing a template:
+the options are another deterministic bridge, text retrieval for rules
+with the graph supplying entity structure, or a re-registered inferred
+path. The second reframes E-001 as a test of the *combination* rather
+than of traversal alone, which changes what the project claims — it is a
+legitimate answer, but not one to slide into unannounced.
+
+Phase 4's Entity Recall criterion (≥0.9 on 1–2 hop questions) is a
+measurement and gets registered in `experiments/registry.md` before it
+runs, not after.
+
 ## 2026-08-09 — Phase 3 closed on a failed DoD, deliberately
 
 Both Phase 3 thresholds failed: linking F1 0.634 against 0.90, citations
