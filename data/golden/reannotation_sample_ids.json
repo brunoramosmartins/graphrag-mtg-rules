@@ -1,0 +1,36 @@
+{
+  "purpose": "intra-annotator agreement on CITES_RULE (E-003 ceiling)",
+  "source": "data\\interim\\extraction_annotations_draft.jsonl",
+  "split": "annotation",
+  "seed": 20260809,
+  "n": 20,
+  "drawn_at": "2026-08-09",
+  "strata": {
+    "homonym": 8,
+    "multiword": 6,
+    "plain": 5,
+    "explicit": 1
+  },
+  "ruling_ids": [
+    "01601a3ac8febec900f9130512720bd4",
+    "1c787980e0be43021cca8b67b261c0cb",
+    "1f287903d82f8093486f4c7a63fd5be2",
+    "252f401ebf511327cb452c057536b5f3",
+    "34ddd51a7a1faf0b11cf0ee5a79b7102",
+    "375a20146d8167702e1b76f11aff9f37",
+    "5373297b59e8ad1969c2623bd4f52b15",
+    "5f487a9c7d221e3fa91012a5f926b03a",
+    "6a64e7b245707832e8a80ad436a6e819",
+    "726b7422b25b620249afa99fba4a827f",
+    "76995a6ce9d16b72563959ad0dcca89e",
+    "84da5595dba471c861e5b6e7bee2cba5",
+    "a09f28c76e4ce861e2393cee7b8500c2",
+    "ad006ef827148d59129072e04cf597fa",
+    "c0df31743e309d971687b72db81646fd",
+    "c44ca01191c24c34b7760dddb9930281",
+    "cd63a8244a3cf9fb3afb57ae22837492",
+    "f4ac64f3dc94a638dea59663e983b32d",
+    "f7db77064cbf74ae6dd09288a475753b",
+    "facfa18200ebd05de8d1f9239351a272"
+  ]
+}

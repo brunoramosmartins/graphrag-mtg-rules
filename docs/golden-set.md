@@ -166,8 +166,11 @@ The Phase 2 plan was to mine the Scryfall rulings corpus for rulings that
 cite a CR rule, giving a deterministic `Card → Ruling → Rule` path. Measured
 against the real corpus, that premise is false:
 
-> **1 of 77,999 rulings contains a CR rule number** — and that one is about
-> a store locator, not a rules citation.
+> **25 of 77,999 rulings contain a CR rule number** (pattern
+> `\b\d{3}\.\d+[a-z]?\b`), and they come from just **3 cards** whose rulings
+> enumerate the 704.5x state-based actions. *(Corrected 2026-07-20: the
+> Phase 2 measurement reported "1 of 77,999"; its pattern missed
+> parenthesized citations like "(704.5g)". See the decision journal.)*
 
 Scryfall rulings are written in players' language and deliberately avoid rule
 numbers. "It will lose that ability before it can trigger" is a layer-6
@@ -175,10 +178,11 @@ statement (613.1f) that never names 613.
 
 Two consequences, both worth stating plainly:
 
-1. **`CITES_RULE` has no deterministic component at all.** It is entirely an
-   LLM extraction target. Far from emptying Phase 3, this is the strongest
-   evidence yet that the phase is necessary — it is exactly the project's
-   rule that "the LLM only adds relations the deterministic parser cannot".
+1. **`CITES_RULE` has no meaningful deterministic component.** At 0.03%
+   coverage concentrated on 3 cards, it is an LLM extraction target. Far
+   from emptying Phase 3, this is the strongest evidence yet that the phase
+   is necessary — it is exactly the project's rule that "the LLM only adds
+   relations the deterministic parser cannot".
 2. **The stratum cannot be honestly filled yet.** Its `gold_path` runs through
    `CITES_RULE`, so rows written now could not be validated against the graph
    the way the 15 `definition_1hop` paths were (15/15 confirmed). Writing

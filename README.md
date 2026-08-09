@@ -89,6 +89,9 @@ docker-compose.yml   Neo4j (app + Phoenix added in Phase 7)
 ## Documentation
 
 - [Hypothesis](docs/hypothesis.md) — the v0.2 thesis and a-priori predictions
+- [Evaluation](docs/evaluation.md) — metrics, results, and every limitation that bounds them
+- [Annotation methodology](docs/annotation-methodology.md) — how a score against a
+  hand-made gold is given a ceiling and a decomposition; written to be reused elsewhere
 - [Data sources & licensing (Gate G1)](docs/data-sources.md)
 - [Contingency gates G1–G4](docs/contingency.md)
 - [Architecture Decision Records](docs/adr/README.md)
