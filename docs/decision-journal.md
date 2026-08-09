@@ -90,6 +90,80 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — Schema reduced: CITES_RULE now means "the ruling says so"
+
+G3's registered consequence, executed. `(:Ruling)-[:CITES_RULE]->(:Rule)`
+is produced deterministically by `extraction/explicit_citations.py` from
+rule numbers the ruling states, and the gate rejects anything inferred as
+`citation_not_explicit`. The LLM extractor still runs behind
+`--llm-citations`, and its output no longer reaches the graph; the
+permissive gate survives as `--legacy-citation-gate`, which the CLI
+refuses to combine with `--load`.
+
+The design choice worth recording is *where* the guarantee lives. It
+would have been easier to stop calling the extractor. Putting the rule in
+the gate instead means the property holds for any future caller,
+including one that reintroduces an LLM path without reading this entry —
+and E-003 is precisely the measurement of what the same guarantee is
+worth when it lives in a prompt (F1 0.125).
+
+Three things the reduction cost, measured rather than assumed:
+
+1. **Coverage collapses, as designed.** 6 gated citation edges over the
+   125 annotated rulings; overall citation F1 falls from 0.125 to
+   **0.047**. Worth stating plainly because it is the opposite of score
+   shopping: the mandated change makes the headline number worse, and the
+   number is reported anyway.
+2. **Precision is not 1.0 either — 0.667 on the `explicit` stratum**
+   (tp=4 fp=2 fn=1). One of the two misses is the interesting one: a
+   ruling writes "(704.5w)", and the August 2026 CR moved that
+   state-based action to `704.5x` while reusing `704.5w` for something
+   else. The gold migrated with the text; **the ruling is a historical
+   document and cannot be migrated**. The number still resolves, so no
+   existence check can catch it. This is the same silent displacement
+   that moved `initiative` off 725.1, now showing up in the deterministic
+   path — the reduced schema has its own version hazard, and it is not
+   fixable by parsing harder.
+3. **The free preview is now the whole citation product**, so the dry run
+   writes its gated triples instead of requiring an API spend to obtain a
+   file that costs nothing to compute.
+
+## 2026-08-09 — The reduction does not break E-001's paths; something else might
+
+Checked before Phase 4 rather than discovered in Phase 8. Two findings,
+from the 77 golden-set rows:
+
+**No gold path depends on the removed edge.** Zero of 77 `gold_path`
+values name `CITES_RULE` or a `Ruling` node; the edges they do name are
+`DEFINED_BY` (25) and `HAS_KEYWORD` (1). So the reduction breaks nothing
+that was written down.
+
+**But that is because most of them do not name edges at all.** Only
+**23 of 77** `gold_path` values are written as traversals; the rest are
+prose describing the semantic route. And the rule families they require
+split sharply by stratum:
+
+| stratum | gold rules | reachable from a card deterministically? |
+|---|---|---|
+| `definition_1hop` (15) | 15/15 keyword 701–702 | yes, `Keyword-[:DEFINED_BY]->Rule` |
+| `keyword_rule_2hop` (3) | 4/4 keyword | yes |
+| `legality_1hop` (20) | none — card properties | n/a |
+| `interaction_multihop` (30) | 8 of 61 keyword; 33 in the 600s, 7 in the 500s, 6 in the 700s, 5 in the 300s | **no** |
+| `negative_temporal` (9) | 3 of 15 keyword | mostly no |
+
+`interaction_multihop` is the stratum carrying the central hypothesis —
+the `vector_should: fail` questions — and roughly 87% of the CR rules it
+needs sit in chapters with no deterministic edge from any card.
+`CITES_RULE` was going to be that bridge. It is gone, and it was never
+good enough to be it anyway (F1 0.125).
+
+No decision taken here; the options are named so Phase 4 chooses
+deliberately: find another deterministic bridge; accept that rules are
+reached by text retrieval while the graph supplies entity structure —
+which reframes E-001 as a test of the combination, not of traversal
+alone; or reopen an inferred path with a different design and its own
+pre-registration. The third is the one that must not happen quietly.
+
 ## 2026-08-09 — E-003b: 40/40 against the model, and why that needs a caveat
 
 The 40 sampled disagreements all came back `gold_right`. The registered

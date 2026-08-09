@@ -3,10 +3,14 @@
 Three edge families come out of Phase 3, all defined in docs/ontology.md:
 
 - ``(:Ruling)-[:MENTIONS]->(:Card)`` — entity linking (exact→fuzzy→LLM);
-- ``(:Ruling)-[:CITES_RULE]->(:Rule)`` — LLM extraction (the roadmap's
-  working name APPLIES_RULE; the ontology's canonical name wins);
+- ``(:Ruling)-[:CITES_RULE]->(:Rule)`` — **deterministic only** since the
+  E-003 schema reduction (2026-08-09): the ruling must state the rule
+  number itself. LLM-inferred citations are measured at F1 0.125 and the
+  gate now refuses them (the roadmap's working name was APPLIES_RULE; the
+  ontology's canonical name wins);
 - ``(:Rule)-[:REFERENCES]->(:Rule)`` — *implicit* cross-references only
-  (explicit "see rule X" links are already deterministic).
+  (explicit "see rule X" links are already deterministic). Never wired
+  into the pipeline, so no unmeasured LLM edge has ever reached the graph.
 
 Every candidate carries a mandatory :class:`EvidenceSpan`. The span is a
 claim about the source text ("characters ``start:end`` read exactly
@@ -29,6 +33,7 @@ class LinkMethod(StrEnum):
     EXACT = "exact"  # normalized multi-word match with a capitalized word
     LOOSE = "loose"  # punctuation-insensitive match (Lim-Dul's ~ Lim Duls)
     SURFACE = "surface"  # single-word name seen capitalized — needs LLM
+    EXPLICIT = "explicit"  # the source text states the rule number itself
     LLM = "llm"  # LLM-disambiguated or LLM-extracted
 
 
@@ -88,23 +93,31 @@ class CardMention(BaseModel):
 class RuleCitation(BaseModel):
     """Candidate ``(:Ruling)-[:CITES_RULE]->(:Rule)`` edge.
 
-    Only 25 of 77,999 rulings (3 cards) state a rule number, so this
-    is *inference*, not quote-matching: the LLM maps the ruling's language
-    onto the rule that governs it. The span quotes the ruling passage that
-    invokes the rule's concept; ``rationale`` says why that passage means
-    that rule. When the passage *does* contain an explicit rule number, the
-    gate additionally requires it to agree with ``rule_number`` — the cheap
-    check that catches "601.2c when the text says 601.2b".
+    Only 25 of 77,999 rulings (3 cards) state a rule number. The original
+    design treated the rest as *inference* — the LLM mapping a ruling's
+    language onto the rule that governs it — and E-003 measured that at
+    citation F1 0.125 [0.073, 0.180], with a sampled decomposition
+    (E-003b) attributing the gap to model error rather than to the metric
+    or the gold. Gate G3's registered rule fired, and since 2026-08-09 the
+    gate requires ``rule_number`` to appear inside ``span.text``. The model
+    is left free to propose; nothing it infers reaches the graph.
+
+    That leaves the tiny explicit slice, produced deterministically by
+    `extraction/explicit_citations.py`. The narrow schema is the honest
+    one: this edge now means "the ruling names this rule", not "this rule
+    governs this ruling".
 
     Attributes:
         ruling_id: Source ruling.
         rule_number: Cited CR rule (e.g. ``"613.4b"``), which must exist in
-            the graph.
+            the graph *and*, under the shipped gate, appear in the span.
         span: Ruling passage the citation rests on.
         rationale: One sentence tying span to rule; audit material, never
             shown as an answer.
-        method: Always :attr:`LinkMethod.LLM` for citations today.
-        confidence: Model-reported, thresholded by the gate.
+        method: :attr:`LinkMethod.EXPLICIT` for the deterministic path;
+            :attr:`LinkMethod.LLM` survives for reproducing E-003.
+        confidence: Model-reported, thresholded by the gate; the
+            deterministic path asserts 1.0.
     """
 
     ruling_id: str = Field(min_length=1)

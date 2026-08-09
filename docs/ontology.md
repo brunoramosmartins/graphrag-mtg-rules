@@ -31,11 +31,22 @@ first schema-as-code, applied by [`graph/schema.py`](../src/graphrag_mtg/graph/s
 | `(:Keyword)-[:DEFINED_BY]->(:Rule)` | keyword's governing rule | deterministic where the glossary is explicit; else LLM-gated |
 | `(:Rule)-[:HAS_SUBRULE]->(:Rule)` | CR tree parent → child | deterministic |
 | `(:Rule)-[:REFERENCES]->(:Rule)` | "see rule X" cross-reference | deterministic (explicit) + LLM (implicit) |
-| `(:Ruling)-[:CITES_RULE]->(:Rule)` | ruling invokes a rule | **LLM extraction (gated)** |
+| `(:Ruling)-[:CITES_RULE]->(:Rule)` | **the ruling states this rule number** | deterministic (reduced 2026-08-09) |
 | `(:Ruling)-[:MENTIONS]->(:Card)` | ruling references another card | entity linking (exact→fuzzy→LLM) |
 
+**`CITES_RULE` was reduced, and the row above is the whole of it now.**
+It originally meant "ruling invokes a rule" and was produced by gated LLM
+extraction. E-003 measured that at citation F1 0.125 [0.073, 0.180] over
+125 annotated rulings; E-003b attributed the gap to model error rather
+than to the metric or the gold; gate G3's registered rule fired. Since
+2026-08-09 the edge covers only the 25 of 77,999 rulings that state a
+rule number, and `extraction/gate.py` rejects inferred citations
+outright. The narrower meaning is the honest one: *the ruling names this
+rule*, not *this rule governs this ruling*. See
+[evaluation.md](evaluation.md) and `experiments/registry.md` (E-003).
+
 **Provenance is a first-class property.** Every edge added by the LLM
-(`CITES_RULE`, `MENTIONS`, implicit `REFERENCES`/`DEFINED_BY`) carries
+(`MENTIONS`, implicit `REFERENCES`/`DEFINED_BY`) carries
 `source="llm"`, `confidence`, and an `evidence_span` — nothing enters the
 graph without passing `extraction/gate.py`. Deterministic edges carry
 `source="deterministic"`.
@@ -90,9 +101,21 @@ The DoD is that the ontology answers 100% of the golden-set strata. It does:
 | `legality_1hop` | `(:Card)-[:HAS_LEGALITY {status}]->(:Format)` |
 | `definition_1hop` | `(:Keyword)-[:DEFINED_BY]->(:Rule)` |
 | `keyword_rule_2hop` | `(:Keyword)-[:DEFINED_BY]->(:Rule)-[:HAS_SUBRULE\|REFERENCES]->(:Rule)` |
-| `rulings_2hop` | `(:Card)-[:HAS_RULING]->(:Ruling)-[:CITES_RULE]->(:Rule)` |
-| `interaction_multihop` | `(:Card)-[:HAS_KEYWORD]->(:Keyword)-[:DEFINED_BY]->(:Rule)-[:REFERENCES*]->(:Rule)` + `Ruling` paths (e.g. the layer system 613.x subtree) |
+| `rulings_2hop` | `(:Card)-[:HAS_RULING]->(:Ruling)-[:CITES_RULE]->(:Rule)` — **now only for rulings that state a number** (25 of 77,999); the stratum was already deferred on evidence in Phase 2 |
+| `interaction_multihop` | `(:Card)-[:HAS_KEYWORD]->(:Keyword)-[:DEFINED_BY]->(:Rule)-[:REFERENCES*]->(:Rule)` + `Ruling` paths (e.g. the layer system 613.x subtree) — **see the caveat below** |
 | `negative_temporal` | `Rule` subtree + `REFERENCES`; timing/negation resolved from rule text on the path |
+
+**Caveat measured 2026-08-09, open for Phase 4.** With `CITES_RULE`
+reduced, the `interaction_multihop` row above is aspirational for most of
+its stratum. Those 30 questions need 61 CR rules, of which only 8 are
+keyword rules; the rest sit in the 600s, 500s, 700s and 300s, with no
+deterministic edge from any card. No `gold_path` in the golden set names
+`CITES_RULE` (0 of 77), so nothing written down breaks — but only 23 of
+77 name edges at all, so most of the stratum has no specified traversal
+to check. Phase 4 must pick between another deterministic bridge, text
+retrieval for rules with the graph supplying entity structure, or a
+re-registered inferred path. Recorded in
+[decision-journal.md](decision-journal.md).
 
 The candidate pool already surfaces this: e.g. a `keyword_rule_2hop`
 sample cites `613.3`/`613.7` (the layer system) with gold entities

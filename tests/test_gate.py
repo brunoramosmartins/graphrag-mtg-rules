@@ -106,7 +106,9 @@ class TestChecks:
 
     def test_explicit_number_must_agree(self) -> None:
         # Span literally says 613.4b; citing 702.19e from it is rejected.
-        result = run_gate(citation(rule_number="702.19e"))
+        # Under the permissive gate this is its own reason; under the shipped
+        # one it never gets that far (see TestSchemaReduction).
+        result = run_gate(citation(rule_number="702.19e"), require_explicit_citations=False)
         assert result.rejected["explicit_number_disagrees"] == 1
 
     def test_low_confidence_rejected(self) -> None:
@@ -129,3 +131,47 @@ class TestDedupe:
     def test_total_accounts_for_everything(self) -> None:
         result = run_gate(mention(), citation(), citation(confidence=0.1))
         assert result.total == 3
+
+
+class TestSchemaReduction:
+    """CITES_RULE is confined to what the ruling states (G3, 2026-08-09).
+
+    The reduction is a gate check, not a prompt instruction, precisely
+    because E-003 measured what the prompt instruction was worth: the
+    inferred path scored citation F1 0.125 over 125 annotated rulings.
+    """
+
+    def inferred(self) -> RuleCitation:
+        """A citation whose span names no rule — the LLM path's normal output."""
+        text = "This works like Giant Growth"
+        return RuleCitation(
+            ruling_id="r1",
+            rule_number="613",
+            span=EvidenceSpan(start=0, end=len(text), text=text),
+            rationale="the ruling turns on layers",
+            method=LinkMethod.LLM,
+            confidence=0.95,
+        )
+
+    def test_an_inferred_citation_is_rejected(self) -> None:
+        result = run_gate(self.inferred())
+        assert result.accepted == []
+        assert result.rejected["citation_not_explicit"] == 1
+
+    def test_confidence_does_not_buy_a_way_in(self) -> None:
+        """A model certain of an unverifiable claim is the case being excluded."""
+        result = run_gate(self.inferred().model_copy(update={"confidence": 1.0}))
+        assert result.rejected["citation_not_explicit"] == 1
+
+    def test_a_stated_number_still_passes(self) -> None:
+        (triple,) = run_gate(citation()).accepted
+        assert (triple.edge_type, triple.target_key) == ("CITES_RULE", "613.4b")
+
+    def test_the_permissive_gate_reproduces_the_old_behaviour(self) -> None:
+        """E-003 predates the reduction; its figure must stay reproducible."""
+        result = run_gate(self.inferred(), require_explicit_citations=False)
+        assert len(result.accepted) == 1
+
+    def test_mentions_are_untouched_by_the_reduction(self) -> None:
+        """G3 fired on citations. Linking is a separate, still-open question."""
+        assert len(run_gate(mention()).accepted) == 1

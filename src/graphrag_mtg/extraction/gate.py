@@ -20,9 +20,14 @@ iteration):
 4. **target exists** — cited rule number / linked oracle_id is a real
    node. This is the net for "cites 601.2c when it means 601.2b" — a
    plausible-but-nonexistent number dies here.
-5. **explicit numbers agree** — when the span itself contains rule
-   numbers (measured: 25 of 77,999 rulings), the cited number must be
-   among them.
+5. **the citation is explicit** — the cited rule number must appear in
+   the span itself. This is the E-003 schema reduction (2026-08-09)
+   expressed as a gate check rather than as a prompt instruction, which
+   is the whole point: a guarantee that lives in the prompt is a wish,
+   and E-003 measured what that wish was worth (citation F1 0.125).
+   ``require_explicit_citations=False`` restores the permissive check —
+   agreement only when the span happens to contain a number — and exists
+   so E-003's recorded figure stays reproducible.
 6. **confidence** — below threshold is out. The threshold is part of
    E-003's configuration in `experiments/registry.md`; changing it after
    seeing results is what the registry exists to prevent.
@@ -114,6 +119,7 @@ def gate_candidates(
     known_rules: frozenset[str] | set[str],
     known_cards: frozenset[str] | set[str],
     min_confidence: float = DEFAULT_MIN_CONFIDENCE,
+    require_explicit_citations: bool = True,
 ) -> GateResult:
     """Run every candidate through the gate.
 
@@ -125,6 +131,11 @@ def gate_candidates(
         known_rules: Rule numbers currently in the graph.
         known_cards: oracle_ids currently in the graph.
         min_confidence: Gate threshold (pinned in E-003 before any run).
+        require_explicit_citations: Ship default. A ``CITES_RULE``
+            candidate passes only if its rule number appears in its own
+            evidence span, which confines the edge to the deterministic
+            slice. Set False to reproduce E-003, whose run predates the
+            reduction — not to widen what a later run may load.
 
     Returns:
         A :class:`GateResult`; ``result.accepted`` is the only legal input
@@ -140,6 +151,7 @@ def gate_candidates(
             known_rules=known_rules,
             known_cards=known_cards,
             min_confidence=min_confidence,
+            require_explicit_citations=require_explicit_citations,
         )
         if reason is not None:
             result.rejected[reason] += 1
@@ -165,6 +177,7 @@ def _first_failure(
     known_rules: frozenset[str] | set[str],
     known_cards: frozenset[str] | set[str],
     min_confidence: float,
+    require_explicit_citations: bool = True,
 ) -> str | None:
     """Return the first failed check's reason, or None if all pass."""
     try:
@@ -192,6 +205,12 @@ def _first_failure(
         if candidate.rule_number not in known_rules:
             return "rule_not_in_graph"
         explicit = _RULE_NUMBER.findall(span.text)
+        if require_explicit_citations and candidate.rule_number not in explicit:
+            # The reduction. An inferred citation is not rejected for being
+            # wrong — it is rejected for being unverifiable from its own
+            # evidence, which is the property the gate was built to demand
+            # and the one the LLM path could never supply.
+            return "citation_not_explicit"
         if explicit and candidate.rule_number not in explicit:
             return "explicit_number_disagrees"
     elif isinstance(candidate, RuleCrossRef):

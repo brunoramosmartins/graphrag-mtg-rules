@@ -211,6 +211,59 @@ multiple-comparison correction when strata are tested jointly.
   no overlap (`709.4` vs `202.3d`). This is what the 0.815/0.902 gap is made
   of, and it is the same failure the family metric was added to separate.
 
+### E-003 — schema reduction executed (2026-08-09)
+
+G3's registered consequence is done. `CITES_RULE` is deterministic:
+`extraction/explicit_citations.py` reads rule numbers the ruling states, and
+`gate.gate_candidates(require_explicit_citations=True)` — the ship default —
+rejects everything inferred as `citation_not_explicit`. The rule lives in the
+gate rather than in the prompt or the caller, so it holds for future callers
+too; E-003 is the measurement of what the same guarantee is worth in a prompt.
+E-003 stays reproducible via `--llm-citations --legacy-citation-gate`, which
+the CLI refuses to combine with `--load`.
+
+Measured consequences on the same 125 annotated rulings, **descriptive, not a
+new test** — the reduction was mandated by a rule fixed on 2026-07-20 and the
+figures below are worse, not better:
+
+- citations overall F1 **0.047** (tp=4 fp=2 fn=161), down from 0.125;
+- on the `explicit` stratum P 0.667 / R 0.800 / F1 **0.727 [0.222, 1.000]**;
+- 6 gated citation edges over 125 rulings.
+
+**New limitation the reduction introduces:** ruling text carries rule numbers
+that go stale and cannot be migrated. One `explicit` false positive is a ruling
+stating "(704.5w)" where the August 2026 CR moved that state-based action to
+`704.5x` and reused `704.5w`. The number still resolves, so no existence check
+catches it. `scripts/cr_migrate.py` can migrate the gold; it cannot migrate a
+historical document.
+
+### E-005 — linking precision (registered 2026-08-09, not yet run)
+
+- **Objective:** E-003 measured linking F1 0.634 [0.491, 0.750] against a 0.90
+  threshold — fail — with precision 0.500 and 16 of 26 false positives in the
+  homonym stratum. E-005 asks what to change.
+- **Hypotheses, generated post hoc from the annotation split and therefore
+  requiring a fresh sample:**
+  1. *The LLM homonym disambiguation costs more than it earns.* Observed in
+     passing while dry-running the reduced pipeline: deterministic stages alone
+     score linking F1 0.677 (tp=22 fp=13 fn=8) where the full cascade scored
+     0.634 (tp=26 fp=26 fn=4) — the LLM stage bought 4 true positives for 13
+     false ones. **This must not be acted on from this observation.** The split
+     is spent; choosing a cascade because it scores better on the data that
+     measured it is fitting to the test set, which is the failure this registry
+     exists to prevent.
+  2. *The reported figure is optimistic for the corpus.* The sample fixes
+     homonym 50 / multiword 40 / plain 30 / explicit 5, while the corpus counts
+     are homonym 17,808 / multiword 6,166 / plain 53,850 / explicit 25
+     (`data/golden/extraction_sample_ids.json`). The corpus over-weights the
+     stratum that scores worst, so a reweighted estimate should read *below*
+     0.634. The registered figure remains 0.634; a reweighted estimate is a
+     separate, labelled quantity and needs its bootstrap redone under the
+     weights.
+- **Design requirement:** a fresh annotation sample with its own seed. Neither
+  hypothesis may be tested on the E-003 annotation split.
+- **Actual result:** _not run._
+
 ### E-003b — composition of the E-003 disagreements
 
 - **Registered:** 2026-08-09, before any disagreement is inspected.

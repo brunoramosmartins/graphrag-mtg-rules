@@ -4,26 +4,34 @@ The connective tissue for Phase 3. Each ruling flows through the whole
 cascade and only gate-approved edges survive:
 
     ruling text
-      ├─ linker.scan_ruling ──▶ resolved mentions (exact/loose)
-      │                     └─▶ pending homonyms
-      ├─ disambiguate ──────────▶ LLM yes/no on each homonym (1 call)
-      ├─ extractor ─────────────▶ CITES_RULE candidates (1 call)
-      └─ gate.gate_candidates ──▶ GatedTriple[]  (schema + span + confidence
-                                   + existence + dedupe)
+      ├─ linker.scan_ruling ──────▶ resolved mentions (exact/loose)
+      │                         └─▶ pending homonyms
+      ├─ disambiguate ────────────▶ LLM yes/no on each homonym (1 call)
+      ├─ explicit_citations ──────▶ CITES_RULE candidates (deterministic)
+      ├─ extractor (--llm-citations, off) ─▶ inferred citations, for E-003
+      └─ gate.gate_candidates ────▶ GatedTriple[]  (schema + span + confidence
+                                     + existence + dedupe)
+
+Citations are deterministic since the E-003 schema reduction
+(2026-08-09): the inferred path measured F1 0.125 and gate G3's
+registered rule fired. ``--llm-citations`` still runs the extractor, but
+the gate rejects everything it infers as ``citation_not_explicit`` — the
+flag reproduces the experiment, it does not reopen the edge.
 
 The gate needs no Neo4j: ``known_rules`` comes from the parsed CR and
 ``known_cards`` from the oracle-cards file, so the expensive, auditable
 part of the phase runs and is scored entirely offline. Writing to the
 graph is a separate, explicit ``--load`` step (integration).
 
-Cost discipline: two LLM calls per ruling (disambiguation + citation),
-cost estimated and printed before any spend, ``--limit`` honoured, and
-``--yes`` required to leave dry-run.
+Cost discipline: one LLM call per ruling by default (disambiguation
+only; citations no longer cost anything), a second with
+``--llm-citations``, cost estimated and printed before any spend,
+``--limit`` honoured, and ``--yes`` required to leave dry-run.
 
 Usage:
     python -m graphrag_mtg.extraction.pipeline --ids data/golden/extraction_sample_ids.json
-    python -m graphrag_mtg.extraction.pipeline --limit 50 --grounded --yes
-    python -m graphrag_mtg.extraction.pipeline --limit 50 --grounded --yes --load
+    python -m graphrag_mtg.extraction.pipeline --limit 50 --yes
+    python -m graphrag_mtg.extraction.pipeline --limit 50 --yes --load
 """
 
 from __future__ import annotations
@@ -36,6 +44,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, RULINGS_STEM, bulk_path, load_bulk
+from graphrag_mtg.extraction.explicit_citations import explicit_citations
 from graphrag_mtg.extraction.gate import DEFAULT_MIN_CONFIDENCE, GatedTriple, gate_candidates
 from graphrag_mtg.extraction.linker import Lexicon, scan_ruling
 from graphrag_mtg.extraction.schemas import ExtractionCandidate
@@ -51,6 +60,7 @@ class PipelineReport:
     resolved_mentions: int = 0
     llm_resolved_mentions: int = 0
     homonyms_rejected: int = 0
+    explicit_citations: int = 0
     citation_candidates: int = 0
     gated: list[GatedTriple] = field(default_factory=list)
     dropped: Counter[str] = field(default_factory=Counter)
@@ -64,7 +74,9 @@ class PipelineReport:
             f"  linking: {self.resolved_mentions} deterministic + "
             f"{self.llm_resolved_mentions} LLM-resolved, "
             f"{self.homonyms_rejected} homonyms judged not-a-card.\n"
-            f"  citations: {self.citation_candidates} proposed.\n"
+            f"  citations: {self.explicit_citations} explicit (deterministic)"
+            f"{f' + {self.citation_candidates} LLM-inferred' if self.citation_candidates else ''}"
+            ".\n"
             f"  stage drops: {dict(self.dropped) or 'none'}.\n"
             f"  gate rejections: {dict(self.gate_rejected) or 'none'}."
         )
@@ -81,6 +93,7 @@ def run_pipeline(
     extract_fn=None,
     candidate_rules_fn=None,
     min_confidence: float = DEFAULT_MIN_CONFIDENCE,
+    require_explicit_citations: bool = True,
 ) -> PipelineReport:
     """Run every ruling through the cascade and gate the union of candidates.
 
@@ -90,12 +103,18 @@ def run_pipeline(
         known_rules: Rule numbers in the graph (from the parsed CR).
         known_cards: oracle_ids in the graph (from the cards file).
         linker_only: If true, skip both LLM stages — deterministic edges
-            only, no API. Used for the free preview pass.
+            only, no API. Used for the free preview pass. Explicit
+            citations still run: they cost nothing, so the free preview
+            now produces every ``CITES_RULE`` edge the graph will ever
+            get.
         disambiguate_fn: ``(pending, text) -> DisambiguationReport``.
         extract_fn: ``(ruling_id, text, candidate_rules) -> ExtractionReport``.
+            Inferred citations, kept for reproducing E-003; the gate
+            rejects them unless ``require_explicit_citations`` is False.
         candidate_rules_fn: ``(oracle_id) -> list[(number, snippet)]`` for
             grounded extraction, or None.
         min_confidence: Gate threshold.
+        require_explicit_citations: See :func:`gate.gate_candidates`.
 
     Returns:
         A :class:`PipelineReport` whose ``gated`` list is the only legal
@@ -116,6 +135,10 @@ def run_pipeline(
         resolved, pending = scan_ruling(rid, text, lexicon, host_oracle_id=raw.get("oracle_id"))
         report.resolved_mentions += len(resolved)
         candidates.extend(resolved)
+
+        stated = explicit_citations(rid, text)
+        report.explicit_citations += len(stated)
+        candidates.extend(stated)
 
         if linker_only:
             continue
@@ -140,6 +163,7 @@ def run_pipeline(
         known_rules=known_rules,
         known_cards=known_cards,
         min_confidence=min_confidence,
+        require_explicit_citations=require_explicit_citations,
     )
     report.gated = result.accepted
     report.gate_rejected = result.rejected
@@ -188,6 +212,22 @@ def main() -> int:
     parser.add_argument("--ids", type=Path, default=None, help="ids list or sample manifest")
     parser.add_argument("--split", choices=("dev", "annotation"), default="dev")
     parser.add_argument("--limit", type=int, default=30)
+    parser.add_argument(
+        "--llm-citations",
+        action="store_true",
+        help=(
+            "also run the inferred-citation extractor (E-003 reproduction only; "
+            "the gate rejects its output unless --legacy-citation-gate is given)"
+        ),
+    )
+    parser.add_argument(
+        "--legacy-citation-gate",
+        action="store_true",
+        help=(
+            "accept inferred citations, as the gate did before the 2026-08-09 "
+            "schema reduction. Reproduces E-003; never a load path."
+        ),
+    )
     parser.add_argument("--grounded", action="store_true", help="ground citation extraction")
     parser.add_argument(
         "--no-keyword-dir",
@@ -211,29 +251,48 @@ def main() -> int:
 
     selected = _select(load_bulk(args.rulings), args.ids, args.split, args.limit)
 
+    if args.legacy_citation_gate and args.load:
+        print(
+            "Refusing --legacy-citation-gate together with --load. That gate setting\n"
+            "accepts inferred citations, measured at F1 0.125 (E-003); it exists to\n"
+            "reproduce the experiment, not to put its output in the graph."
+        )
+        return 1
+
     if not args.yes:
-        # Free preview: deterministic edges only, real gate, no API.
+        # Free preview: deterministic edges only, real gate, no API. Since
+        # the schema reduction that includes every CITES_RULE edge a full
+        # run would produce — citations no longer cost anything.
         report = run_pipeline(
             selected,
             lexicon=lexicon,
             known_rules=known_rules,
             known_cards=known_cards,
             linker_only=True,
+            require_explicit_citations=not args.legacy_citation_gate,
         )
         n_pending = sum(
             len(scan_ruling(str(i), r.get("comment", ""), lexicon)[1])
             for i, r in enumerate(selected)
         )
-        print("DRY RUN — deterministic stages only (no API spend).")
+        calls = report.rulings * (2 if args.llm_citations else 1)
+        # ASCII only: this line reaches consoles that cannot encode "—" (cp1252).
+        print("DRY RUN - deterministic stages only (no API spend).")
         print(report.summary())
+        # Written even on the dry run: these edges are free and complete, and
+        # requiring an API spend to obtain a file of deterministic triples
+        # would be charging for arithmetic.
+        _write_gated(args.out, report.gated)
+        print(f"\nGated triples written to {args.out}.")
         print(
-            f"\nWith --yes: ~{report.rulings * 2} LLM calls "
-            f"({report.rulings} disambiguation over {n_pending} homonyms "
-            f"+ {report.rulings} citation). Pass --yes to run them."
+            f"\nCITES_RULE above is final: explicit citations are deterministic, so\n"
+            f"--yes adds no citation edges. With --yes: ~{calls} LLM calls "
+            f"({report.rulings} disambiguation over {n_pending} homonyms"
+            f"{f' + {report.rulings} inferred citation' if args.llm_citations else ''})."
         )
         return 0
 
-    # Full run: wire the two LLM stages.
+    # Full run: wire the LLM stages that are still on.
     from graphrag_mtg.extraction.disambiguate import disambiguate_ruling
     from graphrag_mtg.extraction.extractor import extract_citations
     from graphrag_mtg.extraction.llm import LlmClient
@@ -242,7 +301,7 @@ def main() -> int:
 
     extract_system = None
     candidate_rules_fn = None
-    if args.grounded:
+    if args.grounded and args.llm_citations:
         from graphrag_mtg.extraction.grounding import candidate_rules_for_keywords, grounding_block
 
         extract_system = grounding_block(doc, include_keywords=not args.no_keyword_dir)
@@ -265,8 +324,9 @@ def main() -> int:
         known_cards=known_cards,
         linker_only=False,
         disambiguate_fn=lambda pending, text: disambiguate_ruling(pending, text, client),
-        extract_fn=extract_fn,
+        extract_fn=extract_fn if args.llm_citations else None,
         candidate_rules_fn=candidate_rules_fn,
+        require_explicit_citations=not args.legacy_citation_gate,
     )
     print(report.summary())
     _write_gated(args.out, report.gated)

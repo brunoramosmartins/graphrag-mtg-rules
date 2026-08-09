@@ -207,6 +207,55 @@ deterministic and unaffected. What Phase 3 establishes is the boundary: the
 deterministic parser reaches further than expected, and LLM inference of a
 *governing* rule — a rule the ruling never names — reaches much less far.
 
+## What the system actually ships (schema reduced, 2026-08-09)
+
+G3's consequence, executed. `(:Ruling)-[:CITES_RULE]->(:Rule)` is now produced
+by `extraction/explicit_citations.py` from rule numbers the ruling states, and
+the gate rejects anything inferred (`citation_not_explicit`). The check lives in
+`gate.py`, not in the prompt or the caller, so it holds for future callers —
+E-003 is the measurement of what the same guarantee is worth in a prompt.
+
+Scored on the same 125 rulings. **Descriptive, not a new test:** the reduction
+was mandated by a rule fixed on 2026-07-20, and the numbers get worse.
+
+| | inferred (E-003, headline) | shipped (reduced) |
+|---|---|---|
+| citations, overall F1 | 0.125 [0.073, 0.180] | **0.047** (tp=4 fp=2 fn=161) |
+| citations, `explicit` stratum | — | **0.727 [0.222, 1.000]** (P 0.667, R 0.800) |
+| gated citation edges / 125 rulings | 140 | **6** |
+
+Trading 99.97% of the coverage is only defensible because the coverage was not
+real: at F1 0.125 roughly seven of every eight inferred edges were wrong, and a
+graph that cites wrongly is worse than one that stays silent — it looks
+grounded. What the edge now means is narrower and true: *the ruling names this
+rule*, not *this rule governs this ruling*.
+
+**The reduction has its own version hazard.** Precision on the `explicit`
+stratum is 0.667, not 1.0. One of the two misses is a ruling that writes
+"(704.5w)" where the August 2026 CR moved that state-based action to `704.5x`
+and reused `704.5w` for something else. `scripts/cr_migrate.py` migrated the
+gold with the rule text; a ruling is a historical document and cannot be
+migrated. The number still resolves, so no existence check catches it — the
+same silent displacement that moved `initiative` off 725.1.
+
+## Consequences for E-001, checked before Phase 4
+
+No golden-set question loses a written path: **0 of 77** `gold_path` values name
+`CITES_RULE` or a `Ruling` node (the edges they name are `DEFINED_BY` ×25 and
+`HAS_KEYWORD` ×1). But only **23 of 77** are written as traversals at all, and
+the rules the rest require split by stratum: `definition_1hop` and
+`keyword_rule_2hop` sit entirely in the keyword chapters and stay reachable via
+`Keyword-[:DEFINED_BY]->Rule`; `legality_1hop` needs no CR rule; but
+`interaction_multihop` — the `vector_should: fail` stratum that carries the
+central claim — needs 61 rules of which only 8 are keyword rules, the rest
+sitting in the 600s, 500s, 700s and 300s with no deterministic edge from any
+card. `CITES_RULE` was to be that bridge, and it was never good enough to be it.
+
+Phase 4 therefore chooses deliberately between finding another deterministic
+bridge, accepting that rules are reached by text retrieval while the graph
+supplies entity structure (which reframes E-001 as a test of the combination),
+or reopening an inferred path under its own pre-registration.
+
 ## Limitations, stated because they bound every number above
 
 - **The ceiling is measured, and it does not explain the result (E-003a).** A
