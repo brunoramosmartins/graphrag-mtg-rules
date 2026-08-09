@@ -37,7 +37,7 @@ names, and the Comprehensive Rules never mention one.
 expansions, retrieval reaches a gold rule for 8 of 15 dev questions — but
 only **2 of the 8 `interaction_multihop` ones**. ADR-007 assumed text
 retrieval would cover the stratum the graph cannot seed; on this
-evidence it does not. Questions like *Humility* × *Opalescence* need the
+evidence it does not. Questions like *Humility* and *Opalescence* need the
 layer system (613.x), and reaching it requires knowing that two
 continuous effects must be ordered, which is not a vocabulary overlap
 with anything either card says. The boundary the project ends up
