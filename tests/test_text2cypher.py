@@ -14,9 +14,9 @@ from __future__ import annotations
 import pytest
 
 from graphrag_mtg.retrieval.text2cypher import (
+    CANNOT_TRANSLATE,
     DEFAULT_LIMIT,
     MAX_LIMIT,
-    CANNOT_TRANSLATE,
     extract_query,
     schema_prompt,
     validate,
