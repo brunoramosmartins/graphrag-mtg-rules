@@ -90,6 +90,52 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — The split caught me within the hour, and the dev data says no
+
+Building ADR-007's text-retrieval half, three golden-set questions were
+inspected to see what lexical search over CR text returns. The
+*Humility* × *Opalescence* one came back with 604.3 and 710.2 — nothing
+about layers — and the diagnosis looked clean: `cite_search`'s stopword
+list, tuned for ruling→rule matching, strips "ability"/"abilities", which
+is the single most diagnostic term for layer 6. Rebuilding the index
+without those stopwords lifted 613.4b — an actual gold rule — into the
+top ten.
+
+**That question is in the frozen evaluation set.** Changing a retrieval
+parameter because it fixes an evaluation question is fitting the
+retriever to the test, which is precisely what the split drawn this
+morning exists to prevent. It caught the case within the hour of being
+created, which is the argument for drawing splits before writing code
+rather than after.
+
+Recorded for the record, since inspecting is not free: the retrieval
+output of `hand-humility-opalescence`, `hand-deathtouch-trample` and one
+targeting question was seen on 2026-08-09. **No parameter was changed as
+a result.** The hypothesis was re-derived on the development split
+instead.
+
+**And the dev split refused it.** Over the 15 dev questions carrying gold
+rules, the lighter stopword list changes nothing at all — 8 of 15 with it
+and 8 of 15 without, identical per stratum. What *does* help is expanding
+the query with the oracle text of the cards the question names: 6 of 15 →
+**8 of 15**, the gain landing on `keyword_rule_2hop` (0/1 → 1/1) and
+`interaction_multihop` (1/8 → 2/8). Only the measured change ships.
+
+**The finding that matters is the one that went the wrong way.**
+`interaction_multihop` reaches a gold rule in **2 of 8** dev questions
+even with expansions. ADR-007 assumed text retrieval would cover the
+stratum the graph cannot seed; on this evidence it does not. Reaching the
+layer system means knowing that two continuous effects must be ordered,
+and that is not a vocabulary overlap with anything either card says — the
+same wall, from the other side.
+
+The response is to report it, not to keep adding mechanisms until
+something scores. Embeddings are the obvious next lever and Phase 3
+already dropped that stage once; adding it now, against a stratum whose
+difficulty is now measured twice, would be reaching for a result rather
+than testing a hypothesis. It goes to the backlog with its own
+registration.
+
 ## 2026-08-09 — Hybrid retrieval adopted, and the golden set split before any template
 
 Option 2 taken (ADR-007): the graph resolves entities and answers the
