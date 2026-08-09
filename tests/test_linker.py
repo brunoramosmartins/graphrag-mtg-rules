@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from graphrag_mtg.extraction.linker import Lexicon, scan_ruling
+from graphrag_mtg.extraction.linker import Lexicon, names_the_host, scan_ruling
 from graphrag_mtg.extraction.schemas import LinkMethod
 
 CARDS = [
@@ -134,12 +134,24 @@ class TestHostFragmentSuppression:
         assert all(m.oracle_id != "oid-legion" for m in resolved)
         assert all(p.mention.surface != "Legion" for p in pending)
 
-    def test_the_host_named_in_full_is_still_a_mention(self) -> None:
-        """Equality is not containment: the gold records these as true positives."""
+    def test_the_host_named_in_full_is_not_a_fragment(self) -> None:
+        """Equality is not containment: the gold records these as true positives.
+
+        Tested on the predicate rather than through ``scan_ruling``, because a
+        surface that resolves to the host's *own* oracle_id is already dropped
+        by the self-mention filter. In the corpus the two ids differ — the name
+        resolves to a different printing than the one the ruling hangs on — and
+        it is only this predicate that decides the case.
+        """
         text = "Brutal Cathar returns transformed."
-        resolved, pending = scan_ruling("r2", text, self.lexicon(), host_oracle_id="host-cathar")
-        surfaces = [m.surface for m in resolved] + [p.mention.surface for p in pending]
-        assert "Brutal Cathar" in surfaces
+        assert not names_the_host(
+            "Brutal Cathar", 0, 13, text, ["Brutal Cathar", "Moonrage Brute"]
+        )
+
+    def test_a_fragment_of_the_host_name_is_recognised(self) -> None:
+        text = "The number of creatures Kemba's Legion can block is fixed."
+        start = text.index("Legion")
+        assert names_the_host("Legion", start, start + 6, text, ["Kemba's Legion"])
 
     def test_a_card_whose_name_the_host_contains_survives(self) -> None:
         text = "The Ring won't tempt you."
