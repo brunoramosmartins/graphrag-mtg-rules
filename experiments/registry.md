@@ -485,3 +485,102 @@ historical document.
   citations the migration remapped, exactly one falls inside the 40 sampled
   cases (`310.10` -> `310.11`, ruling `41f59f3c34ff`) and it was judged with
   the current rule text on screen.
+
+---
+
+## E-007 — do the generated answers cite what they claim?
+
+- **Registered:** 2026-08-09, at Phase 5 kickoff, before `answerer.py` exists.
+  The Phase 5 DoD is a verdict, and a verdict whose criteria are written after
+  the answers are read is not a verdict.
+- **Objective:** the Phase 5 DoD, made measurable. Two questions that are
+  routinely conflated and are kept apart here:
+  - **Coverage** — what share of a generated answer's factual claims carry a
+    citation at all?
+  - **Support** — of the claims that do carry one, what share are actually
+    supported by the cited evidence? A citation that points at a real rule
+    which does not say what the sentence says is worse than no citation,
+    because it survives inspection.
+- **Sample, and why it is not the golden set:** 30 RulesGuru questions drawn
+  fresh by `build_golden_pool.py`, **disjoint from all 77 golden-set
+  questions** — from both the 20-question development split and the 57
+  evaluation questions frozen for E-001. Auditing generation on the
+  evaluation split would spend the split that Phase 4 froze specifically to
+  protect E-001; auditing on the development split would measure a prompt on
+  the same 20 questions it was tuned against. The RulesGuru answer key is the
+  asset here, and it exists for questions we have never touched. IDs are
+  versioned, text is cached and gitignored, per the licence posture already
+  applied to the golden set.
+- **Configuration:** each question goes through the Phase 4 stack
+  (`retrieve()` with its default budget and caps) and then through
+  `generation/answerer.py`. The audit is manual, one worksheet row per
+  **claim**, not per answer — an answer is not a unit of truth. Recorded per
+  claim: whether a citation is present; whether the cited evidence supports
+  it; and whether the claim is correct against the RulesGuru answer key,
+  which is a *third* thing and reported separately.
+- **Decision rule (from the roadmap DoD, not invented here):** **100% of
+  factual claims carry a citation**. Below 100%, the prompt is iterated and
+  the run repeats — this is a build criterion, not a research finding.
+  Support is reported with a cluster-bootstrap interval over questions and
+  carries **no threshold**, because no threshold for it was pre-registered
+  and inventing one after seeing the number is how a target becomes a
+  rationalisation.
+- **Refusals count as correct, and this is the subtle part.** Phase 4 measured
+  `interaction_multihop` rule recall at 0.12: for those questions the rule the
+  answer needs is *not in the subgraph*, and the honest output is a refusal.
+  An audit that scores refusals as failures would push the prompt toward
+  answering from parametric knowledge — it would reward exactly the failure
+  E-008 exists to detect. A refusal is scored as correct behaviour whenever
+  the subgraph lacks the evidence, and the refusal rate is reported beside
+  the coverage figure rather than folded into it.
+- **Prediction, recorded before the run:** coverage reaches 100% only after
+  iteration, with the first round failing on *connective* sentences — the
+  bridging clauses a model writes between two cited facts ("so the creature
+  is still a 1/1"), which feel like reasoning rather than claims and are
+  where uncited assertions hide. Support lands lower than coverage, and its
+  commonest failure is a citation to the right *chapter* and the wrong
+  subrule, which is the same wrong-leaf error E-003a found the annotator
+  making against themself.
+- **Threat to validity, recorded up front:** the author writes the prompt and
+  audits the answers, which is the same single-judge design flagged in E-003b.
+  It is not resolvable by a bigger sample. What bounds it here is that
+  coverage is nearly mechanical — a sentence either carries a citation
+  marker or it does not — while *support* carries the judgement, and support
+  is the figure without a threshold.
+- **Actual result:** _(to be filled after the run)_
+
+## E-008 — does the model answer from the graph or from what it already knows?
+
+- **Registered:** 2026-08-09, at Phase 5 kickoff, before any prompt exists.
+- **Objective:** every grounding claim in this project rests on an assumption
+  that is false by default — that the model's answer came from the retrieved
+  subgraph. Magic is a 30-year-old game with an enormous public corpus, and
+  the model knows it. A correct answer is therefore **not evidence of
+  grounding**, and E-007 cannot separate the two: a well-cited answer that
+  the model actually produced from memory passes every check E-007 makes.
+- **Design — fictional cards, which is the only way to tell the two apart:**
+  a small set of cards that do not exist is loaded into a **disposable graph
+  namespace**, each built to make parametric knowledge actively wrong:
+  - a fictional card whose oracle text contradicts what a similarly-named
+    real card does;
+  - a fictional keyword with a glossary entry and a governing rule, so the
+    correct answer is only derivable from the subgraph;
+  - a real card given a fictional ruling that changes the outcome.
+  The measurement is whether the answer follows the graph or the world. Test
+  fixtures only — nothing fictional touches the production database, and
+  nothing about this ships in the corpus.
+- **Decision rule:** any answer that contradicts the loaded subgraph in favour
+  of real-world Magic knowledge is a **leak**, and a single leak blocks the
+  Phase 5 DoD claim that answers are grounded. Not a proportion with an
+  interval: the claim being tested is "grounded", and one counterexample
+  falsifies it. If leaks occur, the prompt is iterated and the finding is
+  reported either way — a phase that reports "we found parametric leakage and
+  here is what fixed it" is worth more than one that never looked.
+- **Prediction, recorded before the run:** leakage happens, and it happens
+  most on the *contradiction* case rather than the invented-keyword case. An
+  invented keyword leaves the model nothing to fall back on, so it either
+  uses the subgraph or refuses; a card that resembles a known one gives it
+  something confidently wrong to say. Second prediction: leakage shows up in
+  the uncited connective sentences before it shows up in a cited claim —
+  the same seam E-007 predicts for coverage.
+- **Actual result:** _(to be filled after the run)_

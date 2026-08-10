@@ -90,6 +90,41 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — Phase 5 opened; the audit sample comes from outside the golden set
+
+Phase 4 closed with every deliverable present and no carry-over. The one
+deferral — fuzzy and embedding linking — is recorded below with its trigger,
+not left implicit.
+
+Phase 5's DoD asks for "a sample of **30 answers** audited against the
+RulesGuru answer key", and that collides with the split Phase 4 froze. The
+golden set holds 77 questions, 30 of them from RulesGuru, split 20
+development / 57 evaluation. Those 30 straddle both sides, so auditing 30
+answers against the RulesGuru key necessarily spends evaluation questions
+that E-001 has not run on yet — and the development split is both too small
+(20) and already seen by Phase 4's iteration.
+
+Decision: **draw a fresh pool of 30 RulesGuru questions that never entered
+the golden set**, disjoint from both splits. `build_golden_pool.py` already
+pulls and appends unseen ids under the licence posture the golden set uses
+(ids versioned, text cached and gitignored). This keeps the DoD literal —
+30 answers, RulesGuru key — at the cost of one fetch, and it is the cheaper
+option by a wide margin: the alternative spends a split that exists exactly
+once.
+
+Registered before any code: **E-007** (citation coverage and support, with
+coverage carrying the DoD's 100% threshold and support deliberately carrying
+none) and **E-008** (parametric leakage, measured with fictional cards in a
+disposable namespace).
+
+E-007 carries one scoring rule that had to be settled before the first
+answer is generated, because getting it wrong would corrupt the whole
+phase: **a refusal counts as correct when the subgraph lacks the
+evidence.** Phase 4 measured `interaction_multihop` rule recall at 0.12, so
+for those questions there is nothing to answer from. An audit that scored
+refusals as failures would push the prompt toward answering from parametric
+knowledge — rewarding precisely the failure E-008 exists to detect.
+
 ## 2026-08-09 — The close audit found a promise the code was not keeping
 
 Walking the Phase 4 deliverable checklist to close the phase turned up a
