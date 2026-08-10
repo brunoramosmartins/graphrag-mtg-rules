@@ -34,9 +34,27 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from graphrag_mtg.etl.normalize import normalize_name
-from graphrag_mtg.retrieval.linking import QueryEntities
+from graphrag_mtg.retrieval.linking import EntityRef, QueryEntities
 from graphrag_mtg.retrieval.subgraph import Outcome
 from graphrag_mtg.retrieval.templates import BY_NAME
+
+
+def card_key(card: EntityRef) -> str:
+    """The value the card templates match on.
+
+    The resolved card's own ``normalized_name``, never a re-normalized
+    surface. The tokenizer keeps commas and periods because card names
+    contain them (*Omnath, Locus of Creation*), so a mention written as
+    "New Way Forward," normalizes to ``new way forward,`` and matches no
+    node — while the linker had already resolved it correctly through the
+    loose table. Deriving the parameter from the surface threw that
+    resolution away and produced an empty traversal that looked, from the
+    outside, exactly like a card the graph does not hold.
+
+    Falls back to the surface so a caller that builds an ``EntityRef`` by
+    hand still gets the old behaviour rather than an empty query.
+    """
+    return card.normalized or normalize_name(card.surface)
 
 #: Rows any single traversal may return. Beyond the per-kind cap in
 #: `subgraph.add_evidence`; this one bounds the database, that one bounds
@@ -130,7 +148,7 @@ def plan(
             Call("keyword_definition", {"keyword": normalize_name(keyword.key), "limit": row_limit})
         )
     for card in entities.cards:
-        name = normalize_name(card.surface)
+        name = card_key(card)
         calls.append(Call("card_keyword_rules", {"normalized_name": name, "limit": row_limit}))
         calls.append(Call("card_rulings", {"normalized_name": name, "limit": row_limit}))
         # Legality only when the question names a format. Running it always
@@ -142,7 +160,7 @@ def plan(
                                        "limit": row_limit})
             )
 
-    pair = [normalize_name(c.surface) for c in entities.cards[:2]]
+    pair = [card_key(c) for c in entities.cards[:2]]
     if len(pair) == 2:
         calls.append(Call("card_interaction", {"left": pair[0], "right": pair[1], "limit": row_limit}))
 

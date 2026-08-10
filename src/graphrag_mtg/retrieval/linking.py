@@ -61,6 +61,26 @@ RIGHT_SINGLE_QUOTE = chr(0x2019)
 
 _WORD = re.compile("[A-Za-z0-9'" + RIGHT_SINGLE_QUOTE + "/,.-]+")
 
+#: Punctuation that ends a clause rather than a card name. Trimmed only
+#: from the *edges* of a surface, and only on a second attempt: names carry
+#: commas and periods internally (*Omnath, Locus of Creation*, *Fire // Ice*)
+#: and one of them ends in an exclamation mark (*Ach! Hans, Run!*), so the
+#: surface as written is always tried first and wins when it matches.
+_EDGE_PUNCTUATION = ",.;:!?"
+
+
+def _variants(surface: str) -> list[str]:
+    """The surface as written, then with clause punctuation trimmed off.
+
+    The tokenizer keeps commas and periods because card names contain them,
+    which means a mention written mid-sentence arrives as "Humility," — a
+    string in no lookup table. A multi-word name survives that through the
+    loose table; a single-word name has no such rescue and simply fails to
+    resolve, which looks from outside like a card the corpus does not have.
+    """
+    trimmed = surface.strip().strip(_EDGE_PUNCTUATION).strip()
+    return [surface] if trimmed == surface else [surface, trimmed]
+
 
 #: Card layouts that are not rules entities. An `art_series` card is a
 #: collectible print named "X // X", and a `token` shares its name with the
@@ -118,6 +138,14 @@ class EntityRef:
             from a non-empty ``candidates``.
         has_keywords: Cards only — whether this card carries keyword
             abilities, which is what decides if it can seed the rule graph.
+        normalized: Cards only — the resolved card's canonical
+            ``normalized_name``, which is the key the card templates match
+            on. **Not** derivable from ``surface``: the tokenizer keeps
+            commas and periods because card names contain them (*Omnath,
+            Locus of Creation*), so a mention written as "New Way Forward,"
+            normalizes to ``new way forward,`` and matches nothing. The
+            loose table rescues the *linking*; this field is what carries
+            the rescue through to the query.
     """
 
     kind: EntityKind
@@ -128,6 +156,7 @@ class EntityRef:
     method: LinkMethod
     candidates: tuple[str, ...] = ()
     has_keywords: bool = False
+    normalized: str = ""
 
 
 @dataclass(frozen=True)
@@ -289,6 +318,7 @@ class QueryLinker:
                             method=method,
                             candidates=candidates,
                             has_keywords=bool(self.keywords_by_oracle.get(key)),
+                            normalized=self._canonical(kind, key),
                         )
                     )
                     i += width
@@ -333,6 +363,14 @@ class QueryLinker:
         ``candidates`` means "confirm this is a card"; several mean "pick
         which one".
         """
+        for candidate in _variants(surface):
+            found = self._lookup(candidate, gate)
+            if found is not None:
+                return found
+        return None
+
+    def _lookup(self, surface: str, gate: bool):
+        """One cascade — exact, then loose, then single-word — for one surface."""
         norm = normalize_name(surface)
         if not norm:
             return None
@@ -351,6 +389,16 @@ class QueryLinker:
         if not hits:
             return None
         return self._decide(hits, method, force_ambiguous=not gate)
+
+    def _canonical(self, kind: EntityKind, key: str) -> str:
+        """The resolved card's own ``normalized_name``, for the templates.
+
+        Empty for anything that is not a resolved card — keywords, rules
+        and formats already carry their node key in :attr:`EntityRef.key`.
+        """
+        if kind is not EntityKind.CARD or not key:
+            return ""
+        return normalize_name(self.lexicon.name_by_oracle.get(key, ""))
 
     def _decide(self, hits: set[str], method: LinkMethod, *, force_ambiguous: bool = False):
         ordered = tuple(sorted(hits))

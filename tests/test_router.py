@@ -110,3 +110,44 @@ class TestDescribe:
     def test_a_failure_is_described_as_one(self) -> None:
         entities = linker().link("what about the weather")
         assert "no_entities" in describe(entities, plan(entities))
+
+
+class TestCardParameterIsTheResolvedName:
+    """The bug that emptied 194 of 245 card traversals in E-007's first run.
+
+    The tokenizer keeps commas and periods because card names contain them
+    (*Omnath, Locus of Creation*), so a mention written mid-sentence carries
+    its punctuation into the surface. The linker resolves that correctly
+    through the loose table; the router used to throw the resolution away and
+    re-normalize the raw surface, producing a query for `humility,` — an
+    empty traversal indistinguishable, from outside, from a card the graph
+    does not hold.
+    """
+
+    def params(self, question: str, template: str) -> list[dict]:
+        return [dict(c.params) for c in route(question).calls if c.template == template]
+
+    def test_a_trailing_comma_does_not_reach_the_query(self) -> None:
+        (call,) = self.params("Nico casts Humility, then passes.", "card_rulings")
+        assert call["normalized_name"] == "humility"
+
+    def test_a_sentence_initial_capital_is_still_not_an_assertion(self) -> None:
+        """Trimming punctuation must not weaken the capitalization gate.
+
+        "Humility, and then…" capitalizes only because a sentence starts
+        there, which is no evidence of a proper noun — so it stays
+        ambiguous and routes to nothing, exactly as before this fix.
+        """
+        assert route("Humility, and then what happens?").outcome is Outcome.AMBIGUOUS
+
+    def test_a_trailing_period_does_not_either(self) -> None:
+        (call,) = self.params("Nico casts Opalescence. What resolves?", "card_rulings")
+        assert call["normalized_name"] == "opalescence"
+
+    def test_a_clean_mention_is_unchanged(self) -> None:
+        (call,) = self.params("What does Serra Angel do", "card_rulings")
+        assert call["normalized_name"] == "serra angel"
+
+    def test_the_interaction_pair_uses_resolved_names_too(self) -> None:
+        (call,) = self.params("Humility, Opalescence, what happens?", "card_interaction")
+        assert (call["left"], call["right"]) == ("humility", "opalescence")

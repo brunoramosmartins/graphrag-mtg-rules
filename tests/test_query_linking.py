@@ -144,3 +144,52 @@ class TestSpans:
         question = "Does Serra Angel have Flying?"
         entities = linker().link(question)
         assert all(question[e.start : e.end] == e.surface for e in entities.resolved)
+
+
+class TestCanonicalName:
+    """A resolved card carries the node key, not a re-normalized surface."""
+
+    def test_a_card_carries_its_normalized_name(self) -> None:
+        (card,) = linker().link("What does Serra Angel do").cards
+        assert card.normalized == "serra angel"
+
+    def test_punctuation_in_the_surface_does_not_survive_into_it(self) -> None:
+        (card,) = linker().link("Nico casts Humility, then passes.").cards
+        assert card.surface.endswith(",")
+        assert card.normalized == "humility"
+
+    def test_a_keyword_has_none_because_its_key_is_the_node_key(self) -> None:
+        (keyword,) = linker().link("What does Flying do").keywords
+        assert keyword.normalized == ""
+
+
+class TestClausePunctuation:
+    """A mention mid-sentence arrives with the punctuation attached.
+
+    The tokenizer keeps commas and periods because card names contain them,
+    so "Humility," is a string in no lookup table. Multi-word names survive
+    that through the loose table; single-word names had no rescue and simply
+    failed to resolve, which from outside looks like a card the corpus does
+    not hold. The surface as written is still tried first.
+    """
+
+    def test_a_single_word_name_survives_a_trailing_comma(self) -> None:
+        (card,) = linker().link("Nico casts Humility, then passes.").cards
+        assert card.key == "hum"
+
+    def test_and_a_trailing_period(self) -> None:
+        (card,) = linker().link("Nico casts Opalescence. Then what?").cards
+        assert card.key == "opa"
+
+    def test_a_multiword_name_still_resolves_the_same_way(self) -> None:
+        (card,) = linker().link("Nico casts Lightning Bolt, then passes.").cards
+        assert card.key == "bolt"
+
+    def test_trimming_does_not_weaken_the_capitalization_gate(self) -> None:
+        """A sentence-initial capital is not evidence of a proper noun."""
+        entities = linker().link("Humility, and then what happens?")
+        assert entities.cards == ()
+        assert entities.ambiguous[0].candidates == ("hum",)
+
+    def test_an_english_phrase_is_still_not_a_card(self) -> None:
+        assert linker().link("extra card draw each turn, please").cards == ()
