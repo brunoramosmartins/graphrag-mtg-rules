@@ -4,16 +4,23 @@ The second layer of ADR-005, and the phase's registered first cut if the
 timebox runs out. Templates answer the golden set's families; this exists
 for the question nobody wrote a traversal for.
 
-**Defence in depth, and the order matters.** The checks in this module
-catch *mistakes* — a model that writes `SET` because the question said
-"set the power to 3". They do not catch an attacker, and pretending
-otherwise would be the dangerous part. What actually confines the damage
-is running the query in a **read transaction**: Neo4j refuses writes
-server-side there regardless of what the string says, and no amount of
-comment-smuggling or clause-splitting gets around it. This module
-validates first so a bad query fails loudly with a reason, and the caller
-executes with ``session.execute_read`` so a validation miss is still not
-a write.
+**Defence in depth, and the order matters.** Three layers, each catching
+what the one before it cannot:
+
+1. the string checks here catch *mistakes* — a model that writes `SET`
+   because the question said "set the power to 3";
+2. ``EXPLAIN`` asks the server to plan the query without running it,
+   which is the only check that knows whether the Cypher is actually
+   valid against the real schema. The checks above reason about text and
+   will happily pass a query that no database can parse;
+3. the caller's **read transaction** is what confines an attacker. Neo4j
+   refuses writes server-side there regardless of what the string says,
+   and no amount of comment-smuggling or clause-splitting gets around
+   it.
+
+Layers 1 and 2 exist so a bad query fails loudly with a *reason*; layer 3
+exists because the first two can be wrong. Pretending the string checks
+were the security boundary would be the dangerous part.
 
 Everything here fails closed. A query that cannot be parsed with
 confidence is rejected, not executed and hoped about — and a rejection is
@@ -48,6 +55,7 @@ _COMMENT = re.compile(r"//|/\*|\*/")
 _LIMIT = re.compile(r"\bLIMIT\s+(\d+)\b", re.IGNORECASE)
 _CALL = re.compile(r"\bCALL\s+([A-Za-z_][\w.]*)", re.IGNORECASE)
 _STRING_LITERAL = re.compile(r"'[^']*'|\"[^\"]*\"")
+_PARAMETER = re.compile(r"\$[A-Za-z_]\w*")
 
 
 @dataclass(frozen=True)
@@ -117,6 +125,14 @@ def validate(cypher: str, *, max_limit: int = MAX_LIMIT) -> Verdict:
     if "RETURN" not in upper:
         return Verdict(False, "no_return")
 
+    if _PARAMETER.search(body):
+        # Nothing binds parameters in this layer: the query is generated
+        # from the question and executed with an empty map, so `$name`
+        # reaches the server unbound and raises. Refusing it here turns a
+        # crash inside the pipeline into a named refusal — found while
+        # adding EXPLAIN, because the prompt used to *ask* for parameters.
+        return Verdict(False, "unbound_parameter")
+
     found = _LIMIT.search(body)
     if found is None:
         query = f"{query}\nLIMIT {DEFAULT_LIMIT}"
@@ -145,6 +161,48 @@ def returns_citable_columns(cypher: str) -> bool:
     return set(CITABLE_COLUMNS) <= aliases
 
 
+#: Asks the server to plan a query without running it. Everything above
+#: this line reasons about *text*; only the database knows whether the
+#: Cypher parses and whether the labels and properties it names exist.
+EXPLAIN = "EXPLAIN "
+
+
+def _refusal(error: BaseException) -> str:
+    """Compress a driver error into a short, machine-readable reason.
+
+    Neo4j codes look like ``Neo.ClientError.Statement.SyntaxError``; the
+    last segment is the part worth carrying into a subgraph note. Anything
+    without a code falls back to its exception class.
+    """
+    code = getattr(error, "code", "") or type(error).__name__
+    return str(code).rsplit(".", 1)[-1]
+
+
+def check_plan(cypher: str, run) -> str:
+    """Plan the query server-side, returning ``""`` when it is executable.
+
+    This is the promise ADR-005 made and the string checks could not keep:
+    a query can be read-only, citable, bounded and still be invalid Cypher
+    or name a label that does not exist. Planning is cheap and touches no
+    data.
+
+    The ``except Exception`` is deliberate. This module never imports the
+    Neo4j driver — ``run`` is injected — so it cannot name the driver's
+    exception types, and the whole purpose here is to convert *any* server
+    rejection into a named refusal rather than an exception escaping into
+    the retrieval pipeline.
+
+    Returns:
+        An empty string when the server accepted the plan, otherwise
+        ``explain:<Reason>``.
+    """
+    try:
+        run(f"{EXPLAIN}{cypher}", {})
+    except Exception as error:
+        return f"explain:{_refusal(error)}"
+    return ""
+
+
 def schema_prompt(labels: dict[str, list[str]], relationships: list[str]) -> str:
     """Describe the graph to the model, and the rules its output must obey.
 
@@ -164,7 +222,8 @@ def schema_prompt(labels: dict[str, list[str]], relationships: list[str]) -> str
         "  - one statement, no semicolons, no comments",
         "  - it must carry a LIMIT",
         "  - no procedure calls",
-        "  - use parameters for values you were given, not string concatenation",
+        "  - no parameters: write values as literals, because nothing binds",
+        "    a `$name` in this path and the query would fail to run",
         "  - RETURN exactly two columns, aliased `key` and `text`: `key` is the",
         "    citation handle (a rule number, a ruling id, a card name) and `text`",
         "    is what will be quoted. An answer that cannot be cited is not shipped,",
@@ -206,7 +265,7 @@ class Attempt:
 
 
 class Text2Cypher:
-    """The long-tail layer: generate, validate, and only then execute.
+    """The long-tail layer: generate, validate, plan, and only then execute.
 
     Wired into `retrieval/pipeline.py` as the last resort, after the plan
     has failed to find anything — not as a general-purpose path. Phase 3
@@ -245,14 +304,25 @@ class Text2Cypher:
 
         Returns:
             ``(evidence, reason)``. The reason is empty on success and
-            names the refusal otherwise — "declined", a validation code, or
-            "not_citable" — so a caller can report *why* the long tail did
-            not answer instead of reporting nothing.
+            names the refusal otherwise — "declined", a validation code,
+            "not_citable", or an ``explain:``/``execution:`` code from the
+            server — so a caller can report *why* the long tail did not
+            answer instead of reporting nothing.
         """
         tried = self.attempt(question)
         if not tried.usable:
             return [], tried.verdict.reason
-        rows = list(run(tried.cypher, {}))
+        rejected = check_plan(tried.cypher, run)
+        if rejected:
+            return [], rejected
+        try:
+            rows = list(run(tried.cypher, {}))
+        except Exception as error:
+            # Planned and still failed — a timeout, a memory ceiling, a
+            # transient. Same rule as everywhere else in this stack: the
+            # failure gets a name, it does not become an empty result that
+            # reads like an answer.
+            return [], f"execution:{_refusal(error)}"
         found = [
             Evidence(
                 kind="row",

@@ -17,6 +17,8 @@ from graphrag_mtg.retrieval.text2cypher import (
     CANNOT_TRANSLATE,
     DEFAULT_LIMIT,
     MAX_LIMIT,
+    Text2Cypher,
+    check_plan,
     extract_query,
     schema_prompt,
     validate,
@@ -43,6 +45,10 @@ ATTACKS = [
     ("USE system MATCH (c) RETURN c LIMIT 1", "unexpected_opening_clause"),
     ("MATCH (c:Card) LIMIT 5", "no_return"),
     ("   ", "empty"),
+    # Not an attack — a crash. Nothing binds parameters in this layer, so an
+    # obedient model following the old prompt produced a query that raised
+    # inside the pipeline. Refused with a name instead.
+    ("MATCH (c:Card {name: $name}) RETURN c.name AS key, c.oracle_text AS text", "unbound_parameter"),
 ]
 
 
@@ -113,3 +119,91 @@ class TestSchemaPrompt:
     def test_it_offers_the_model_a_way_to_decline(self) -> None:
         prompt = schema_prompt({"Card": ["name"]}, [])
         assert CANNOT_TRANSLATE in prompt
+
+    def test_it_does_not_ask_for_parameters_it_cannot_bind(self) -> None:
+        """The prompt used to request parameters that the executor never supplies."""
+        assert "no parameters" in schema_prompt({"Card": ["name"]}, [])
+
+
+class DriverError(Exception):
+    """Stands in for a Neo4j error, which carries a dotted `code`."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+class TestServerPlan:
+    """EXPLAIN — the only check that knows whether the Cypher is real.
+
+    The string checks reason about text. A query can be read-only, bounded,
+    citable and still be unparseable or name a label that does not exist;
+    the server is the only thing that can say so, and planning touches no
+    data.
+    """
+
+    QUERY = "MATCH (c:Card) RETURN c.name AS key, c.oracle_text AS text LIMIT 5"
+
+    def test_an_accepted_plan_reports_nothing(self) -> None:
+        assert check_plan(self.QUERY, lambda cypher, params: []) == ""
+
+    def test_the_query_is_planned_not_run(self) -> None:
+        seen: list[str] = []
+
+        def run(cypher: str, params):
+            seen.append(cypher)
+            return []
+
+        check_plan(self.QUERY, run)
+        assert seen == [f"EXPLAIN {self.QUERY}"]
+
+    def test_a_rejected_plan_names_the_server_s_reason(self) -> None:
+        def run(cypher: str, params):
+            raise DriverError("Neo.ClientError.Statement.SyntaxError")
+
+        assert check_plan(self.QUERY, run) == "explain:SyntaxError"
+
+    def test_an_error_without_a_code_still_gets_a_name(self) -> None:
+        def run(cypher: str, params):
+            raise TimeoutError("took too long")
+
+        assert check_plan(self.QUERY, run) == "explain:TimeoutError"
+
+
+class TestPlanningBeforeExecution:
+    QUERY = "MATCH (c:Card) RETURN c.name AS key, c.oracle_text AS text LIMIT 5"
+
+    def layer(self, response: str) -> Text2Cypher:
+        return Text2Cypher(lambda q, s: response, {"Card": ["name"]}, ["HAS_RULING"])
+
+    def test_a_query_the_server_refuses_to_plan_is_never_executed(self) -> None:
+        seen: list[str] = []
+
+        def run(cypher: str, params):
+            seen.append(cypher)
+            raise DriverError("Neo.ClientError.Statement.SyntaxError")
+
+        found, why = self.layer(self.QUERY).evidence("anything", run)
+        assert found == []
+        assert why == "explain:SyntaxError"
+        assert seen == [f"EXPLAIN {self.QUERY}"]
+
+    def test_a_planned_query_runs_and_cites(self) -> None:
+        def run(cypher: str, params):
+            return [] if cypher.startswith("EXPLAIN") else [{"key": "Opt", "text": "Draw a card."}]
+
+        found, why = self.layer(self.QUERY).evidence("anything", run)
+        assert why == ""
+        assert [(item.kind, item.key) for item in found] == [("row", "Opt")]
+
+    def test_a_failure_after_planning_is_named_not_swallowed(self) -> None:
+        """Planning succeeds and execution still dies: timeouts, memory ceilings."""
+
+        def run(cypher: str, params):
+            if cypher.startswith("EXPLAIN"):
+                return []
+            raise DriverError("Neo.TransientError.General.MemoryPoolOutOfMemoryError")
+
+        found, why = self.layer(self.QUERY).evidence("anything", run)
+        assert found == []
+        assert why == "execution:MemoryPoolOutOfMemoryError"

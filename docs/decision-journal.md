@@ -90,6 +90,58 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — The close audit found a promise the code was not keeping
+
+Walking the Phase 4 deliverable checklist to close the phase turned up a
+gap that no test could have found, because nothing was ever asserted about
+it: the roadmap, [ADR-005](adr/adr-005-templates-first-text2cypher-second.md)
+and `CLAUDE.md` all promise "syntax check via **EXPLAIN** before
+execution", and `text2cypher.py` shipped without it. String checks,
+citable-column checks and a read transaction — but nothing that asks the
+server whether the Cypher is valid at all.
+
+Decision: implement it before the PR rather than carry it, because the
+missing layer is the one that turns *invalid Cypher* into a named refusal
+instead of an exception. Every other failure in this stack has a name; this
+one crashed.
+
+Implementing it exposed a second defect that had been latent since the
+module was written. The system prompt instructed the model to **use
+parameters** for values, and `evidence()` executes with an empty parameter
+map — so a model that obeyed produced `$name` with nothing to bind it, and
+the driver's `ParameterMissing` propagated out of retrieval. The tests
+never caught it because every fake generator in the suite wrote literals.
+Three changes: `unbound_parameter` is now a validation refusal, the prompt
+asks for literals and says why nothing binds a parameter here, and both the
+plan and the execution are guarded so any server error becomes
+`explain:<Reason>` / `execution:<Reason>`.
+
+The generalizable part is the one worth keeping: **the deliverable audit is
+a test the test suite cannot run.** A promise made in an ADR and not kept in
+code produces no failing assertion — only a reader comparing the two finds
+it, and only if the close ritual forces the comparison.
+
+## 2026-08-09 — Fuzzy and embedding linking deferred: nothing is failing
+
+The Phase 4 deliverable specified query-time linking as *exact → fuzzy →
+embedding*, covering nicknames like "Bolt". What shipped is exact +
+normalized + a capitalization gate; `Lexicon.build` accepts an alias table
+but no alias source is loaded, and there is no edit-distance or embedding
+stage.
+
+Deferred rather than built, on evidence: E-006's 1–2 hop entity recall is
+**1.000** on the 20 development questions without any of those layers, so
+there is no measured failure for them to fix. Adding a retrieval layer that
+nothing is asking for is the same mistake this phase already inherited from
+`crossref.py` — a component with no caller is a component nobody measured.
+
+What this leaves genuinely untested is nicknames: the development split
+contains none, so "Bolt" is not known to work or known to fail. Recorded as
+a limitation of the measurement, not as a passing result. The trigger for
+building the layer is a question that names a card the exact path misses —
+Phase 6's evaluation split may supply one, and if it does, the layer gets
+built against a real failure instead of an anticipated one.
+
 ## 2026-08-09 — Six percent of card names were ambiguous, and none of it was ambiguity
 
 One development question came back `AMBIGUOUS`: *Doubling Season*
