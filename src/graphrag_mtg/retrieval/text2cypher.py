@@ -24,8 +24,10 @@ than a plausible query against the wrong nodes.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 
+from graphrag_mtg.retrieval.subgraph import Evidence
 from graphrag_mtg.retrieval.templates import WRITE_CLAUSES
 
 #: Clauses a read query may open with. Anything else is either a write or
@@ -124,6 +126,25 @@ def validate(cypher: str, *, max_limit: int = MAX_LIMIT) -> Verdict:
     return Verdict(True, "", query)
 
 
+#: Columns a generated query must return. Everything else in this project
+#: is citable — a rule number, a ruling id, a named path — and the long-tail
+#: layer does not get an exemption. Demanding the shape up front is what
+#: lets a generated answer be quoted the same way a template's is.
+CITABLE_COLUMNS = ("key", "text")
+
+
+def returns_citable_columns(cypher: str) -> bool:
+    """Whether a query returns the ``key`` and ``text`` columns citations need.
+
+    Separate from :func:`validate` because safety and shape are different
+    questions: a query can be perfectly read-only and still produce
+    something nobody can cite.
+    """
+    _, _, tail = cypher.partition("RETURN")
+    aliases = {alias.lower() for alias in re.findall(r"\bAS\s+([A-Za-z_]+)", tail)}
+    return set(CITABLE_COLUMNS) <= aliases
+
+
 def schema_prompt(labels: dict[str, list[str]], relationships: list[str]) -> str:
     """Describe the graph to the model, and the rules its output must obey.
 
@@ -141,11 +162,15 @@ def schema_prompt(labels: dict[str, list[str]], relationships: list[str]) -> str
         "Rules, all enforced before your query runs:",
         "  - read only: no CREATE, MERGE, DELETE, DETACH, SET, REMOVE, DROP, FOREACH",
         "  - one statement, no semicolons, no comments",
-        "  - it must RETURN something, and carry a LIMIT",
+        "  - it must carry a LIMIT",
         "  - no procedure calls",
         "  - use parameters for values you were given, not string concatenation",
+        "  - RETURN exactly two columns, aliased `key` and `text`: `key` is the",
+        "    citation handle (a rule number, a ruling id, a card name) and `text`",
+        "    is what will be quoted. An answer that cannot be cited is not shipped,",
+        "    and this layer gets no exemption from that.",
         "",
-        'If the schema cannot answer the question, reply exactly: CANNOT TRANSLATE',
+        "If the schema cannot answer the question, reply exactly: CANNOT TRANSLATE",
     ]
     return "\n".join(lines)
 
@@ -165,3 +190,79 @@ def extract_query(response: str) -> str:
         return ""
     fenced = re.search(r"```(?:cypher)?\s*(.+?)```", text, re.DOTALL | re.IGNORECASE)
     return (fenced.group(1) if fenced else text).strip()
+
+
+@dataclass(frozen=True)
+class Attempt:
+    """One generation attempt: what came back, and whether it may run."""
+
+    cypher: str = ""
+    verdict: Verdict = Verdict(False, "not_attempted")
+    declined: bool = False
+
+    @property
+    def usable(self) -> bool:
+        return self.verdict.ok
+
+
+class Text2Cypher:
+    """The long-tail layer: generate, validate, and only then execute.
+
+    Wired into `retrieval/pipeline.py` as the last resort, after the plan
+    has failed to find anything — not as a general-purpose path. Phase 3
+    ended with `crossref.py` built, gated and never called by anything,
+    which the phase note records as a failure; a component with no caller
+    is a component nobody measured.
+
+    The generator is injected as ``(question, system) -> str`` so this
+    module never imports an LLM client and the caller keeps control of
+    cost.
+    """
+
+    def __init__(
+        self,
+        generate: Callable[[str, str], str],
+        labels: dict[str, list[str]],
+        relationships: list[str],
+    ) -> None:
+        self._generate = generate
+        self._system = schema_prompt(labels, relationships)
+
+    def attempt(self, question: str) -> Attempt:
+        """Generate one query and decide whether it is allowed to run."""
+        raw = extract_query(self._generate(question, self._system))
+        if not raw:
+            return Attempt(declined=True, verdict=Verdict(False, "declined"))
+        verdict = validate(raw)
+        if not verdict.ok:
+            return Attempt(cypher=raw, verdict=verdict)
+        if not returns_citable_columns(verdict.cypher):
+            return Attempt(cypher=raw, verdict=Verdict(False, "not_citable"))
+        return Attempt(cypher=verdict.cypher, verdict=verdict)
+
+    def evidence(self, question: str, run) -> tuple[list[Evidence], str]:
+        """Run one validated query and return its rows as evidence.
+
+        Returns:
+            ``(evidence, reason)``. The reason is empty on success and
+            names the refusal otherwise — "declined", a validation code, or
+            "not_citable" — so a caller can report *why* the long tail did
+            not answer instead of reporting nothing.
+        """
+        tried = self.attempt(question)
+        if not tried.usable:
+            return [], tried.verdict.reason
+        rows = list(run(tried.cypher, {}))
+        found = [
+            Evidence(
+                kind="row",
+                key=str(row["key"]),
+                text=str(row.get("text") or ""),
+                template="text2cypher",
+                path="generated query (validated read-only)",
+                distance=2,
+            )
+            for row in rows
+            if row.get("key") not in (None, "")
+        ]
+        return found, "" if found else "no_rows"

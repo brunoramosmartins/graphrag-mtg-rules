@@ -45,6 +45,7 @@ from graphrag_mtg.retrieval.subgraph import (
     enforce_budget,
 )
 from graphrag_mtg.retrieval.templates import BY_NAME
+from graphrag_mtg.retrieval.text2cypher import Text2Cypher
 
 Runner = Callable[[str, Mapping[str, Any]], Iterable[Mapping[str, Any]]]
 
@@ -55,6 +56,7 @@ def retrieve(
     linker: QueryLinker,
     run: Runner,
     rule_search: RuleSearch | None = None,
+    text2cypher: Text2Cypher | None = None,
     oracle_text: Mapping[str, str] | None = None,
     token_budget: int = DEFAULT_TOKEN_BUDGET,
     kind_cap: int = DEFAULT_KIND_CAP,
@@ -70,6 +72,10 @@ def retrieve(
             there. Absent means a seedless question returns
             :attr:`Outcome.NO_SEED` rather than silently reaching for
             nothing.
+        text2cypher: The long-tail layer, tried **only** after the planned
+            route has produced nothing. Absent means such a question comes
+            back as its named failure, which is the correct answer when no
+            generator is configured.
         oracle_text: ``oracle_id -> oracle text``, expanding lexical
             retrieval. Measured on dev as worth 6 of 15 against 8 of 15.
         token_budget: Context ceiling.
@@ -84,7 +90,7 @@ def retrieve(
     subgraph = Subgraph(question=question, outcome=chosen.outcome, note=chosen.reason)
 
     if chosen.outcome is not Outcome.RESOLVED:
-        return subgraph
+        return _last_resort(subgraph, question, run, text2cypher, kind_cap)
 
     for call in chosen.calls:
         template = BY_NAME[call.template]
@@ -112,8 +118,37 @@ def retrieve(
         # about them — which a caller may want to report differently.
         subgraph.outcome = Outcome.NO_MATCH
         subgraph.note = f"{chosen.reason}; every traversal returned nothing"
-    else:
-        subgraph.note = "; ".join([chosen.reason, *chosen.notes])
+        return _last_resort(subgraph, question, run, text2cypher, kind_cap)
+
+    subgraph.note = "; ".join([chosen.reason, *chosen.notes])
+    return subgraph
+
+
+def _last_resort(
+    subgraph: Subgraph,
+    question: str,
+    run: Runner,
+    text2cypher: Text2Cypher | None,
+    kind_cap: int,
+) -> Subgraph:
+    """Try the generated-Cypher layer, and say what happened either way.
+
+    Reached only when the planned route produced nothing, so the long tail
+    stays a fallback rather than a competing path — and the failure that
+    sent us here is preserved in the note, because "the templates found
+    nothing and generation also declined" is a more useful report than
+    either half alone.
+    """
+    if text2cypher is None:
+        return subgraph
+    found, why = text2cypher.evidence(question, run)
+    subgraph.templates_run.append("text2cypher")
+    if not found:
+        subgraph.note = f"{subgraph.note}; text2cypher: {why}"
+        return subgraph
+    add_evidence(subgraph, found, kind_cap=kind_cap)
+    subgraph.outcome = Outcome.RESOLVED
+    subgraph.note = f"{subgraph.note}; answered by generated Cypher (validated read-only)"
     return subgraph
 
 
