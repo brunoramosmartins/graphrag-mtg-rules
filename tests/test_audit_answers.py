@@ -16,7 +16,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-import audit_answers  # noqa: E402
+import audit_answers
 
 
 def write(path: Path, rows: list[dict]) -> Path:

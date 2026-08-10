@@ -7,6 +7,8 @@ the partial case that had no rule.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from graphrag_mtg.evaluation.claims import (
     ClaimRow,
     Failure,
@@ -186,7 +188,7 @@ class TestSupport:
 
 
 class TestRefusalClassification:
-    SUFFICIENCY = {
+    SUFFICIENCY: ClassVar[dict[str, Sufficiency]] = {
         "q1": Sufficiency.SUFFICIENT,
         "q2": Sufficiency.INSUFFICIENT,
         "q3": Sufficiency.PARTIAL,
