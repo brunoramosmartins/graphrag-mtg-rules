@@ -109,6 +109,30 @@ def main() -> int:
     parser.add_argument("--out", type=Path, default=OUT_PATH)
     parser.add_argument("--cache-dir", type=Path, default=CACHE_DIR)
     parser.add_argument(
+        "--stratum",
+        action="append",
+        default=[],
+        choices=[row[0].value for row in STRATUM_PLAN],
+        help="only draw for these strata; repeatable. Default: all three.",
+    )
+    parser.add_argument(
+        "--complexity",
+        action="append",
+        default=[],
+        help=(
+            "override the stratum's RulesGuru complexity filter; repeatable. "
+            "Complexity is a hint the human confirms during annotation, so "
+            "widening it is legitimate — but it changes what the sample "
+            "represents and belongs in the registry before the draw is frozen."
+        ),
+    )
+    parser.add_argument(
+        "--level",
+        action="append",
+        default=[],
+        help="RulesGuru judge levels to include; repeatable. Default: 0, 1, 2.",
+    )
+    parser.add_argument(
         "--exclude",
         type=Path,
         action="append",
@@ -120,6 +144,7 @@ def main() -> int:
         ),
     )
     args = parser.parse_args()
+    args.level = args.level or ["0", "1", "2"]
 
     existing = load_golden(args.out) if args.out.exists() else []
     known_ids = {q.id for q in existing}
@@ -138,12 +163,20 @@ def main() -> int:
         excluded_cards.update(name.casefold() for q in rows for name in q.gold_entities)
         print(f"Excluding {len(rows)} row(s) from {path}")
 
+    plan = [row for row in STRATUM_PLAN if not args.stratum or row[0].value in args.stratum]
     added: list[GoldenQuestion] = []
     with rulesguru.client() as http:
-        for stratum, complexity, hops, vector in STRATUM_PLAN:
+        for stratum, complexity, hops, vector in plan:
+            # The filter is an argument, not a constant, because a bucket
+            # can be exhausted. The golden set already took 22 of its
+            # `interaction_multihop` questions from RulesGuru, and a later
+            # draw against `complexity: Complicated` matched three, all of
+            # them already taken. Widening the filter changes what the
+            # sample represents, so it is stated on the command line and
+            # printed with the result rather than edited into a constant.
             settings = {
-                "level": ["0", "1", "2"],
-                "complexity": complexity,
+                "level": args.level,
+                "complexity": args.complexity or complexity,
                 "tags": [],
                 "tagsConjunc": "OR",
                 "rules": [],
@@ -151,6 +184,10 @@ def main() -> int:
                 "cards": [],
                 "cardsConjunc": "OR",
             }
+            print(
+                f"[{stratum.value}] filter: complexity={settings['complexity']} "
+                f"level={settings['level']} count={args.per_stratum}"
+            )
             try:
                 questions = _fetch_stratum(http, settings, args.per_stratum)
             except Exception as exc:  # one stratum failing must not sink the run
