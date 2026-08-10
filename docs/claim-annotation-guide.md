@@ -144,7 +144,12 @@ any answer was read:
 - refusal on `sufficient` → **over-refusal**, a grounding failure, and
   non-zero over-refusal blocks the Phase 5 DoD regardless of coverage;
 - answering on `insufficient` → **unsupported answering**, the
-  parametric-leak surface E-008 tests directly.
+  parametric-leak surface E-008 tests directly;
+- on `partial`, **both** a refusal and a partial answer that states what
+  is missing are correct. Only a partial answer that asserts the missing
+  part without flagging it fails, and it counts as unsupported
+  answering. Audit its claims for coverage and support like any other —
+  a claim inside a hedged answer is still a claim.
 
 Do not revisit a sufficiency label while auditing an answer. If one looks
 wrong, note it and leave it — that file was frozen precisely so this

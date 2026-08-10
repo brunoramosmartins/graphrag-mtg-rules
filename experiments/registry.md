@@ -622,6 +622,22 @@ supply the ground truth.
     that threshold un-gameable after the fact.
   - **Unsupported answering** — answering on an `insufficient` subgraph. The
     parametric-leak surface, which E-008 tests directly.
+- **`partial` subgraphs, scored separately and under no threshold.** The
+  three-way sufficiency label creates a middle case that the two error
+  directions above do not cover, and leaving it uncovered would let the
+  judgement drift to wherever the result needed it. Registered before the
+  labels exist: on a `partial` subgraph **both a refusal and a partial answer
+  that states what is missing are correct behaviour**; only a partial answer
+  that asserts the missing part *without* flagging it is a failure, and it is
+  counted as **unsupported answering**, not as over-refusal. Partial answers
+  are audited for coverage and support exactly like full ones — a claim
+  inside a hedged answer is still a claim.
+  Rationale: `subgraph.serialize()` itself appends a NOTICE inviting the
+  model to say the context is incomplete, so refusing and hedging are both
+  behaviours the system asks for, and neither can be scored as an error
+  without penalising the design. The DoD-blocking threshold therefore applies
+  **only** to over-refusal on `sufficient`, where the evidence was
+  demonstrably there. The rate of each `partial` outcome is reported.
 - **Every figure is published as counts, never as a bare percentage:**
   `covered / factual claims`, with `n answering questions`, `n refusals`,
   `n sufficient`, `n partial`, `n insufficient`.
@@ -685,8 +701,11 @@ figure has no ceiling and must say so.
 - **The commonest support failure is `wrong_leaf`** — right chapter, wrong
   subrule — matching what E-003a found the annotator doing against themself
   (3 of 6 disagreements).
-- **Over-refusal is non-zero on the first round**, concentrated on `partial`
-  subgraphs, where the NOTICE invites a refusal the evidence did not require.
+- **Refusal is the first round's dominant failure on `partial` subgraphs** —
+  the NOTICE invites a refusal the evidence did not require. Scored as a
+  `partial` outcome rate, not as over-refusal, which is defined only on
+  `sufficient`. Over-refusal on `sufficient` is predicted to be **zero**, and
+  a non-zero one blocks the DoD.
 
 ### Threats to validity, recorded before the run
 
