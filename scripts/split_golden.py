@@ -185,31 +185,40 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 0
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI, separated from `main` so the wiring itself can be tested."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--golden", type=Path, default=GOLDEN_DIR)
-    parser.add_argument("--split", type=Path, default=SPLIT_PATH)
-    parser.add_argument(
+    # On the subparsers rather than on the top-level parser: argparse only
+    # accepts a parent-level option *before* the subcommand name, which reads
+    # backwards for everyone. Defining them once here and inheriting keeps
+    # `draw --golden ...` working, which is the order people actually type.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--golden", type=Path, default=GOLDEN_DIR)
+    common.add_argument("--split", type=Path, default=SPLIT_PATH)
+    common.add_argument(
         "--questions",
         action="append",
         default=[],
         help=(
             "file name(s) under --golden to split, instead of the golden set. "
-            "Used for E-007's 10/30 draw over its own audit pool."
+            "Used for E-007's 10/32 draw over its own audit pool."
         ),
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    drawer = sub.add_parser("draw", help="freeze the development subset")
+    drawer = sub.add_parser("draw", parents=[common], help="freeze the development subset")
     drawer.add_argument("--n", type=int, default=DEFAULT_N)
     drawer.add_argument("--seed", type=int, default=DEFAULT_SEED)
     drawer.add_argument("--force", action="store_true")
     drawer.set_defaults(func=cmd_draw)
 
-    checker = sub.add_parser("check", help="report the split and validate it")
+    checker = sub.add_parser("check", parents=[common], help="report the split and validate it")
     checker.set_defaults(func=cmd_check)
+    return parser
 
-    args = parser.parse_args()
+
+def main() -> int:
+    args = build_parser().parse_args()
     return int(args.func(args))
 
 

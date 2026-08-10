@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from split_golden import allocate, composition, draw, load_questions
+from split_golden import allocate, build_parser, composition, draw, load_questions
 
 ROWS = (
     [{"id": f"im-{i}", "stratum": "interaction_multihop"} for i in range(30)]
@@ -88,3 +88,36 @@ class TestLoadingAnAlternatePool:
     def test_a_row_with_neither_marker_is_ignored(self, tmp_path: Path) -> None:
         self.write(tmp_path, "pool.jsonl", [{"id": "junk"}])
         assert load_questions(tmp_path, ["pool.jsonl"]) == []
+
+
+class TestCliWiring:
+    """The options have to work *after* the subcommand, which is how people type.
+
+    argparse accepts a top-level option only before the subcommand name, so
+    defining --golden/--split/--questions on the parent parser silently
+    rejected `draw --golden ...`. They live on the subparsers now.
+    """
+
+    def test_draw_accepts_the_options_after_the_subcommand(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "draw",
+                "--golden", "data/golden",
+                "--questions", "e007_audit_pool.jsonl",
+                "--split", "data/golden/e007_split.json",
+                "--n", "10",
+                "--seed", "20260810",
+            ]
+        )
+        assert args.questions == ["e007_audit_pool.jsonl"]
+        assert (args.n, args.seed) == (10, 20260810)
+
+    def test_check_accepts_them_too(self) -> None:
+        args = build_parser().parse_args(["check", "--questions", "e007_audit_pool.jsonl"])
+        assert args.questions == ["e007_audit_pool.jsonl"]
+
+    def test_the_golden_set_defaults_are_unchanged(self) -> None:
+        """Phase 4's invocation still means what it meant."""
+        args = build_parser().parse_args(["draw", "--n", "20"])
+        assert args.questions == []
+        assert args.golden == Path("data/golden")
