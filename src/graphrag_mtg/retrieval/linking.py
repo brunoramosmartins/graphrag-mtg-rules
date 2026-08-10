@@ -68,6 +68,7 @@ class EntityKind(StrEnum):
     CARD = "card"
     KEYWORD = "keyword"
     RULE = "rule"
+    FORMAT = "format"
 
 
 @dataclass(frozen=True)
@@ -107,12 +108,13 @@ class QueryEntities:
     cards: tuple[EntityRef, ...] = ()
     keywords: tuple[EntityRef, ...] = ()
     rules: tuple[EntityRef, ...] = ()
+    formats: tuple[EntityRef, ...] = ()
     ambiguous: tuple[EntityRef, ...] = field(default_factory=tuple)
 
     @property
     def resolved(self) -> tuple[EntityRef, ...]:
         """Every unambiguous reference, in question order."""
-        found = self.cards + self.keywords + self.rules
+        found = self.cards + self.keywords + self.rules + self.formats
         return tuple(sorted(found, key=lambda e: e.start))
 
     @property
@@ -192,10 +194,14 @@ class QueryLinker:
         lexicon: Lexicon,
         keywords: Iterable[str] = (),
         keywords_by_oracle: Mapping[str, list[str]] | None = None,
+        formats: Iterable[str] = (),
     ) -> None:
         self.lexicon = lexicon
         self.keywords = {normalize_name(k): k for k in keywords if normalize_name(k)}
         self.keywords_by_oracle = keywords_by_oracle or {}
+        # Another closed vocabulary: "Modern" in a question is the format,
+        # never anything else, so it resolves exactly like a keyword does.
+        self.formats = {normalize_name(f): f for f in formats if normalize_name(f)}
 
     def link(self, question: str) -> QueryEntities:
         """Resolve every mention, longest span first, without overlaps.
@@ -207,6 +213,9 @@ class QueryLinker:
         claimed: list[tuple[int, int]] = []
         rules = find_rules(question)
         claimed += [(r.start, r.end) for r in rules]
+
+        formats = self._scan(question, claimed, self._match_format, 2)
+        claimed += [(f.start, f.end) for f in formats]
 
         keywords = self._scan(question, claimed, self._match_keyword, MAX_KEYWORD_TOKENS)
         claimed += [(k.start, k.end) for k in keywords]
@@ -222,6 +231,7 @@ class QueryLinker:
             cards=resolved_cards,
             keywords=tuple(keywords),
             rules=tuple(rules),
+            formats=tuple(formats),
             ambiguous=ambiguous,
         )
 
@@ -256,6 +266,12 @@ class QueryLinker:
             if hit is None:
                 i += 1
         return found
+
+    def _match_format(self, surface: str):
+        name = self.formats.get(normalize_name(surface))
+        if name is None:
+            return None
+        return EntityKind.FORMAT, name, LinkMethod.EXACT, ()
 
     def _match_keyword(self, surface: str):
         name = self.keywords.get(normalize_name(surface))

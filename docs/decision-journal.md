@@ -90,6 +90,45 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — E-006 came back at 0.067, and the prediction said why
+
+The Phase 4 DoD's entity-recall criterion, registered as E-006 before the
+first run, carried an instruction with it: *if entity recall on the 1–2
+hop strata comes back low, suspect the harness before the templates.*
+
+It came back at **0.067** against a 0.9 floor. Two harness bugs, both
+invisible to review and both caught only because that sentence existed:
+
+1. **The router passed the wrong casing.** `Keyword.display_name` is
+   "Trample"; the graph keys on the normalized `name`, "trample". Every
+   `definition_1hop` question returned `NO_MATCH` — a traversal that runs
+   perfectly and matches nothing.
+2. **Legality was never wired.** The router emitted `card_keyword_rules`
+   and `card_rulings` for a card and never `card_legality`, and no
+   traversal emitted the *card itself* as evidence. So `legality_1hop`
+   scored 0 on questions the graph answers with a single typed edge.
+
+After fixing both: **0.967, PASS.** `definition_1hop` and `legality_1hop`
+at 1.00, 19 of 20 questions resolved, 1 ambiguous, **none silent**,
+latency p95 0.57 s against the 2 s criterion.
+
+Recording the 0.067 rather than only the 0.967 is the point. It belongs to
+a broken harness, and a reader who sees only the passing number learns
+nothing about how close the phase came to reporting a false failure of
+the *templates*.
+
+A third fix came out of the same run and is a design decision, not a bug:
+a question naming a format ("is this legal in Modern?") no longer routes
+to text retrieval when its card has no keywords. Legality is answered
+completely by one typed edge; treating the missing rule-graph seed as a
+gap would have bolted eight lexical rule hits onto the answer and called
+them evidence.
+
+And the number that did not move: `interaction_multihop` rule recall
+**0.06**. Three independent methods now agree — `reachability.py` on the
+graph, `eval_rule_search.py` on the text, and E-006 end to end. That
+convergence is the Phase 4 finding, not a defect still to be fixed.
+
 ## 2026-08-09 — Valid Cypher that kills the server, found by running it
 
 Seven of the eight template traversals ran against the loaded graph on

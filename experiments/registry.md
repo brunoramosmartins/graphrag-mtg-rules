@@ -271,6 +271,80 @@ stating "(704.5w)" where the August 2026 CR moved that state-based action to
 catches it. `scripts/cr_migrate.py` can migrate the gold; it cannot migrate a
 historical document.
 
+### E-006 — retrieval reach on the Phase 4 development split
+
+- **Registered:** 2026-08-09, before the first end-to-end run. The Phase 4
+  DoD carries a threshold, and a threshold recorded after the number exists
+  is not a threshold.
+- **Objective:** does the shipped retrieval stack put the things a question
+  needs into the subgraph? Preliminary only — the official comparison is
+  E-001 in Phase 6, and this never touches its 57 evaluation questions.
+- **Two metrics, kept apart because they are different claims:**
+  - **Entity recall** — the share of a question's `gold_entities` that
+    appear as evidence keys in the retrieved subgraph, matched on
+    normalized name. This is what the DoD's threshold applies to.
+  - **Rule recall** — the share of its `gold_cr_rules` that appear.
+    Reported beside it, never merged into it: reaching *Humility* and
+    reaching *613.4b* are not interchangeable achievements, and averaging
+    them would let the easy one hide the hard one.
+- **Configuration:** the 20 questions of `data/golden/phase4_dev_ids.json`;
+  `QueryLinker` -> `router.plan` -> template traversals -> `rule_search`
+  where the plan says so -> `Subgraph` with its default budget and caps;
+  live Neo4j with the full corpus loaded. Reported per stratum with
+  bootstrap intervals over questions.
+- **Decision rule (from the roadmap DoD, not invented here):** entity
+  recall **≥ 0.9 on the 1–2 hop strata** (`definition_1hop`,
+  `keyword_rule_2hop`, `legality_1hop`). Below that, the templates are
+  wrong before anything downstream is worth building. `interaction_multihop`
+  is **excluded from the threshold** — the roadmap scoped it to 1–2 hops,
+  and reachability plus `eval_rule_search` have already measured that
+  stratum as out of reach for both halves.
+- **Prediction, recorded before the run:** the 1–2 hop strata clear 0.9,
+  because reachability found 100% of their gold rules at two hops inside
+  small balls, and the traversals for them are a single typed edge or a
+  single `DEFINED_BY` hop. `interaction_multihop` entity recall is high
+  (its cards resolve) while its **rule** recall stays near the 2 of 8 that
+  `eval_rule_search.py` measured. If entity recall on the 1–2 hop strata
+  comes back low, suspect the harness before the templates.
+- **Also collected, not a criterion:** wall-clock per question, to check
+  the DoD's p95 < 2 s. Informal timing of the eight traversals already
+  ranged 9–685 ms.
+- **Actual result (2026-08-09, 20 development questions):**
+
+  | stratum | entity recall | rule recall | n |
+  |---|---|---|---|
+  | `definition_1hop` | 1.00 | 1.00 | 4 |
+  | `legality_1hop` | 1.00 | n/a | 5 |
+  | `keyword_rule_2hop` | 0.67 | 1.00 | 1 |
+  | `negative_temporal` | 1.00 | 0.25 | 2 |
+  | `interaction_multihop` | 0.69 | **0.06** | 8 |
+
+  **1–2 hop entity recall 0.967** over 10 questions against the 0.9 floor —
+  **PASS**. Outcomes: 19 resolved, 1 ambiguous, **0 silent**; every question
+  produced a subgraph or a named failure. Latency median 0.12 s, p95 0.57 s
+  against the 2 s criterion. n=10 on the threshold, so this is a smoke test
+  and not E-001.
+
+  **The registered prediction held, including its warning.** It said to
+  suspect the harness before the templates if the 1–2 hop strata came back
+  low. The first run returned **0.067**, and both causes were harness bugs
+  found only because that instruction was written down:
+  1. the router passed `Keyword.display_name` ("Trample") where the graph
+     keys on the normalized `name` ("trample"), so every `definition_1hop`
+     question returned `NO_MATCH`;
+  2. `card_legality` was never wired into the router at all, and no
+     traversal emitted the *card* as evidence, so `legality_1hop` scored 0
+     on questions the graph answers with one typed edge.
+
+  Both were fixed and the measurement re-run; the 0.067 figure belongs to
+  a broken harness and is recorded here rather than quietly discarded.
+
+  `interaction_multihop` rule recall of **0.06** is consistent with the two
+  independent measurements that preceded it — `reachability.py` (graph) and
+  `eval_rule_search.py` (text, 2 of 8). Three methods now agree that this
+  stratum is out of reach, which is the Phase 4 finding rather than a
+  defect left to fix.
+
 ### E-005 — linking precision (registered 2026-08-09, not yet run)
 
 - **Objective:** E-003 measured linking F1 0.634 [0.491, 0.750] against a 0.90

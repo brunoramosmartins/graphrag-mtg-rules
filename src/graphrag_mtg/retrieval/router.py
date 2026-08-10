@@ -123,17 +123,36 @@ def plan(
         calls.append(Call("rule_subtree", {"rule_number": rule.key, "limit": row_limit}))
         calls.append(Call("rule_neighbourhood", {"rule_number": rule.key, "limit": row_limit}))
     for keyword in entities.keywords:
-        calls.append(Call("keyword_definition", {"keyword": keyword.key, "limit": row_limit}))
+        # Keyword.name in the graph is normalized; display_name is not. Passing
+        # the display form matched nothing at all and every definition_1hop
+        # question came back NO_MATCH — caught by E-006, not by review.
+        calls.append(
+            Call("keyword_definition", {"keyword": normalize_name(keyword.key), "limit": row_limit})
+        )
     for card in entities.cards:
         name = normalize_name(card.surface)
         calls.append(Call("card_keyword_rules", {"normalized_name": name, "limit": row_limit}))
         calls.append(Call("card_rulings", {"normalized_name": name, "limit": row_limit}))
+        # Legality only when the question names a format. Running it always
+        # would add 23 rows of noise per card to every question that never
+        # asked about a format.
+        for fmt in entities.formats:
+            calls.append(
+                Call("card_legality", {"normalized_name": name, "format": fmt.key,
+                                       "limit": row_limit})
+            )
 
     pair = [normalize_name(c.surface) for c in entities.cards[:2]]
     if len(pair) == 2:
         calls.append(Call("card_interaction", {"left": pair[0], "right": pair[1], "limit": row_limit}))
 
-    seeded = entities.has_graph_seed
+    # A named format makes this a legality question, which one typed edge
+    # answers completely. Such a question does not need the CR rule graph,
+    # so failing to seed it is not a gap to paper over with text retrieval —
+    # doing that would bolt eight lexical rule hits onto "is this card legal
+    # in Modern?" and call them evidence.
+    legality_only = bool(entities.formats)
+    seeded = entities.has_graph_seed or legality_only
     expansions = tuple(
         text
         for card in entities.cards
@@ -148,11 +167,12 @@ def plan(
     if not seeded and not expansions:
         notes.append("no oracle text available to widen retrieval with")
 
-    reason = (
-        "entities seed the rule graph; traversals answer"
-        if seeded
-        else "no graph seed; traversals supply cards and rulings, text retrieval supplies rules"
-    )
+    if legality_only:
+        reason = "a format was named; the legality edge answers this without CR rules"
+    elif seeded:
+        reason = "entities seed the rule graph; traversals answer"
+    else:
+        reason = "no graph seed; traversals supply cards and rulings, text retrieval supplies rules"
     return Plan(
         calls=tuple(calls),
         text_search=not seeded,

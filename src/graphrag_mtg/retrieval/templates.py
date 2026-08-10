@@ -140,7 +140,7 @@ LIMIT $limit
 CARD_LEGALITY = """
 MATCH (c:Card {normalized_name: $normalized_name})-[e:HAS_LEGALITY]->(f:Format)
 WHERE $format IS NULL OR f.name = $format
-RETURN c.name AS card, f.name AS format, e.status AS status
+RETURN c.name AS card, c.oracle_text AS card_text, f.name AS format, e.status AS status
 ORDER BY f.name
 LIMIT $limit
 """
@@ -172,6 +172,7 @@ CARD_RULINGS = """
 MATCH (c:Card {normalized_name: $normalized_name})-[:HAS_RULING]->(rl:Ruling)
 OPTIONAL MATCH (rl)-[:CITES_RULE]->(r:Rule)
 RETURN c.name AS card,
+       c.oracle_text AS card_text,
        rl.ruling_id AS ruling_id,
        rl.text AS ruling_text,
        rl.published_at AS published_at,
@@ -259,8 +260,9 @@ TEMPLATES: tuple[Template, ...] = (
         strata=("legality_1hop",),
         description="A card's legality status per format; $format may be null for all of them.",
         emits=(
+            Emit("card", "card", "card_text", "(:Card {{{card}}})"),
             Emit("legality", "format", "status",
-                 "(:Card {{{card}}})-[:HAS_LEGALITY]->(:Format {{{format}}})"),
+                 "(:Card {{{card}}})-[:HAS_LEGALITY {{{status}}}]->(:Format {{{format}}})"),
         ),
     ),
     Template(
@@ -306,6 +308,7 @@ TEMPLATES: tuple[Template, ...] = (
             "Since ADR-006 the citation is present only when the ruling states a number."
         ),
         emits=(
+            Emit("card", "card", "card_text", "(:Card {{{card}}})"),
             Emit("ruling", "ruling_id", "ruling_text",
                  "(:Card {{{card}}})-[:HAS_RULING]->(:Ruling)", distance=1),
             Emit("rule", "number", "text",
