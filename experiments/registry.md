@@ -645,6 +645,18 @@ Pinned 2026-08-10, before the first generation:
   query* underneath a *generated answer*, and a failure could then belong
   to either model. E-007 measures whether answers cite what they claim, not
   whether two models compose.
+- **Retrieval defect found and fixed before any label was frozen
+  (2026-08-10).** The first hand-read sufficiency case exposed three linking
+  bugs — the router deriving its query parameter from the raw surface, a
+  single-word name failing to resolve when clause punctuation was attached,
+  and *Who // What // When // Where // Why* matching the word "What". The
+  pool's retrieval went from 32 resolved / 10 `no_match` to **42 resolved /
+  0 `no_match`**, with cards in the subgraph rising 51 -> 164. **E-006 was
+  re-run and is unchanged**, so the Phase 4 figures stand as published; the
+  defect was invisible from the golden set, whose development questions name
+  cards without clause punctuation. Sufficiency is labelled against the
+  corrected dump, and this entry records that the dump was regenerated once,
+  before labelling, for a stated reason.
 - **Generation replays the retrieval dump rather than re-querying**, and
   `run_e007.py` refuses to proceed if the rebuilt context differs by one
   byte from what was dumped. The sufficiency labels describe the dumped

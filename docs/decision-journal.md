@@ -90,6 +90,57 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — Three linking defects, found by prose the golden set never had
+
+Reading the first sufficiency case turned up something wrong before a single
+label was written. `rg-4825` came back `resolved` with 11 evidence items and
+**one** card — yet the router had planned four card traversals. Across the 42
+questions: **245 card entities planned, 51 reaching the subgraph**, and every
+one of the 42 missing at least one card.
+
+Three separate defects, each found by pulling the previous one apart:
+
+1. **The router derived the query parameter from the surface text.** The
+   tokenizer deliberately keeps commas and periods, because card names
+   contain them (*Omnath, Locus of Creation*), so a mention written
+   mid-sentence arrives as `New Way Forward,` and normalizes to
+   `new way forward,` — a string matching no node. The linker had already
+   resolved it correctly through the loose table; the router threw that
+   resolution away and re-derived the name. `EntityRef` now carries the
+   resolved card's own `normalized_name`, and the router uses it.
+2. **A single-word name with clause punctuation did not resolve at all.**
+   `humility,` is in no lookup table: not `exact`, not `loose` (multi-word
+   only), not `single_word`. Multi-word names survived through `loose`;
+   single-word names — Humility, Opalescence, Opt — simply failed, which
+   from outside looks exactly like a card the corpus does not hold. The
+   surface as written is now tried first, then once more with edge
+   punctuation trimmed.
+3. **"What" resolves to a card** — *Who // What // When // Where // Why*
+   exists, and the capitalization gate cannot help because the capital is
+   sentence-initial. Costs an empty traversal rather than wrong evidence,
+   and goes to E-005 rather than being patched here.
+
+Effect on E-007's pool, re-run before anything was frozen: outcomes went from
+32 resolved / **10 no_match** to **42 resolved / 0 no_match**; cards in the
+subgraph 51 -> 164; rulings 196 -> 657; median evidence 11.5 -> 30 items.
+Every one of the ten "the graph has nothing for this" verdicts was the
+punctuation bug.
+
+**E-006 was re-run and does not move.** The corrected table is identical to
+the published one — `interaction_multihop` 0.88 entity / 0.12 rule, 1–2 hop
+entity recall 1.000, p95 0.40 s — so the Phase 4 figures stand as reported
+and the tagged release needs no amendment. The reachability and
+`eval_rule_search` measurements never touched the linker, so the phase's
+"`interaction_multihop` is out of reach" conclusion is untouched too.
+
+The lesson is about the sample, not the bug. **The defect could not be seen
+from the golden set**, whose development questions are generated or authored
+and name cards cleanly. It took RulesGuru prose — real sentences, with real
+commas — to expose it. A measurement can be correct and still be blind, and
+what made this visible was reading one case by hand before labelling it,
+which is the only reason the E-007 dump is not now frozen around ten false
+`no_match` verdicts.
+
 ## 2026-08-10 — The audit pool's hardest stratum was already spent
 
 The first dry run of E-007's draw returned 23 new questions and **zero
