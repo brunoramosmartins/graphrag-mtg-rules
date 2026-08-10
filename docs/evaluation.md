@@ -256,6 +256,47 @@ bridge, accepting that rules are reached by text retrieval while the graph
 supplies entity structure (which reframes E-001 as a test of the combination),
 or reopening an inferred path under its own pre-registration.
 
+## Phase 4 — what retrieval reaches (E-006, development split)
+
+Preliminary and deliberately quarantined: measured on the **20 development
+questions** frozen in `data/golden/phase4_dev_ids.json`, never on the 57 that
+E-001 will score in Phase 6. The split was drawn before the first traversal was
+written, because Phase 4 was otherwise going to build templates against the
+questions that measure them.
+
+| stratum | entity recall | rule recall | n |
+|---|---|---|---|
+| `definition_1hop` | 1.00 | 1.00 | 4 |
+| `legality_1hop` | 1.00 | n/a | 5 |
+| `keyword_rule_2hop` | 1.00 | 1.00 | 1 |
+| `negative_temporal` | 1.00 | 0.25 | 2 |
+| `interaction_multihop` | 0.88 | **0.12** | 8 |
+
+**1–2 hop entity recall 1.000** against the DoD's 0.9 floor. All 20 questions
+returned a subgraph or a named failure — none silent. Latency p95 0.53 s
+against the 2 s criterion. n=10 on the threshold: read it as a smoke test.
+
+Entity recall and rule recall are reported apart and never averaged. Reaching
+*Humility* and reaching `613.4b` are not interchangeable achievements, and a
+combined figure would let the easy one hide the hard one — which is exactly
+what the `interaction_multihop` row shows.
+
+**Three measurements now agree about that row.** `scripts/reachability.py`
+found 15 of its 30 questions have no graph seed at all;
+`scripts/eval_rule_search.py` found lexical retrieval reaches a gold rule in 2
+of 8 dev questions; E-006 end to end reads 0.12. Neither half of ADR-007's
+hybrid covers the stratum that carries the central hypothesis, and that
+convergence is the Phase 4 finding rather than a defect still to fix.
+
+**Two harness defects preceded the passing number, and both are on record.**
+The first run returned entity recall **0.067** — the router passed
+`Keyword.display_name` where the graph keys on the normalized `name`, and
+`card_legality` was never wired at all. E-006's registered prediction had said
+to suspect the harness before the templates if that happened, which is the only
+reason it was chased rather than believed. A third run reached 1.000 after the
+query lexicon stopped admitting `art_series` prints and tokens, which had made
+6% of card names resolve to more than one `oracle_id`.
+
 ## Limitations, stated because they bound every number above
 
 - **The ceiling is measured, and it does not explain the result (E-003a).** A
