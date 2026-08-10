@@ -36,6 +36,40 @@ multiple-comparison correction when strata are tested jointly.
   the graph.
 - **Expected result:** graph ≫ vector on `fail`, graph > vector on
   `lose`, no significant difference on `tie`.
+- **Amendment 2026-08-09 (before Phase 4 writes a single traversal, no
+  retrieval result seen) — development split.** Phase 4 would otherwise write
+  its templates against the same 77 questions E-001 measures on, which is
+  fitting the retriever to the test set. **20 questions** (seed `20260809`,
+  stratified proportionally) are frozen as the Phase 4 development subset in
+  `data/golden/phase4_dev_ids.json`; the remaining **57** are the evaluation
+  set and are touched once, in Phase 6. `scripts/split_golden.py` refuses to
+  redraw. Consequence stated rather than hidden: `keyword_rule_2hop` holds 3
+  questions in total, so the split leaves 1 dev and 2 evaluation and **no
+  per-stratum claim about it is reportable from either side**.
+- **Amendment 2026-08-09 (same, before any run) — three arms.** ADR-006
+  removed the ruling→rule bridge and ADR-007 answers with a hybrid, so the
+  "graph pipeline" of the original design no longer names one thing. A hybrid
+  measured only against the vector baseline could win entirely on its text
+  component — the Project 1 pipeline wearing a different hat — and be
+  presented as evidence about the graph. E-001 therefore runs:
+  | arm | what it is | what it tests |
+  |---|---|---|
+  | **A** | vector baseline (Project 1 pipeline, same corpus) | control |
+  | **B** | graph-only traversal | the thesis in `docs/hypothesis.md` |
+  | **C** | hybrid (ADR-007) | the shipped system |
+  **B vs A is the registered prediction above and is not renegotiated.**
+  C vs A is the product; C vs B isolates the text contribution. Three arms
+  across five strata require the multiple-comparison correction this registry
+  already mandates, and paired tests over the shared question set.
+- **Interim evidence recorded 2026-08-09, no decision taken from it:**
+  `scripts/reachability.py` measured deterministic reachability of gold rules
+  from gold entities — 100% at k=2 on `definition_1hop` and
+  `keyword_rule_2hop`; 38% only at k=6 on `interaction_multihop`, where the
+  ball holds 1515 of 3308 rules, and 15 of those 30 questions produce no seed
+  at all (their cards have no keyword abilities). This makes prediction 2
+  look unlikely **for arm B**. The prediction stands as written and is scored
+  as written in Phase 6; it is not amended to match evidence that arrived
+  after it.
 - **Actual result:** _pending (Phase 8)._
 
 ## E-002 — MetaQA calibration
@@ -236,6 +270,113 @@ stating "(704.5w)" where the August 2026 CR moved that state-based action to
 `704.5x` and reused `704.5w`. The number still resolves, so no existence check
 catches it. `scripts/cr_migrate.py` can migrate the gold; it cannot migrate a
 historical document.
+
+### E-006 — retrieval reach on the Phase 4 development split
+
+- **Registered:** 2026-08-09, before the first end-to-end run. The Phase 4
+  DoD carries a threshold, and a threshold recorded after the number exists
+  is not a threshold.
+- **Objective:** does the shipped retrieval stack put the things a question
+  needs into the subgraph? Preliminary only — the official comparison is
+  E-001 in Phase 6, and this never touches its 57 evaluation questions.
+- **Two metrics, kept apart because they are different claims:**
+  - **Entity recall** — the share of a question's `gold_entities` that
+    appear as evidence keys in the retrieved subgraph, matched on
+    normalized name. This is what the DoD's threshold applies to.
+  - **Rule recall** — the share of its `gold_cr_rules` that appear.
+    Reported beside it, never merged into it: reaching *Humility* and
+    reaching *613.4b* are not interchangeable achievements, and averaging
+    them would let the easy one hide the hard one.
+- **Configuration:** the 20 questions of `data/golden/phase4_dev_ids.json`;
+  `QueryLinker` -> `router.plan` -> template traversals -> `rule_search`
+  where the plan says so -> `Subgraph` with its default budget and caps;
+  live Neo4j with the full corpus loaded. Reported per stratum with
+  bootstrap intervals over questions.
+- **Decision rule (from the roadmap DoD, not invented here):** entity
+  recall **≥ 0.9 on the 1–2 hop strata** (`definition_1hop`,
+  `keyword_rule_2hop`, `legality_1hop`). Below that, the templates are
+  wrong before anything downstream is worth building. `interaction_multihop`
+  is **excluded from the threshold** — the roadmap scoped it to 1–2 hops,
+  and reachability plus `eval_rule_search` have already measured that
+  stratum as out of reach for both halves.
+- **Prediction, recorded before the run:** the 1–2 hop strata clear 0.9,
+  because reachability found 100% of their gold rules at two hops inside
+  small balls, and the traversals for them are a single typed edge or a
+  single `DEFINED_BY` hop. `interaction_multihop` entity recall is high
+  (its cards resolve) while its **rule** recall stays near the 2 of 8 that
+  `eval_rule_search.py` measured. If entity recall on the 1–2 hop strata
+  comes back low, suspect the harness before the templates.
+- **Also collected, not a criterion:** wall-clock per question, to check
+  the DoD's p95 < 2 s. Informal timing of the eight traversals already
+  ranged 9–685 ms.
+- **Actual result (2026-08-09, 20 development questions):**
+
+  | stratum | entity recall | rule recall | n |
+  |---|---|---|---|
+  | `definition_1hop` | 1.00 | 1.00 | 4 |
+  | `legality_1hop` | 1.00 | n/a | 5 |
+  | `keyword_rule_2hop` | 0.67 | 1.00 | 1 |
+  | `negative_temporal` | 1.00 | 0.25 | 2 |
+  | `interaction_multihop` | 0.69 | **0.06** | 8 |
+
+  **1–2 hop entity recall 0.967** over 10 questions against the 0.9 floor —
+  **PASS**. Outcomes: 19 resolved, 1 ambiguous, **0 silent**; every question
+  produced a subgraph or a named failure. Latency median 0.12 s, p95 0.57 s
+  against the 2 s criterion. n=10 on the threshold, so this is a smoke test
+  and not E-001.
+
+  **The registered prediction held, including its warning.** It said to
+  suspect the harness before the templates if the 1–2 hop strata came back
+  low. The first run returned **0.067**, and both causes were harness bugs
+  found only because that instruction was written down:
+  1. the router passed `Keyword.display_name` ("Trample") where the graph
+     keys on the normalized `name` ("trample"), so every `definition_1hop`
+     question returned `NO_MATCH`;
+  2. `card_legality` was never wired into the router at all, and no
+     traversal emitted the *card* as evidence, so `legality_1hop` scored 0
+     on questions the graph answers with one typed edge.
+
+  Both were fixed and the measurement re-run; the 0.067 figure belongs to
+  a broken harness and is recorded here rather than quietly discarded.
+
+  `interaction_multihop` rule recall of **0.06** is consistent with the two
+  independent measurements that preceded it — `reachability.py` (graph) and
+  `eval_rule_search.py` (text, 2 of 8). Three methods now agree that this
+  stratum is out of reach, which is the Phase 4 finding rather than a
+  defect left to fix.
+
+- **Third run, 2026-08-09, after a lexicon fix.** All three runs are kept:
+  a number that moved because a defect was fixed says more than the final
+  number alone.
+
+  | run | 1–2 hop entity recall | what changed |
+  |---|---|---|
+  | 1 | 0.067 — FAIL | broken harness (keyword casing, legality unwired) |
+  | 2 | 0.967 — PASS | both harness bugs fixed |
+  | 3 | **1.000 — PASS** | query lexicon excludes non-rules layouts |
+
+  Run 3, full: `definition_1hop` 1.00/1.00, `legality_1hop` 1.00/n/a,
+  `keyword_rule_2hop` 1.00/1.00, `negative_temporal` 1.00/0.25,
+  `interaction_multihop` **0.88 entity / 0.12 rule**. All 20 questions
+  resolved, none ambiguous, latency p95 0.53 s.
+
+  The fix: 2,196 multi-word card names resolved to more than one
+  `oracle_id`, and **2,116 of those collisions are `art_series` prints**
+  (collectible cards named "X // X" whose faces normalize onto the real
+  card) with 80 more from tokens. Neither is a rules entity. Filtering
+  those layouts out of the query lexicon drops collisions to 25 of 33,448,
+  and the ambiguous question disappears. `build_card_lexicon` does the
+  filtering at the retrieval call site, **not** inside `Lexicon.build`,
+  because that constructor is what E-003 measured.
+
+- **Hypothesis for E-005, generated here and not acted on:** the Phase 3
+  ingestion linker used the *unfiltered* lexicon, so those same 2,196
+  collisions would have pushed real multi-word card names into the pending
+  homonym path and on to LLM disambiguation. That is a plausible
+  contributor to multiword linking F1 landing at 0.760 against a predicted
+  0.95, and to the precision of the LLM stage. It is **not** a correction
+  to E-003: that split is spent, its figure stands as reported, and this
+  belongs to E-005 with a fresh sample.
 
 ### E-005 — linking precision (registered 2026-08-09, not yet run)
 

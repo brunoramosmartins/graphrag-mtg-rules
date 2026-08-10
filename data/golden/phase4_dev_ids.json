@@ -1,0 +1,44 @@
+{
+  "purpose": "Phase 4 development subset \u2014 templates are written against these only",
+  "seed": 20260809,
+  "n": 20,
+  "total": 77,
+  "drawn_at": "2026-08-09",
+  "dev_strata": {
+    "interaction_multihop": 8,
+    "negative_temporal": 2,
+    "definition_1hop": 4,
+    "keyword_rule_2hop": 1,
+    "legality_1hop": 5
+  },
+  "eval_strata": {
+    "interaction_multihop": 22,
+    "keyword_rule_2hop": 2,
+    "negative_temporal": 7,
+    "definition_1hop": 11,
+    "legality_1hop": 15
+  },
+  "rule": "Everything not listed here is the E-001 evaluation set. Retrieval code may be iterated against dev ids only; the evaluation set is touched once, in Phase 6.",
+  "dev_ids": [
+    "hand-def-deathtouch",
+    "hand-def-defender",
+    "hand-def-indestructible",
+    "hand-def-trample",
+    "hand-doubling-season-planeswalker",
+    "hand-humility-plus-counter",
+    "hand-indestructible-zero-toughness",
+    "rg-1951",
+    "rg-2066",
+    "rg-2333",
+    "rg-2569",
+    "rg-30",
+    "rg-539",
+    "rg-705",
+    "rg-7749",
+    "scry-leg-54866c25-b332-46c8-a2c5-1a71b702ddc0-pauper",
+    "scry-leg-65a9f643-063f-406a-8d5a-5ebbe0f04c3d-legacy",
+    "scry-leg-6c0c5832-416f-405f-bb44-c24be6f9d081-pioneer",
+    "scry-leg-b1a3b2ab-d9f8-4a0a-b2e2-aaa9989b2e41-modern",
+    "scry-leg-c6a606af-ea08-4cd9-bfd9-60d76e232e85-modern"
+  ]
+}

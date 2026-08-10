@@ -90,6 +90,339 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — The close audit found a promise the code was not keeping
+
+Walking the Phase 4 deliverable checklist to close the phase turned up a
+gap that no test could have found, because nothing was ever asserted about
+it: the roadmap, [ADR-005](adr/adr-005-templates-first-text2cypher-second.md)
+and `CLAUDE.md` all promise "syntax check via **EXPLAIN** before
+execution", and `text2cypher.py` shipped without it. String checks,
+citable-column checks and a read transaction — but nothing that asks the
+server whether the Cypher is valid at all.
+
+Decision: implement it before the PR rather than carry it, because the
+missing layer is the one that turns *invalid Cypher* into a named refusal
+instead of an exception. Every other failure in this stack has a name; this
+one crashed.
+
+Implementing it exposed a second defect that had been latent since the
+module was written. The system prompt instructed the model to **use
+parameters** for values, and `evidence()` executes with an empty parameter
+map — so a model that obeyed produced `$name` with nothing to bind it, and
+the driver's `ParameterMissing` propagated out of retrieval. The tests
+never caught it because every fake generator in the suite wrote literals.
+Three changes: `unbound_parameter` is now a validation refusal, the prompt
+asks for literals and says why nothing binds a parameter here, and both the
+plan and the execution are guarded so any server error becomes
+`explain:<Reason>` / `execution:<Reason>`.
+
+The generalizable part is the one worth keeping: **the deliverable audit is
+a test the test suite cannot run.** A promise made in an ADR and not kept in
+code produces no failing assertion — only a reader comparing the two finds
+it, and only if the close ritual forces the comparison.
+
+## 2026-08-09 — Fuzzy and embedding linking deferred: nothing is failing
+
+The Phase 4 deliverable specified query-time linking as *exact → fuzzy →
+embedding*, covering nicknames like "Bolt". What shipped is exact +
+normalized + a capitalization gate; `Lexicon.build` accepts an alias table
+but no alias source is loaded, and there is no edit-distance or embedding
+stage.
+
+Deferred rather than built, on evidence: E-006's 1–2 hop entity recall is
+**1.000** on the 20 development questions without any of those layers, so
+there is no measured failure for them to fix. Adding a retrieval layer that
+nothing is asking for is the same mistake this phase already inherited from
+`crossref.py` — a component with no caller is a component nobody measured.
+
+What this leaves genuinely untested is nicknames: the development split
+contains none, so "Bolt" is not known to work or known to fail. Recorded as
+a limitation of the measurement, not as a passing result. The trigger for
+building the layer is a question that names a card the exact path misses —
+Phase 6's evaluation split may supply one, and if it does, the layer gets
+built against a real failure instead of an anticipated one.
+
+## 2026-08-09 — Six percent of card names were ambiguous, and none of it was ambiguity
+
+One development question came back `AMBIGUOUS`: *Doubling Season*
+resolved to two `oracle_id`s. Chasing it found the general case —
+**2,196 of 36,268 multi-word card names resolve to more than one id**, and
+the cause is not language.
+
+- **2,116 are `art_series` prints.** Collectible art cards are named
+  `"X // X"`, and both faces normalize onto the real card's name.
+- **80 are tokens**, which share a name with the card that makes them.
+
+Neither is a rules entity. Left in, six percent of card names come back as
+"I cannot confirm what this names" and the question containing them is
+refused — a linking policy behaving exactly as designed, on data that
+should never have reached it.
+
+Filtering those layouts out drops collisions to **25 of 33,448** and lifts
+E-006's 1–2 hop entity recall from 0.967 to **1.000**, with
+`keyword_rule_2hop` going 0.67 → 1.00 and the last ambiguous question
+disappearing. All 20 development questions now resolve.
+
+The filtering lives in a new `build_card_lexicon` at the retrieval call
+site, **not** inside `Lexicon.build`. That constructor is what the Phase 3
+ingestion linker used and what E-003 measured; changing a measured
+component from underneath its published result is how a number quietly
+stops meaning what it says.
+
+Which raises the uncomfortable part, recorded rather than acted on: the
+ingestion linker used the **unfiltered** lexicon, so those same collisions
+would have pushed real multi-word card names into the pending-homonym path
+and on to LLM disambiguation. That is a plausible contributor to E-003's
+multiword linking F1 of 0.760 against a predicted 0.95. It is not a
+correction — E-003's split is spent and its figure stands as reported — and
+it goes to E-005 as a hypothesis with a fresh sample. The temptation to
+re-run Phase 3 "now that we know" is precisely what the spent-split rule
+exists to refuse.
+
+## 2026-08-09 — E-006 came back at 0.067, and the prediction said why
+
+The Phase 4 DoD's entity-recall criterion, registered as E-006 before the
+first run, carried an instruction with it: *if entity recall on the 1–2
+hop strata comes back low, suspect the harness before the templates.*
+
+It came back at **0.067** against a 0.9 floor. Two harness bugs, both
+invisible to review and both caught only because that sentence existed:
+
+1. **The router passed the wrong casing.** `Keyword.display_name` is
+   "Trample"; the graph keys on the normalized `name`, "trample". Every
+   `definition_1hop` question returned `NO_MATCH` — a traversal that runs
+   perfectly and matches nothing.
+2. **Legality was never wired.** The router emitted `card_keyword_rules`
+   and `card_rulings` for a card and never `card_legality`, and no
+   traversal emitted the *card itself* as evidence. So `legality_1hop`
+   scored 0 on questions the graph answers with a single typed edge.
+
+After fixing both: **0.967, PASS.** `definition_1hop` and `legality_1hop`
+at 1.00, 19 of 20 questions resolved, 1 ambiguous, **none silent**,
+latency p95 0.57 s against the 2 s criterion.
+
+Recording the 0.067 rather than only the 0.967 is the point. It belongs to
+a broken harness, and a reader who sees only the passing number learns
+nothing about how close the phase came to reporting a false failure of
+the *templates*.
+
+A third fix came out of the same run and is a design decision, not a bug:
+a question naming a format ("is this legal in Modern?") no longer routes
+to text retrieval when its card has no keywords. Legality is answered
+completely by one typed edge; treating the missing rule-graph seed as a
+gap would have bolted eight lexical rule hits onto the answer and called
+them evidence.
+
+And the number that did not move: `interaction_multihop` rule recall
+**0.06**. Three independent methods now agree — `reachability.py` on the
+graph, `eval_rule_search.py` on the text, and E-006 end to end. That
+convergence is the Phase 4 finding, not a defect still to be fixed.
+
+## 2026-08-09 — Valid Cypher that kills the server, found by running it
+
+Seven of the eight template traversals ran against the loaded graph on
+the first try. The eighth, `card_interaction`, returned
+`Neo.TransientError.General.MemoryPoolOutOfMemoryError`.
+
+Isolating clause by clause put it on one line:
+
+```
+OPTIONAL MATCH (a)-[:HAS_KEYWORD]->(k:Keyword)<-[:HAS_KEYWORD]-(b)
+```
+
+The surprise is that it fails **regardless of how many keywords the two
+cards have** — *Humility* and *Opalescence* have none between them, and it
+still exhausts the pool. The planner expands through the `Keyword` hub,
+where `flying` alone carries thousands of edges. And `$limit` cannot save
+it: the blowup happens before aggregation, so the bound is applied to a
+result set that was never produced.
+
+The fix stages each `OPTIONAL MATCH` behind a `WITH ... collect(...)` and
+replaces the two-sided pattern with an intersection of the two keyword
+sets. Both pairs now return in ~0.5–0.7 s, and the full set of eight runs
+between 9 ms and 685 ms, comfortably inside the phase's 2 s p95 criterion.
+
+This is the roadmap's registered risk — "interaction subgraphs explode
+(keywords and rules that are very connected)" — arriving exactly where it
+was predicted. What is worth recording is that **no amount of reading
+would have caught it.** The query is valid, its bound is present, and the
+review-level invariants the unit tests enforce (read-only, `$limit`,
+bounded expansion, declared parameters) all passed on the version that
+killed the server. Only execution against a real planner on real
+cardinalities said otherwise, which is the argument for integration
+fixtures rather than a mocked driver.
+
+Two smaller findings from the same run, both now pinned by tests:
+`collect(DISTINCT {number: sub.number})` over a missed `OPTIONAL MATCH`
+yields `[{number: null}]` rather than `[]`, which would have become
+citations reading `rule:None`; and the row-to-evidence mapping is now
+declared beside each query as `Emit` entries, with a test asserting every
+column it names is one the query returns — so a `RETURN` edited without
+its mapping fails loudly instead of quietly emitting nothing.
+
+## 2026-08-09 — The split caught me within the hour, and the dev data says no
+
+Building ADR-007's text-retrieval half, three golden-set questions were
+inspected to see what lexical search over CR text returns. The
+*Humility* × *Opalescence* one came back with 604.3 and 710.2 — nothing
+about layers — and the diagnosis looked clean: `cite_search`'s stopword
+list, tuned for ruling→rule matching, strips "ability"/"abilities", which
+is the single most diagnostic term for layer 6. Rebuilding the index
+without those stopwords lifted 613.4b — an actual gold rule — into the
+top ten.
+
+**That question is in the frozen evaluation set.** Changing a retrieval
+parameter because it fixes an evaluation question is fitting the
+retriever to the test, which is precisely what the split drawn this
+morning exists to prevent. It caught the case within the hour of being
+created, which is the argument for drawing splits before writing code
+rather than after.
+
+Recorded for the record, since inspecting is not free: the retrieval
+output of `hand-humility-opalescence`, `hand-deathtouch-trample` and one
+targeting question was seen on 2026-08-09. **No parameter was changed as
+a result.** The hypothesis was re-derived on the development split
+instead.
+
+**And the dev split refused it.** Over the 15 dev questions carrying gold
+rules, the lighter stopword list changes nothing at all — 8 of 15 with it
+and 8 of 15 without, identical per stratum. What *does* help is expanding
+the query with the oracle text of the cards the question names: 6 of 15 →
+**8 of 15**, the gain landing on `keyword_rule_2hop` (0/1 → 1/1) and
+`interaction_multihop` (1/8 → 2/8). Only the measured change ships.
+
+**The finding that matters is the one that went the wrong way.**
+`interaction_multihop` reaches a gold rule in **2 of 8** dev questions
+even with expansions. ADR-007 assumed text retrieval would cover the
+stratum the graph cannot seed; on this evidence it does not. Reaching the
+layer system means knowing that two continuous effects must be ordered,
+and that is not a vocabulary overlap with anything either card says — the
+same wall, from the other side.
+
+The response is to report it, not to keep adding mechanisms until
+something scores. Embeddings are the obvious next lever and Phase 3
+already dropped that stage once; adding it now, against a stratum whose
+difficulty is now measured twice, would be reaching for a result rather
+than testing a hypothesis. It goes to the backlog with its own
+registration.
+
+## 2026-08-09 — Hybrid retrieval adopted, and the golden set split before any template
+
+Option 2 taken (ADR-007): the graph resolves entities and answers the
+structural strata, text retrieval reaches CR rules where the graph cannot
+seed. Forced by the reachability measurement rather than chosen — option 1
+has no material for the 15 `interaction_multihop` questions whose cards
+carry no keyword, and option 3 is the inference E-003 measured at 0.125.
+
+**The confound this creates is the part worth recording.** E-001 was
+designed as graph vs. vector. A hybrid arm measured only against the
+vector baseline could win entirely on its text component — which *is* the
+Project 1 pipeline — and be presented as evidence about the graph. E-001
+now runs three arms: vector (A), graph-only (B), hybrid (C). B vs A is
+the registered prediction and is not renegotiated; C vs B is what the
+text adds. Without the third arm the hybrid's number would be
+uninterpretable, and the temptation would be to report it anyway.
+
+**The golden set is split before a single traversal exists.** Twenty
+questions (seed `20260809`, stratified) are frozen as the Phase 4
+development subset; the other 57 are E-001's evaluation set. This was a
+pre-existing hole in the roadmap — Phase 4 was to build templates against
+the questions Phase 6 scores — and it is only cheap to fix before the
+first template. `scripts/split_golden.py` refuses to redraw, because a
+split that can be redrawn after the fact is not a split.
+
+Cost accepted and written down: `keyword_rule_2hop` has 3 questions, so
+the split leaves 1 dev and 2 evaluation, and no per-stratum claim about
+it is reportable from either side. The alternative — leaving all 3 in
+evaluation — would mean writing that stratum's template with nothing to
+develop against, trading a reporting limitation for a contamination risk.
+The limitation is the better trade.
+
+`docs/hypothesis.md` was **not** edited. Its a-priori predictions stand;
+a dated section records the reachability evidence and says plainly that
+prediction 2 now looks unlikely for arm B. Recording evidence against a
+prediction is not the same as editing the prediction, and the difference
+is the whole point.
+
+## 2026-08-09 — Measured the bridge instead of arguing it; implicit cross-refs dropped
+
+Two Phase 4 decisions, one of them correcting me.
+
+**Implicit CR cross-references are dropped**, not carried. `extraction/
+crossref.py`, its schema and its gate support stay in the tree as
+unwired code; nothing calls them and nothing will in Phase 4. The reason
+is the one Phase 3 just paid for: an inferred edge is worth what its
+measurement says, and measuring this one means another annotation round
+against another hand-made gold. The phase that just spent XL effort
+learning that the *first* inferred edge scored 0.125 is not the phase to
+add a second on faith. If it returns, it returns with its own
+pre-registration and its own gold.
+
+**The reachability claim was asserted, not measured — and the
+measurement changes the argument.** Closing Phase 3 I wrote that
+`interaction_multihop`'s rules have "no deterministic edge from any
+card", inferred from chapter families. That tested direct edges only. It
+said nothing about multi-hop paths through `REFERENCES` and the CR tree,
+which is exactly what a traversal would use. `scripts/reachability.py`
+now measures it, seeding from each question's entities and expanding k
+hops through the undirected union of cross-references and the tree — the
+architecture's best case, deliberately.
+
+| stratum | k=2 | k=4 | k=6 | median ball at k=6 | no seed |
+|---|---|---|---|---|---|
+| `definition_1hop` | **100%** | 100% | 100% | 2228 | 0/15 |
+| `keyword_rule_2hop` | **100%** | 100% | 100% | 2544 | 0/3 |
+| `interaction_multihop` | 10% | 21% | 38% | 1515 | **15/30** |
+| `negative_temporal` | 13% | 33% | 47% | 2206 | 3/9 |
+
+The conclusion survives, for a better reason than the one I gave. At k=2
+the graph reaches **every** gold rule of the 1–2 hop strata inside ~200
+rules — it is at ceiling there. On `interaction_multihop` it reaches 38%
+only by k=6, and a k=6 ball holds 1515 of 3308 rules: reaching almost
+half the document is not retrieval, it is loading the corpus.
+
+The decisive column is the last one. **Fifteen of the thirty
+`interaction_multihop` questions produce no seed at all** — 56 of the
+golden set's gold entities are cards with no keyword abilities
+(*Humility*, *Opalescence*). No traversal depth helps a card with no edge
+into the rule graph, and no new deterministic bridge can be built for
+them either: what connects *Humility* to the layer system is what its
+text *means*, which is inference. That is the same inference E-003
+measured at 0.125.
+
+So option 1 (another deterministic bridge) has no material for half the
+stratum, and option 3 (a re-registered inferred path) is the thing just
+measured and rejected. Recorded before the choice, so the choice is
+forced by the data rather than by preference.
+
+## 2026-08-09 — Phase 4 opened with one decision blocking the first line of code
+
+Gate check on Phase 3: every deliverable exists. One carry-over,
+explicitly carried rather than dropped — implicit CR cross-references
+(`extraction/crossref.py`) are built, schema'd and gated but never wired
+into the pipeline. They enter Phase 4 as a task, or they get dropped with
+a dated entry; not left ambiguous.
+
+The phase does not start with `retrieval/templates.py`. It starts with
+the architectural question Phase 3 left: with `CITES_RULE` reduced
+(ADR-006), `interaction_multihop` needs 61 CR rules of which only 8 are
+keyword rules, and nothing deterministic connects a card to the rest.
+Two Phase 4 deliverables depend on the answer — the `carta→rulings→regras`
+traversal in the ≥7 templates now reaches 25 of 77,999 rulings, and the
+`interação carta×carta` traversal was to lean on shared rulings and
+common rules.
+
+Recorded so the choice is not made by accident while writing a template:
+the options are another deterministic bridge, text retrieval for rules
+with the graph supplying entity structure, or a re-registered inferred
+path. The second reframes E-001 as a test of the *combination* rather
+than of traversal alone, which changes what the project claims — it is a
+legitimate answer, but not one to slide into unannounced.
+
+Phase 4's Entity Recall criterion (≥0.9 on 1–2 hop questions) is a
+measurement and gets registered in `experiments/registry.md` before it
+runs, not after.
+
 ## 2026-08-09 — Phase 3 closed on a failed DoD, deliberately
 
 Both Phase 3 thresholds failed: linking F1 0.634 against 0.90, citations
