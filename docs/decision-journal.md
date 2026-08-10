@@ -90,6 +90,43 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-09 — Six percent of card names were ambiguous, and none of it was ambiguity
+
+One development question came back `AMBIGUOUS`: *Doubling Season*
+resolved to two `oracle_id`s. Chasing it found the general case —
+**2,196 of 36,268 multi-word card names resolve to more than one id**, and
+the cause is not language.
+
+- **2,116 are `art_series` prints.** Collectible art cards are named
+  `"X // X"`, and both faces normalize onto the real card's name.
+- **80 are tokens**, which share a name with the card that makes them.
+
+Neither is a rules entity. Left in, six percent of card names come back as
+"I cannot confirm what this names" and the question containing them is
+refused — a linking policy behaving exactly as designed, on data that
+should never have reached it.
+
+Filtering those layouts out drops collisions to **25 of 33,448** and lifts
+E-006's 1–2 hop entity recall from 0.967 to **1.000**, with
+`keyword_rule_2hop` going 0.67 → 1.00 and the last ambiguous question
+disappearing. All 20 development questions now resolve.
+
+The filtering lives in a new `build_card_lexicon` at the retrieval call
+site, **not** inside `Lexicon.build`. That constructor is what the Phase 3
+ingestion linker used and what E-003 measured; changing a measured
+component from underneath its published result is how a number quietly
+stops meaning what it says.
+
+Which raises the uncomfortable part, recorded rather than acted on: the
+ingestion linker used the **unfiltered** lexicon, so those same collisions
+would have pushed real multi-word card names into the pending-homonym path
+and on to LLM disambiguation. That is a plausible contributor to E-003's
+multiword linking F1 of 0.760 against a predicted 0.95. It is not a
+correction — E-003's split is spent and its figure stands as reported — and
+it goes to E-005 as a hypothesis with a fresh sample. The temptation to
+re-run Phase 3 "now that we know" is precisely what the spent-split rule
+exists to refuse.
+
 ## 2026-08-09 — E-006 came back at 0.067, and the prediction said why
 
 The Phase 4 DoD's entity-recall criterion, registered as E-006 before the

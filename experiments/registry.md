@@ -345,6 +345,39 @@ historical document.
   stratum is out of reach, which is the Phase 4 finding rather than a
   defect left to fix.
 
+- **Third run, 2026-08-09, after a lexicon fix.** All three runs are kept:
+  a number that moved because a defect was fixed says more than the final
+  number alone.
+
+  | run | 1–2 hop entity recall | what changed |
+  |---|---|---|
+  | 1 | 0.067 — FAIL | broken harness (keyword casing, legality unwired) |
+  | 2 | 0.967 — PASS | both harness bugs fixed |
+  | 3 | **1.000 — PASS** | query lexicon excludes non-rules layouts |
+
+  Run 3, full: `definition_1hop` 1.00/1.00, `legality_1hop` 1.00/n/a,
+  `keyword_rule_2hop` 1.00/1.00, `negative_temporal` 1.00/0.25,
+  `interaction_multihop` **0.88 entity / 0.12 rule**. All 20 questions
+  resolved, none ambiguous, latency p95 0.53 s.
+
+  The fix: 2,196 multi-word card names resolved to more than one
+  `oracle_id`, and **2,116 of those collisions are `art_series` prints**
+  (collectible cards named "X // X" whose faces normalize onto the real
+  card) with 80 more from tokens. Neither is a rules entity. Filtering
+  those layouts out of the query lexicon drops collisions to 25 of 33,448,
+  and the ambiguous question disappears. `build_card_lexicon` does the
+  filtering at the retrieval call site, **not** inside `Lexicon.build`,
+  because that constructor is what E-003 measured.
+
+- **Hypothesis for E-005, generated here and not acted on:** the Phase 3
+  ingestion linker used the *unfiltered* lexicon, so those same 2,196
+  collisions would have pushed real multi-word card names into the pending
+  homonym path and on to LLM disambiguation. That is a plausible
+  contributor to multiword linking F1 landing at 0.760 against a predicted
+  0.95, and to the precision of the LLM stage. It is **not** a correction
+  to E-003: that split is spent, its figure stands as reported, and this
+  belongs to E-005 with a fresh sample.
+
 ### E-005 — linking precision (registered 2026-08-09, not yet run)
 
 - **Objective:** E-003 measured linking F1 0.634 [0.491, 0.750] against a 0.90

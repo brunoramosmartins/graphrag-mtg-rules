@@ -62,6 +62,36 @@ RIGHT_SINGLE_QUOTE = chr(0x2019)
 _WORD = re.compile("[A-Za-z0-9'" + RIGHT_SINGLE_QUOTE + "/,.-]+")
 
 
+#: Card layouts that are not rules entities. An `art_series` card is a
+#: collectible print named "X // X", and a `token` shares its name with the
+#: card that makes it — neither is ever what a rules question is asking
+#: about, and both collide with the real card after name normalization.
+#: Measured on the loaded corpus: 2,196 multi-word names resolve to more
+#: than one oracle_id, and 2,116 of those collisions are art series, 80
+#: tokens. Left in, six percent of card names come back *ambiguous* and the
+#: question they appear in is refused.
+NON_RULES_LAYOUTS = frozenset({"art_series", "token", "double_faced_token", "emblem"})
+
+
+def build_card_lexicon(cards: Iterable[Mapping[str, object]], **kwargs) -> Lexicon:
+    """Build the query-time lexicon from rules-relevant printings only.
+
+    Filtering happens here rather than inside :meth:`Lexicon.build` on
+    purpose: that constructor is also used by the Phase 3 ingestion linker,
+    whose behaviour was measured in E-003, and changing a measured
+    component from underneath its result is how a number stops meaning what
+    it says. Whether ingestion should filter too is a question for E-005.
+    """
+    return Lexicon.build(
+        (
+            (str(card["name"]), str(card["oracle_id"]))
+            for card in cards
+            if card.get("layout") not in NON_RULES_LAYOUTS
+        ),
+        **kwargs,
+    )
+
+
 class EntityKind(StrEnum):
     """Which node label a resolved mention points at."""
 

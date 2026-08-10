@@ -38,10 +38,9 @@ from pathlib import Path
 from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
 from graphrag_mtg.etl.cr_parser import CR_TXT_PATH, parse_cr
 from graphrag_mtg.etl.normalize import normalize_name
-from graphrag_mtg.extraction.linker import Lexicon
 from graphrag_mtg.graph.connection import driver_session
 from graphrag_mtg.graph.loader import keyword_definition_rows
-from graphrag_mtg.retrieval.linking import QueryLinker
+from graphrag_mtg.retrieval.linking import QueryLinker, build_card_lexicon
 from graphrag_mtg.retrieval.pipeline import neo4j_runner, retrieve
 from graphrag_mtg.retrieval.rule_search import RuleSearch
 from graphrag_mtg.retrieval.subgraph import Outcome
@@ -105,7 +104,7 @@ def main() -> int:
 
     doc = parse_cr(args.cr)
     cards = list(iter_bulk(bulk_path(ORACLE_CARDS_STEM)))
-    lexicon = Lexicon.build((c["name"], c["oracle_id"]) for c in cards)
+    lexicon = build_card_lexicon(cards)
     keywords_by_oracle = {c["oracle_id"]: c.get("keywords", []) for c in cards}
     oracle_text = {c["oracle_id"]: c.get("oracle_text", "") for c in cards}
     keyword_names = {row["display_name"] for row in keyword_definition_rows(doc)}
