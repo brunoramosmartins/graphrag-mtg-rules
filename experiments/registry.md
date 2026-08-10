@@ -707,6 +707,60 @@ refusal, look at the subgraph, and agree it was thin. The 30 fresh questions
 carry no `gold_cr_rules` annotations, so nothing else on this sample can
 supply the ground truth.
 
+### Achieved sufficiency, and what it does to the gates (2026-08-10, before generation)
+
+Labelled and frozen before any answer existed. **Audit side: 5
+`sufficient`, 20 `partial`, 7 `insufficient`** (development side 3 / 5 / 2).
+By stratum: `interaction_multihop` 3 / 19 / 4, `negative_temporal` 5 / 6 / 4,
+`keyword_rule_2hop` 0 / 0 / 1.
+
+The registered contingency does **not** fire — `sufficient` + `partial` is
+25 against a floor of 12 — and no new threshold is invented here, because
+the criterion was chosen before the labels existed and moving it now
+because the composition disappoints is exactly what pre-registration
+forbids. What follows is therefore a **limitation, not a revised gate**:
+
+- **The over-refusal gate rests on 5 questions.** It is the only condition
+  that blocks the Phase 5 DoD, and it is defined only on `sufficient`.
+  Zero over-refusals over 5 bounds the over-refusal rate at **3/5 = 0.60**
+  by rule of three. The write-up says that bound; it does not say "the
+  system does not over-refuse".
+- **Unsupported answering rests on 7**, bounded at 3/7 = 0.43 on a clean
+  run. Same treatment.
+- **`partial` is the majority of the audit at 20 of 32**, and `partial`
+  carries no threshold in either direction by design. So most of the audit
+  exercises coverage and support while contributing nothing to the refusal
+  gates. Coverage and support keep a healthy denominator — up to 25
+  answering questions — which is the half this sample can actually speak to.
+
+### E-007c — is `partial` a judgement or a shrug? (registered 2026-08-10, not yet run)
+
+- **Registered before the first generation**, and before any disagreement is
+  inspected. Prompted by the composition above rather than by a result:
+  `partial` was applied to 25 of 42 subgraphs by one annotator on a label
+  invented for this experiment, and a category that absorbs the majority of
+  a sample is the category most likely to be absorbing uncertainty.
+- **Objective:** the ceiling for the sufficiency label, the same M2 the
+  project applies to every hand-made gold
+  ([../docs/annotation-methodology.md](../docs/annotation-methodology.md)).
+  E-003a measured this annotator at **0.815 against themself**; a label with
+  no ceiling is reported against a 1.0 that does not exist.
+- **Design:** a blind re-label of **10 of the 42** subgraphs — fresh
+  worksheet, original labels hidden, days elapsed printed — scored as exact
+  agreement and as agreement collapsed to answerable / not
+  (`sufficient`+`partial` vs `insufficient`), because the second is what the
+  refusal gates actually use.
+- **Decision rule:** none, and deliberately. This measures the instrument;
+  it changes no frozen label and licenses no re-labelling. If collapsed
+  agreement is materially below exact agreement, the reported refusal
+  figures carry that ceiling beside them.
+- **Prediction, recorded before the run:** exact agreement is the weaker of
+  the two, with the disagreement concentrated on the `sufficient` /
+  `partial` boundary rather than on `insufficient` — deciding whether the
+  missing rule mattered is the judgement, and deciding whether anything was
+  retrieved is not.
+- **Actual result:** _(to be filled after the run)_
+
 ### Decision rules
 
 - **Coverage: 100% of factual claims carry a citation** (from the roadmap

@@ -90,6 +90,38 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — The contingency held, and I did not move it
+
+Sufficiency labelled on all 42 before any answer existed. Audit side: **5
+`sufficient`, 20 `partial`, 7 `insufficient`.**
+
+The registered contingency does not fire — `sufficient` + `partial` is 25
+against a floor of 12 — so generation proceeds. But the composition is worse
+than the headline suggests, and the honest thing is to say so rather than
+quietly re-cut the criterion:
+
+**The only DoD-blocking gate now rests on 5 questions.** Over-refusal is
+defined on `sufficient` alone, and zero over-refusals over 5 bounds the rate
+at 3/5 = 0.60 by rule of three. Passing that gate will prove very little,
+and the write-up has to say so instead of reporting "the system does not
+over-refuse".
+
+I wanted to change the criterion — to require some number of `sufficient`
+specifically, now that I can see there are five. That is precisely the move
+pre-registration exists to prevent: the floor was chosen before the labels
+existed, it was met, and disliking the composition afterwards is not a
+reason to re-cut it. The limitation goes in the record; the gate stays.
+
+What *is* legitimate is measuring the instrument, and the project's own
+default says to: `partial` absorbed 25 of 42 subgraphs, and a category that
+takes the majority of a sample is the one most likely to be absorbing
+uncertainty rather than describing it. **E-007c** is registered — a blind
+re-label of 10 subgraphs, scored both exactly and collapsed to
+answerable / not, since the collapsed version is what the refusal gates use.
+It carries no decision rule and changes no frozen label. E-003a already
+measured this annotator at 0.815 against themself; a label with no ceiling
+is a label reported against a 1.0 that does not exist.
+
 ## 2026-08-10 — Three linking defects, found by prose the golden set never had
 
 Reading the first sufficiency case turned up something wrong before a single

@@ -1,215 +1,216 @@
 {
-  "frozen": false,
+  "frozen": true,
   "labels": {
     "rg-4825": {
       "outcome": "resolved",
       "evidence": 16,
-      "label": ""
+      "label": "partial"
     },
     "rg-119": {
       "outcome": "resolved",
       "evidence": 28,
-      "label": ""
+      "label": "insufficient"
     },
     "rg-260": {
       "outcome": "resolved",
       "evidence": 15,
-      "label": ""
+      "label": "sufficient"
     },
     "rg-6817": {
       "outcome": "resolved",
       "evidence": 11,
-      "label": ""
+      "label": "partial"
     },
     "rg-2848": {
       "outcome": "resolved",
       "evidence": 56,
-      "label": ""
+      "label": "sufficient"
     },
     "rg-5257": {
       "outcome": "resolved",
       "evidence": 11,
-      "label": ""
+      "label": "sufficient"
     },
     "rg-6461": {
       "outcome": "resolved",
       "evidence": 27,
-      "label": ""
+      "label": "partial"
     },
     "rg-320": {
       "outcome": "resolved",
       "evidence": 51,
-      "label": ""
+      "label": "partial"
     },
     "rg-1015": {
       "outcome": "resolved",
       "evidence": 26,
-      "label": ""
+      "label": "partial"
     },
     "rg-1154": {
       "outcome": "resolved",
       "evidence": 18,
-      "label": ""
+      "label": "insufficient"
     },
     "rg-47": {
       "outcome": "resolved",
       "evidence": 28,
-      "label": ""
+      "label": "sufficient"
     },
     "rg-6687": {
       "outcome": "resolved",
       "evidence": 26,
-      "label": ""
+      "label": "partial"
     },
     "rg-48": {
       "outcome": "resolved",
       "evidence": 36,
-      "label": ""
+      "label": "partial"
     },
     "rg-4298": {
       "outcome": "resolved",
       "evidence": 7,
-      "label": ""
+      "label": "insufficient"
     },
     "rg-6586": {
       "outcome": "resolved",
       "evidence": 19,
-      "label": ""
+      "label": "partial"
     },
     "rg-7500": {
       "outcome": "resolved",
       "evidence": 44,
-      "label": ""
+      "label": "sufficient"
     },
     "rg-6417": {
       "outcome": "resolved",
       "evidence": 30,
-      "label": ""
+      "label": "partial"
     },
     "rg-1704": {
       "outcome": "resolved",
       "evidence": 29,
-      "label": ""
+      "label": "insufficient"
     },
     "rg-1186": {
       "outcome": "resolved",
       "evidence": 42,
-      "label": ""
+      "label": "partial"
     },
     "rg-2420": {
       "outcome": "resolved",
       "evidence": 39,
-      "label": ""
+      "label": "insufficient"
     },
     "rg-4747": {
       "outcome": "resolved",
       "evidence": 20,
-      "label": ""
+      "label": "partial"
     },
     "rg-256": {
       "outcome": "resolved",
       "evidence": 15,
-      "label": ""
+      "label": "sufficient"
     },
     "rg-1049": {
       "outcome": "resolved",
       "evidence": 38,
-      "label": ""
+      "label": "partial"
     },
     "rg-2027": {
       "outcome": "resolved",
       "evidence": 49,
-      "label": ""
+      "label": "partial"
     },
     "rg-6388": {
       "outcome": "resolved",
       "evidence": 27,
-      "label": ""
+      "label": "partial"
     },
     "rg-1660": {
       "outcome": "resolved",
       "evidence": 31,
-      "label": ""
+      "label": "partial"
     },
     "rg-2208": {
       "outcome": "resolved",
       "evidence": 34,
-      "label": ""
+      "label": "insufficient"
     },
     "rg-66": {
       "outcome": "resolved",
       "evidence": 19,
-      "label": ""
+      "label": "insufficient"
     },
     "rg-685": {
       "outcome": "resolved",
       "evidence": 23,
-      "label": ""
+      "label": "sufficient"
     },
     "rg-1973": {
       "outcome": "resolved",
       "evidence": 25,
-      "label": ""
+      "label": "partial"
     },
     "rg-1702": {
       "outcome": "resolved",
       "evidence": 36,
-      "label": ""
+      "label": "partial"
     },
     "rg-5610": {
       "outcome": "resolved",
       "evidence": 42,
-      "label": ""
+      "label": "sufficient"
     },
     "rg-361": {
       "outcome": "resolved",
       "evidence": 43,
-      "label": ""
+      "label": "insufficient"
     },
     "rg-1766": {
       "outcome": "resolved",
       "evidence": 35,
-      "label": ""
+      "label": "partial"
     },
     "rg-220": {
       "outcome": "resolved",
       "evidence": 26,
-      "label": ""
+      "label": "partial"
     },
     "rg-241": {
       "outcome": "resolved",
       "evidence": 56,
-      "label": ""
+      "label": "partial"
     },
     "rg-32": {
       "outcome": "resolved",
       "evidence": 20,
-      "label": ""
+      "label": "partial"
     },
     "rg-3859": {
       "outcome": "resolved",
       "evidence": 33,
-      "label": ""
+      "label": "partial"
     },
     "rg-1411": {
       "outcome": "resolved",
       "evidence": 34,
-      "label": ""
+      "label": "partial"
     },
     "rg-503": {
       "outcome": "resolved",
       "evidence": 34,
-      "label": ""
+      "label": "partial"
     },
     "rg-910": {
       "outcome": "resolved",
       "evidence": 32,
-      "label": ""
+      "label": "insufficient"
     },
     "rg-134": {
       "outcome": "resolved",
       "evidence": 34,
-      "label": ""
+      "label": "partial"
     }
-  }
+  },
+  "hash": "c8cafaf69c1dbb62c268dfdf2995a14e68d7165bf7179b6f8d6d559fcadc76f4"
 }
