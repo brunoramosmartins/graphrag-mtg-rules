@@ -14,6 +14,12 @@ data/interim/*
 !data/raw/.gitignore
 !data/interim/.gitignore
 
+# Run artifacts: retrieved subgraphs and generated answers. These carry
+# serialized CR rule text and card oracle text, which are exactly what the
+# Fan Content Policy forbids committing. Every figure they support is
+# reproducible from the committed ids plus a re-run.
+runs/
+
 # ─────────────────────────────────────────────────────────────────────────
 # Secrets / environment
 # ─────────────────────────────────────────────────────────────────────────
