@@ -490,7 +490,7 @@ historical document.
 
 ## E-007 — do the generated answers cite what they claim?
 
-- **Registered:** 2026-08-09, at Phase 5 kickoff, before `answerer.py` exists.
+- **Registered:** 2026-08-10, at Phase 5 kickoff, before `answerer.py` exists.
   Red-teamed the same day, before any generation; what the review changed is
   listed at the end of this entry rather than silently folded in.
 - **Objective:** the Phase 5 DoD, made measurable. Three constructs that are
@@ -506,15 +506,63 @@ historical document.
 
 ### Sample
 
-- **40 fresh RulesGuru questions**, drawn by `build_golden_pool.py` with the
-  seed and ids frozen before the first generation, **disjoint from all 77
-  golden-set questions** — from the 20-question development split and from
-  the 57 frozen for E-001 alike. Auditing on the evaluation split would spend
-  the split Phase 4 froze to protect E-001; auditing on the development split
-  would measure a prompt against the 20 questions it was tuned on.
-- **10 are the prompt-development subset. 30 are the audit.** The 30 are
+- **Target 40 fresh RulesGuru questions; 42 achieved** (drawn 2026-08-10,
+  `data/golden/e007_audit_pool.jsonl`), **disjoint from all 77 golden-set
+  questions** — from the 20-question development split and from the 57 frozen
+  for E-001 alike. Auditing on the evaluation split would spend the split
+  Phase 4 froze to protect E-001; auditing on the development split would
+  measure a prompt against the 20 questions it was tuned on.
+- **10 are the prompt-development subset. 32 are the audit.** The 32 are
   touched by `answerer.py` exactly once, after the prompt is frozen and its
-  version string recorded.
+  version string recorded. **The rule-of-three bound follows from 32, not
+  from the round number this entry first named: 3/32 = 0.094.**
+- **Achieved content overlap: 9 of the 42 questions touch a card name the
+  golden set also uses** — Blood Moon, Dress Down, Glass Golem, Hardened
+  Scales, Ral's Outburst, Magus of the Moon, Strionic Resonator, Yixlid
+  Jailer. Reported rather than dropped: a second question about Blood Moon is
+  not the same question. The one place it could bite is indirect — prompt
+  iteration on the 10 development questions could in principle fit a card
+  E-001 will later evaluate on — and it is bounded by the fact that E-007
+  tunes a *prompt*, never retrieval, and never sees an E-001 answer.
+- **The drawn labels are the source filter, not the strata**, and are
+  reclassified by hand (`scripts/classify_pool.py`) **before** the 10/32
+  split, because the split draws proportionally by stratum. Splitting on
+  seeded labels would be nominally stratified and substantively hollow, and
+  if the true `interaction_multihop` questions landed mostly on the
+  development side the audit would lose the stratum this pool was redrawn to
+  recover. Seeded mix as drawn: `keyword_rule_2hop` 16, `rulings_2hop` 14,
+  `interaction_multihop` 12.
+- **Achieved mix, 2026-08-10, before the split was drawn:**
+  `interaction_multihop` **26**, `negative_temporal` **15**,
+  `keyword_rule_2hop` **1**, `rulings_2hop` **0**. The hand pass **changed 31
+  of 42 labels**, so the complexity-seeded value was noise rather than a
+  weak signal — the second independent demonstration of that, after Phase 1.
+- **`rulings_2hop` came back empty again**, exactly as it did in the golden
+  set. Two independent annotation passes now agree that judge questions are
+  not answered by "a card's official ruling citing a rule", which is the
+  same conclusion ADR-006 reached from the corpus side when it reduced
+  `CITES_RULE` to explicit citations. Recorded as a replication, not
+  re-litigated here.
+- **`keyword_rule_2hop` holds exactly one question**, so **no per-stratum
+  claim about it is reportable from this sample** — the same disclosure the
+  Phase 4 split carries for the same stratum, and for the same reason.
+- **Consequence to face before generating, not after:** 41 of the 42 sit in
+  the two strata where Phase 4 measured retrieval weakest
+  (`interaction_multihop` rule recall 0.12). Most subgraphs are therefore
+  expected to be labelled `insufficient`, the refusal machinery will be
+  exercised heavily — which is what this pool was redrawn for — and
+  **coverage and support will rest on whatever small number of questions can
+  actually be answered.** That is a real risk of a figure over fewer than 10
+  clusters, which this entry already requires to be labelled a description
+  rather than an estimate.
+  **Pre-registered contingency, decided now rather than after seeing the
+  number:** once sufficiency is labelled and before any answer is generated,
+  if `sufficient` + `partial` over the 32 audit questions is **below 12**,
+  the pool is topped up by a further draw under the same filters and
+  exclusions, the top-up is recorded here with its own date, and sufficiency
+  is labelled for the new questions before generation. Below 12 there is no
+  coverage figure worth reporting, and discovering that after generating
+  would leave only bad options.
 - **Stratified proportionally to the golden set's strata**, assigned before
   generation. Unstratified, the refusal rate is close to a function of the
   draw: rule recall on `interaction_multihop` is 0.12, so a draw light on
@@ -524,6 +572,51 @@ historical document.
   near-duplicate questions about the same interaction; a card-set overlap
   check against the 77 runs before the draw is frozen, and the achieved
   overlap is reported.
+- **Amendment 2026-08-10, before the draw is frozen and before any
+  generation — the source filter widens.** The first dry run against the
+  registered filter (`complexity: Complicated`, judge levels 0–2) returned
+  **23 new questions, none of them `interaction_multihop`**: that filter
+  matched three questions and the golden set already holds all three. It
+  holds 22 `interaction_multihop` questions from RulesGuru in total, so the
+  bucket is exhausted rather than unlucky.
+  Sampling around it is not an option. `interaction_multihop` is where Phase
+  4 measured rule recall **0.12**, which makes it the only stratum that
+  exercises the machinery this experiment was rebuilt around — `insufficient`
+  subgraphs, correct refusals, over-refusal. A draw without it would report
+  citation behaviour on the easy half and say nothing about the hard one,
+  which is the failure mode the stratification requirement above exists to
+  prevent.
+  The filter therefore widens, with the stratum **assigned by hand from the
+  question text**, as this entry already requires and as the golden set
+  itself was built ([../docs/golden-set.md](../docs/golden-set.md) records
+  that the complexity-seeded stratum was wrong and left two strata empty).
+  The filter used is passed on the command line and printed with the draw, so
+  what the sample represents is recorded rather than remembered.
+  **Which axis, measured rather than assumed (two dry runs, 2026-08-10):**
+  judge level is not it — `Complicated` at levels 0–3 returned the same three
+  questions and zero new. Complexity is — `Intermediate` + `Complicated` at
+  levels 0–2 returned **14 new of 20**, with 3 of the 14 touching a card name
+  the golden set also uses.
+- **What the three `STRATUM_PLAN` entries actually are, corrected here:**
+  three **source filters**, not strata. `data/golden/ids_v0.jsonl` contains no
+  `rulings_2hop` question at all — its 30 RulesGuru rows are 22
+  `interaction_multihop`, 6 `negative_temporal`, 2 `keyword_rule_2hop` —
+  because the seeded stratum was reclassified by hand during annotation. The
+  achieved stratum mix of this pool is therefore unknowable until the manual
+  pass is done, and is reported as **achieved**, never as planned.
+- **Two golden-set strata are out of E-007's reach, stated before the draw:**
+  `definition_1hop` and `legality_1hop` were generated from Scryfall, not
+  drawn from RulesGuru, so no RulesGuru filter can produce them. Together they
+  are 35 of the golden set's 77 questions. Nothing E-007 reports speaks to
+  citation behaviour on those two strata. The limitation runs in the
+  conservative direction — they are the easiest questions in the set, where
+  coverage would be highest — so the reported figure is a floor rather than a
+  flattering slice, and the write-up says which strata it covers instead of
+  implying all of them.
+  **The achieved n and stratum mix are registered here before generation.**
+  If the widened draw cannot reach 40, the registered n changes and the
+  rule-of-three bound is recomputed from it — 3/30 = 0.10 is a property of
+  the sample size, not a target to be reported regardless.
 
 ### Configuration, pinned before the run
 
@@ -531,13 +624,32 @@ An unpinned temperature already cost this project three prompt iterations
 (journal, 2026-08-09): the same configuration scored citation F1 0.167 and
 then 0.114, a spread as wide as the differences it was meant to measure.
 
-- Model id and temperature 0, recorded in the run log; prompt version string
-  recorded per round.
-- `retrieve()` with `token_budget` and `kind_cap` stated numerically, and
-  **explicitly whether `rule_search`, `text2cypher` and `oracle_text` are
-  configured**. These are optional injections and each moves the refusal
-  rate, which is the denominator of everything measured here — leaving them
-  to runtime accident would make "the Phase 4 stack" not one thing.
+Pinned 2026-08-10, before the first generation:
+
+- **Model `gpt-4o-mini`, temperature 0.** The same model E-003 used, chosen
+  for cost; temperature 0 because nothing here wants variation — a rules
+  answer has a right shape, and sampling would make two runs of one
+  configuration disagree. Recorded per answer in the run log, not only in
+  this entry.
+- **Prompt version `p5-a1`**, incremented per iteration round and written
+  into every answer row.
+- **`max_tokens` 700 per answer** — generous for a rule-by-rule walk, small
+  enough that a runaway answer cannot quietly multiply the bill.
+- **`retrieve()` with `token_budget=6000`, `kind_cap=25`** (the
+  `subgraph.py` defaults, stated rather than inherited).
+- **`rule_search` on. `oracle_text` expansions on. `text2cypher` OFF.**
+  These are optional injections and each moves the refusal rate, which is
+  the denominator of everything measured here. The first two match how
+  E-006 ran, so the retrieval half is unchanged between the phases.
+  `text2cypher` is off on principle: it would put a *generated Cypher
+  query* underneath a *generated answer*, and a failure could then belong
+  to either model. E-007 measures whether answers cite what they claim, not
+  whether two models compose.
+- **Generation replays the retrieval dump rather than re-querying**, and
+  `run_e007.py` refuses to proceed if the rebuilt context differs by one
+  byte from what was dumped. The sufficiency labels describe the dumped
+  context; letting the graph move underneath a frozen label would
+  invalidate them silently.
 - A rerun of the same configuration must reproduce byte-identically. One that
   does not is a bug report before it is a result.
 
@@ -734,7 +846,7 @@ brand-new hand-made gold.
 
 ## E-008 — does the model answer from the graph or from what it already knows?
 
-- **Registered:** 2026-08-09, at Phase 5 kickoff, before any prompt exists.
+- **Registered:** 2026-08-10, at Phase 5 kickoff, before any prompt exists.
   Red-teamed the same day, before any probe ran.
 - **Objective:** every grounding claim in this project rests on an assumption
   that is false by default — that the answer came from the retrieved

@@ -90,7 +90,108 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
-## 2026-08-09 — Phase 5 opened; the audit sample comes from outside the golden set
+## 2026-08-10 — The audit pool's hardest stratum was already spent
+
+The first dry run of E-007's draw returned 23 new questions and **zero
+`interaction_multihop`**. The registered filter — `complexity: Complicated`,
+judge levels 0–2 — matched three questions, and the golden set already holds
+all three. Counting properly: of the 30 RulesGuru questions in the golden
+set, **22 are `interaction_multihop`**. The bucket is exhausted, not unlucky.
+
+This is not a logistics problem, and the fix is not to sample around it.
+`interaction_multihop` is where Phase 4 measured rule recall 0.12 — the only
+stratum that will produce `insufficient` subgraphs, correct refusals, and any
+chance of over-refusal. An audit without it measures citation behaviour on
+the easy half and reports nothing about the half where grounding is actually
+at risk. It is exactly the "an unstratified draw silently determines the
+result" hole the red-team flagged, arriving as fact rather than risk.
+
+The golden set left the answer in its own documentation: `golden-set.md`
+records that the complexity-seeded stratum was **wrong** and left two strata
+empty, so its 22 interaction questions came from human reclassification, not
+from the `Complicated` filter. `STRATUM_PLAN` says the same in a comment —
+complexity is a hint, the human confirms.
+
+Decision: widen the filter on judge level and complexity, and assign the
+stratum by hand from the question text — which E-007 already required.
+`build_golden_pool.py` takes `--stratum`, `--complexity` and `--level`
+rather than carrying them as constants, and prints the filter used with the
+draw, because widening changes what the sample represents and that belongs
+in the record instead of in an edited constant. Registered as an amendment
+to E-007 before the draw is frozen and before a single answer exists.
+
+Which axis to widen was measured, not assumed. Judge level is not it:
+`Complicated` at levels 0–3 returned the same three questions and zero new.
+Complexity is: `Intermediate` + `Complicated` at levels 0–2 returned 14 new
+of 20.
+
+The probes also corrected something I had wrong. The three `STRATUM_PLAN`
+entries are **source filters, not strata** — `ids_v0.jsonl` holds no
+`rulings_2hop` question at all, because the complexity-seeded stratum was
+reclassified by hand during annotation. So the pool's stratum mix cannot be
+known until the manual pass, and gets reported as achieved rather than
+planned.
+
+And a limitation worth writing down before it can be discovered
+conveniently: `definition_1hop` and `legality_1hop` were generated from
+Scryfall, not drawn from RulesGuru, so no filter here can produce them.
+That is 35 of the golden set's 77 questions on which E-007 will say
+nothing. It runs in the conservative direction — those are the easiest
+questions, where coverage would be highest — so the figure is a floor, and
+the write-up names the strata it covers instead of implying all of them.
+
+If the widened draw cannot reach 40, the registered n changes and the
+rule-of-three bound is recomputed from it. 3/30 = 0.10 is a property of the
+sample size; reporting it after drawing 23 would be arithmetic theatre.
+
+**Drawn the same day: 42.** Two passes — the default filters, then the
+widened interaction source — giving 10 development and **32** audit
+questions, so the bound is **3/32 = 0.094** and not the 0.10 the entry first
+named. Nine of the 42 touch a card name the golden set also uses; recorded
+with the sample, not dropped, because a second question about Blood Moon is
+not the same question.
+
+One ordering consequence I had wrong when I wrote the command list: the
+hand reclassification has to happen **before** the 10/32 split, not after.
+The split draws proportionally by stratum, so splitting on seeded labels
+would be stratified in name only — and if the true `interaction_multihop`
+questions landed mostly on the development side, the audit would lose the
+stratum this pool was redrawn to recover. The first worksheet row makes the
+point on its own: `rg-4825` came seeded as `keyword_rule_2hop` and is a
+chain of two *New Way Forward* redirecting a *Ral's Outburst*.
+
+The pass is cheap by design — **one field**, the stratum. E-007 measures
+citation coverage and support, not retrieval recall, so it needs no
+`gold_path`, no `gold_cr_rules`, no `vector_should`. The worksheet carries
+question text and therefore lives under `data/interim/` (gitignored); only
+`id -> stratum` goes back to the committed pool.
+
+**Classified the same day, and the result is itself a finding.**
+`interaction_multihop` 26, `negative_temporal` 15, `keyword_rule_2hop` 1,
+`rulings_2hop` 0 — with **31 of the 42 labels changed** from the seeded
+value. RulesGuru `complexity` is not a weak signal for traversal depth; it
+is noise, demonstrated independently for the second time after Phase 1.
+
+`rulings_2hop` came back empty again, exactly as in the golden set. Two
+independent annotation passes now agree that judge questions are not
+answered by "a card's official ruling citing a rule" — the same conclusion
+ADR-006 reached from the corpus side when it cut `CITES_RULE` back to
+explicit citations. Worth naming as a replication: the decision was made on
+corpus evidence, and question-side evidence arrived later and agreed.
+
+The uncomfortable consequence, faced before generating rather than after:
+41 of the 42 questions sit in the two strata where Phase 4 measured
+retrieval weakest. Most subgraphs will be labelled `insufficient`, which is
+what this pool was redrawn to produce — but it also means coverage and
+support will rest on however few questions can actually be answered, with a
+real risk of fewer than 10 clusters. So the contingency is registered now,
+with a number attached: if `sufficient` + `partial` lands below 12 on the 32
+audit questions, the pool is topped up before any answer is generated.
+Discovering that after generating would leave only bad options, and picking
+the threshold after seeing the count is how a contingency becomes a
+rationalisation.
+
+## 2026-08-10 — Phase 5 opened; the audit sample comes from outside the golden set
 
 Phase 4 closed with every deliverable present and no carry-over. The one
 deferral — fuzzy and embedding linking — is recorded below with its trigger,
@@ -173,7 +274,7 @@ is drawn, not before the run.** Four of the fixes changed what gets drawn
 and what gets labelled first, and none of them would have been available
 once the answers existed.
 
-## 2026-08-09 — The close audit found a promise the code was not keeping
+## 2026-08-10 — The close audit found a promise the code was not keeping
 
 Walking the Phase 4 deliverable checklist to close the phase turned up a
 gap that no test could have found, because nothing was ever asserted about
@@ -204,7 +305,7 @@ a test the test suite cannot run.** A promise made in an ADR and not kept in
 code produces no failing assertion — only a reader comparing the two finds
 it, and only if the close ritual forces the comparison.
 
-## 2026-08-09 — Fuzzy and embedding linking deferred: nothing is failing
+## 2026-08-10 — Fuzzy and embedding linking deferred: nothing is failing
 
 The Phase 4 deliverable specified query-time linking as *exact → fuzzy →
 embedding*, covering nicknames like "Bolt". What shipped is exact +
