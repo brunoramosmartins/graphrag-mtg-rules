@@ -491,96 +491,332 @@ historical document.
 ## E-007 — do the generated answers cite what they claim?
 
 - **Registered:** 2026-08-09, at Phase 5 kickoff, before `answerer.py` exists.
-  The Phase 5 DoD is a verdict, and a verdict whose criteria are written after
-  the answers are read is not a verdict.
-- **Objective:** the Phase 5 DoD, made measurable. Two questions that are
-  routinely conflated and are kept apart here:
-  - **Coverage** — what share of a generated answer's factual claims carry a
-    citation at all?
-  - **Support** — of the claims that do carry one, what share are actually
-    supported by the cited evidence? A citation that points at a real rule
-    which does not say what the sentence says is worse than no citation,
-    because it survives inspection.
-- **Sample, and why it is not the golden set:** 30 RulesGuru questions drawn
-  fresh by `build_golden_pool.py`, **disjoint from all 77 golden-set
-  questions** — from both the 20-question development split and the 57
-  evaluation questions frozen for E-001. Auditing generation on the
-  evaluation split would spend the split that Phase 4 froze specifically to
-  protect E-001; auditing on the development split would measure a prompt on
-  the same 20 questions it was tuned against. The RulesGuru answer key is the
-  asset here, and it exists for questions we have never touched. IDs are
-  versioned, text is cached and gitignored, per the licence posture already
-  applied to the golden set.
-- **Configuration:** each question goes through the Phase 4 stack
-  (`retrieve()` with its default budget and caps) and then through
-  `generation/answerer.py`. The audit is manual, one worksheet row per
-  **claim**, not per answer — an answer is not a unit of truth. Recorded per
-  claim: whether a citation is present; whether the cited evidence supports
-  it; and whether the claim is correct against the RulesGuru answer key,
-  which is a *third* thing and reported separately.
-- **Decision rule (from the roadmap DoD, not invented here):** **100% of
-  factual claims carry a citation**. Below 100%, the prompt is iterated and
-  the run repeats — this is a build criterion, not a research finding.
-  Support is reported with a cluster-bootstrap interval over questions and
-  carries **no threshold**, because no threshold for it was pre-registered
-  and inventing one after seeing the number is how a target becomes a
-  rationalisation.
-- **Refusals count as correct, and this is the subtle part.** Phase 4 measured
-  `interaction_multihop` rule recall at 0.12: for those questions the rule the
-  answer needs is *not in the subgraph*, and the honest output is a refusal.
-  An audit that scores refusals as failures would push the prompt toward
-  answering from parametric knowledge — it would reward exactly the failure
-  E-008 exists to detect. A refusal is scored as correct behaviour whenever
-  the subgraph lacks the evidence, and the refusal rate is reported beside
-  the coverage figure rather than folded into it.
-- **Prediction, recorded before the run:** coverage reaches 100% only after
-  iteration, with the first round failing on *connective* sentences — the
-  bridging clauses a model writes between two cited facts ("so the creature
-  is still a 1/1"), which feel like reasoning rather than claims and are
-  where uncited assertions hide. Support lands lower than coverage, and its
-  commonest failure is a citation to the right *chapter* and the wrong
-  subrule, which is the same wrong-leaf error E-003a found the annotator
-  making against themself.
-- **Threat to validity, recorded up front:** the author writes the prompt and
-  audits the answers, which is the same single-judge design flagged in E-003b.
-  It is not resolvable by a bigger sample. What bounds it here is that
-  coverage is nearly mechanical — a sentence either carries a citation
-  marker or it does not — while *support* carries the judgement, and support
-  is the figure without a threshold.
+  Red-teamed the same day, before any generation; what the review changed is
+  listed at the end of this entry rather than silently folded in.
+- **Objective:** the Phase 5 DoD, made measurable. Three constructs that are
+  routinely collapsed into one number, kept apart here:
+  - **Coverage** — what share of an answer's factual claims carry a citation?
+  - **Support** — of the claims that carry one, what share are actually
+    supported by the cited evidence? A citation pointing at a real rule that
+    does not say what the sentence says is worse than no citation, because it
+    survives inspection.
+  - **Correctness** against the RulesGuru answer key — a third thing, reported
+    separately, and **not part of the Phase 5 DoD**. It may not be traded
+    against coverage in the write-up.
+
+### Sample
+
+- **40 fresh RulesGuru questions**, drawn by `build_golden_pool.py` with the
+  seed and ids frozen before the first generation, **disjoint from all 77
+  golden-set questions** — from the 20-question development split and from
+  the 57 frozen for E-001 alike. Auditing on the evaluation split would spend
+  the split Phase 4 froze to protect E-001; auditing on the development split
+  would measure a prompt against the 20 questions it was tuned on.
+- **10 are the prompt-development subset. 30 are the audit.** The 30 are
+  touched by `answerer.py` exactly once, after the prompt is frozen and its
+  version string recorded.
+- **Stratified proportionally to the golden set's strata**, assigned before
+  generation. Unstratified, the refusal rate is close to a function of the
+  draw: rule recall on `interaction_multihop` is 0.12, so a draw light on
+  that stratum reports a system that rarely needs to refuse and a heavier one
+  reports the opposite, from the same pool.
+- **Disjoint by id is not disjoint in content.** RulesGuru carries
+  near-duplicate questions about the same interaction; a card-set overlap
+  check against the 77 runs before the draw is frozen, and the achieved
+  overlap is reported.
+
+### Configuration, pinned before the run
+
+An unpinned temperature already cost this project three prompt iterations
+(journal, 2026-08-09): the same configuration scored citation F1 0.167 and
+then 0.114, a spread as wide as the differences it was meant to measure.
+
+- Model id and temperature 0, recorded in the run log; prompt version string
+  recorded per round.
+- `retrieve()` with `token_budget` and `kind_cap` stated numerically, and
+  **explicitly whether `rule_search`, `text2cypher` and `oracle_text` are
+  configured**. These are optional injections and each moves the refusal
+  rate, which is the denominator of everything measured here — leaving them
+  to runtime accident would make "the Phase 4 stack" not one thing.
+- A rerun of the same configuration must reproduce byte-identically. One that
+  does not is a bug report before it is a result.
+
+### The claim unit, fixed before the first answer is generated
+
+Segmentation is the most judgement-laden step in this design and it sits
+under the only threshold, so it is mechanical and it is frozen first:
+
+1. `scripts/audit_answers.py segment` strips every citation marker, splits
+   the remaining text into sentences deterministically, writes one worksheet
+   row per sentence, and **freezes the file with its sha-256 in the run log
+   before any citation is re-attached or any judgement is entered**.
+2. Each row is labelled `factual` / `non_factual` under
+   [../docs/claim-annotation-guide.md](../docs/claim-annotation-guide.md),
+   written before the run. A sentence asserting anything about a card, rule,
+   ruling or game outcome is `factual` **including connective and inferential
+   sentences** — an inference drawn from two cited facts is still a claim
+   about the game, and is in the denominator.
+3. The `non_factual` **exclusion rate is reported beside coverage** with its
+   own interval. Above 20%, the coverage figure is void: at that point the
+   metric is measuring the segmentation.
+4. **Mean factual claims per answer and mean answer length are reported for
+   every iteration round.** Coverage is monotonically improved by brevity and
+   hedging, and the iteration loop optimises it; a gain bought by shortening
+   answers must be visible rather than invisible.
+
+### Sufficiency is labelled before any answer is read
+
+Binding ordering, the same shape as E-003a's ceiling-before-adjudication rule
+and enforced the same way. After `retrieve()` runs on all 40 questions and
+**before** `answerer.py` is invoked, each retrieved subgraph is labelled
+`sufficient` / `partial` / `insufficient` against the RulesGuru answer key —
+could a human derive the key's answer from this evidence alone? Labels are
+frozen in `data/golden/e007_sufficiency.json` with the file's hash in the run
+log. **Reading a generated answer before that file is frozen voids the run.**
+
+`partial` is a real category, not a hedge: `subgraph.serialize()` appends a
+NOTICE when the context is incomplete, so the system itself produces hedged
+partial answers and refusal-vs-answer is not binary here.
+
+Without this, the refusal rule below is circular — the author would look at a
+refusal, look at the subgraph, and agree it was thin. The 30 fresh questions
+carry no `gold_cr_rules` annotations, so nothing else on this sample can
+supply the ground truth.
+
+### Decision rules
+
+- **Coverage: 100% of factual claims carry a citation** (from the roadmap
+  DoD, not invented here). Below 100% on the *development* subset, the prompt
+  is iterated.
+- **Iteration budget: at most 3 documented rounds**, each judged on the
+  10-question development subset only, each recorded with its coverage,
+  support and refusal figures. If coverage has not reached 100% there within
+  3 rounds, the audit runs anyway and the DoD is reported **not met** with
+  the measured figure — the same shape as E-003's G3. Calling this "a build
+  criterion, not a research finding" does not exempt it: the number goes into
+  `docs/evaluation.md` and the README as evidence that answers are grounded,
+  which makes it a finding the moment it is published.
+- **Support: no numeric pass threshold** — none was pre-registered and one
+  invented now would be fitted to the data. It carries a **pre-committed
+  reading**, registered here before any number exists. The roadmap DoD has
+  two clauses — *"100% das afirmações factuais têm citação; citações
+  sustentam a frase"* — and the second is satisfied only if the **lower
+  bound** of support's cluster-bootstrap interval exceeds the **upper bound**
+  of a same-run **shuffled-citation control**: the same answers re-scored
+  with citation handles permuted across claims within each answer. That
+  control is the only thing separating "the citations support the sentences"
+  from "any citation looked plausible to this judge". If the intervals
+  overlap, Phase 5 reports the DoD **not met on its second clause**, whatever
+  coverage reads.
+- **Refusals count as correct behaviour when the subgraph lacks the
+  evidence.** Phase 4 measured `interaction_multihop` rule recall at 0.12; for
+  those questions there is nothing to answer from, and an audit that scored
+  refusals as failures would push the prompt toward answering from parametric
+  knowledge — rewarding exactly the failure E-008 exists to detect.
+- **The two error directions that rule creates are both measured**, because
+  without them a system that refuses everything scores coverage 100% (0/0)
+  with an unbounded refusal rate and passes:
+  - **Over-refusal** — refusing on a `sufficient` subgraph. A grounding
+    failure, not correct behaviour. **Non-zero over-refusal blocks the Phase 5
+    DoD regardless of coverage.** The frozen sufficiency file is what makes
+    that threshold un-gameable after the fact.
+  - **Unsupported answering** — answering on an `insufficient` subgraph. The
+    parametric-leak surface, which E-008 tests directly.
+- **Every figure is published as counts, never as a bare percentage:**
+  `covered / factual claims`, with `n answering questions`, `n refusals`,
+  `n sufficient`, `n partial`, `n insufficient`.
+
+### Reporting plan
+
+- **Coverage at 100% is reported as a rule-of-three bound over question
+  clusters, not as a bootstrap interval.** A percentile bootstrap on a
+  unanimous sample resamples to itself and prints `[1.000, 1.000]`; E-003b
+  already walked into this and `metrics.rule_of_three_upper` exists because of
+  it. Over 30 questions the bound is **3/30 = 0.10** — n=30 can only bound the
+  per-question uncited-claim rate at 10%, and the write-up says that rather
+  than "100% of claims carry a citation".
+- **Clusters are questions, and the count is printed.** Claims inside one
+  answer share a prompt, a subgraph and an error mode. Refusals contribute
+  zero claims, so support's effective cluster count is the number of
+  *answering* questions and may be 12–18. Every figure prints `n_clusters` and
+  `n_claims`; a figure over fewer than 10 clusters is labelled as such rather
+  than reported as an estimate.
+- **Round-over-round is paired.** Rounds 1 and 2 run on the same development
+  questions: McNemar over claims with a question-level cluster bootstrap. If
+  that is not run, round-over-round differences are **descriptive only** and
+  no claim of improvement is made.
+- **Multiple comparisons:** if coverage or support are broken out by stratum,
+  the correction the registry mandates applies and is named in the result.
+- **Support failure taxonomy**, mandatory per-claim field, without which this
+  entry's own prediction is unfalsifiable: `wrong_leaf` (right rule family,
+  wrong subrule), `right_evidence_wrong_reading`, `unrelated_evidence`,
+  `evidence_absent` (cites a handle absent from the subgraph),
+  `claim_not_in_evidence`.
+- **`key_stale`** — a claim correct under CR 2026-08-07 that disagrees with
+  the RulesGuru key. Counted separately and excluded from the correctness
+  denominator, with the exclusion stated. The key was written against whatever
+  CR was current when authored, and this project has already been displaced
+  twice this way (`704.5w` -> `704.5x`; initiative off 725.1). An answer key
+  is a historical document and cannot be migrated any more than a ruling can.
+
+### Ceiling (M2), registered before the score exists
+
+E-007 builds a new hand-made gold — every claim label, every support
+judgement, every sufficiency label — produced by one person. The project's
+own default ([../docs/annotation-methodology.md](../docs/annotation-methodology.md))
+is M1 score, M2 ceiling, M3 composition, and E-003a showed why: the ceiling
+came back at **0.815, not 1.0**, and the disagreement lived exactly where
+this entry predicts its commonest support failure — choosing the leaf.
+
+**Blind re-audit of 8 of the 30 answers**: fresh worksheet, segmentation
+regenerated from the citation-stripped text, original labels hidden, days
+elapsed printed, scored with the same metric — and **written before any
+support disagreement is inspected**. If the second pass disagrees with the
+first at a rate comparable to the support gap being reported, the support
+figure has no ceiling and must say so.
+
+### Predictions, recorded before the run
+
+- **Round 1 coverage is below 1.0**, failing on *connective* sentences — the
+  bridging clauses between two cited facts ("so the creature is still a
+  1/1"), which feel like reasoning rather than claims and are where uncited
+  assertions hide. Scoreable now that connectives are explicitly inside the
+  denominator and the iteration budget is fixed.
+- **The commonest support failure is `wrong_leaf`** — right chapter, wrong
+  subrule — matching what E-003a found the annotator doing against themself
+  (3 of 6 disagreements).
+- **Over-refusal is non-zero on the first round**, concentrated on `partial`
+  subgraphs, where the NOTICE invites a refusal the evidence did not require.
+
+### Threats to validity, recorded before the run
+
+- **Single judge, again.** The author writes the prompt, segments the answers,
+  labels sufficiency and judges support. Not resolvable by a bigger sample —
+  E-003b recorded the same threat. What bounds it here is the ordering
+  (segmentation frozen before scoring, sufficiency frozen before any answer is
+  read), the shuffled-citation control, and the M2 ceiling — **not**, as first
+  registered, the claim that "coverage is nearly mechanical". Coverage is
+  mechanical only *given* a segmentation, and the segmentation is the
+  judgement-laden step.
+- **The audit sample has no hop annotations**, so stratum labels are assigned
+  by the author from the question text rather than inherited from a verified
+  golden set.
+
+### What the red-team pass changed
+
+Recorded because the first version would have passed while measuring little:
+the degenerate 0/0 route to coverage 100% via universal refusal; "factual
+claim" left undefined with the denominator chosen by the interested party; no
+iteration budget and no held-out split on the sample that produces the
+verdict; the roadmap DoD's second clause quoted away; and no ceiling on a
+brand-new hand-made gold.
+
 - **Actual result:** _(to be filled after the run)_
 
 ## E-008 — does the model answer from the graph or from what it already knows?
 
 - **Registered:** 2026-08-09, at Phase 5 kickoff, before any prompt exists.
+  Red-teamed the same day, before any probe ran.
 - **Objective:** every grounding claim in this project rests on an assumption
-  that is false by default — that the model's answer came from the retrieved
+  that is false by default — that the answer came from the retrieved
   subgraph. Magic is a 30-year-old game with an enormous public corpus, and
   the model knows it. A correct answer is therefore **not evidence of
-  grounding**, and E-007 cannot separate the two: a well-cited answer that
-  the model actually produced from memory passes every check E-007 makes.
-- **Design — fictional cards, which is the only way to tell the two apart:**
-  a small set of cards that do not exist is loaded into a **disposable graph
-  namespace**, each built to make parametric knowledge actively wrong:
-  - a fictional card whose oracle text contradicts what a similarly-named
-    real card does;
-  - a fictional keyword with a glossary entry and a governing rule, so the
-    correct answer is only derivable from the subgraph;
-  - a real card given a fictional ruling that changes the outcome.
-  The measurement is whether the answer follows the graph or the world. Test
-  fixtures only — nothing fictional touches the production database, and
-  nothing about this ships in the corpus.
-- **Decision rule:** any answer that contradicts the loaded subgraph in favour
-  of real-world Magic knowledge is a **leak**, and a single leak blocks the
-  Phase 5 DoD claim that answers are grounded. Not a proportion with an
-  interval: the claim being tested is "grounded", and one counterexample
-  falsifies it. If leaks occur, the prompt is iterated and the finding is
-  reported either way — a phase that reports "we found parametric leakage and
-  here is what fixed it" is worth more than one that never looked.
-- **Prediction, recorded before the run:** leakage happens, and it happens
-  most on the *contradiction* case rather than the invented-keyword case. An
-  invented keyword leaves the model nothing to fall back on, so it either
-  uses the subgraph or refuses; a card that resembles a known one gives it
-  something confidently wrong to say. Second prediction: leakage shows up in
-  the uncited connective sentences before it shows up in a cited claim —
-  the same seam E-007 predicts for coverage.
+  grounding**, and E-007 cannot separate the two: a well-cited answer the
+  model produced from memory passes every check E-007 makes.
+
+### Design — fictional cards, in a disposable namespace
+
+Three constructs, each built so that parametric knowledge is actively wrong:
+
+1. a fictional card whose oracle text contradicts what a similarly-named real
+   card does;
+2. a fictional keyword with a glossary entry and a governing rule, so the
+   correct answer is derivable only from the subgraph;
+3. a real card given a fictional ruling that changes the outcome.
+
+Test fixtures only. Nothing fictional touches the production database and
+nothing here ships in the corpus.
+
+**Probe count, fixed before the first generation:** 3 constructs × 4 probe
+questions = **12 held-out probes**, plus a **6-probe development set** for the
+iteration rounds. Temperature 0, one generation per probe; if the shipped
+answerer samples, the sample count is registered here and a leak in any
+sample is a leak.
+
+**Namespace hygiene, verified rather than asserted.** Node counts before
+load, after load and after teardown are recorded. E-007's 30 answers are
+generated against a graph verified to hold zero fictional nodes, and the two
+experiments never share a database session.
+
+**Evidence presence is verified per probe before any answer is judged.** For
+each probe the retrieved `Subgraph` is recorded with its `outcome`,
+`templates_run`, `evidence` keys, `dropped` and `capped` counters. A probe
+whose subgraph does not contain the fictional evidence the question needs is
+**excluded from the leak denominator and reported as a retrieval miss**, not
+scored as a leak. Fictional entities load through the same path as production
+data and `build_card_lexicon` is rebuilt against the fixture graph so the
+linker can resolve them; if it cannot, that is a fixture defect to fix before
+generating, not a result. Without this check a leak would be scored — and the
+prompt iterated — against a *retrieval* defect, collapsing the two numbers
+`docs/evaluation.md` exists to keep apart. E-006's first run read 0.067 and
+both causes were harness bugs.
+
+### Outcome coding — four categories, all reported
+
+A refusal is not a leak, and neither is a hedge. Without this coding, a model
+that recognises the fakes and refuses everything records zero leaks, and the
+experiment measures its fiction detector rather than its grounding. Combined
+with E-007's refusal rule, refusing would otherwise be the dominant strategy
+across both Phase 5 experiments with nothing penalising it.
+
+- `followed_graph` — the answer follows the loaded fiction.
+- `leak` — the answer contradicts the loaded subgraph in favour of real-world
+  Magic knowledge.
+- `refused` — refusal or hedge on a probe whose subgraph was **verified** to
+  contain the needed evidence. A grounding failure, not a pass.
+- `intra_context_conflict` — the answer follows one loaded item against
+  another. The fictional-ruling construct puts oracle text and injected ruling
+  in conflict, and a model siding with the oracle text is following the
+  subgraph, not leaking. Coded, reported, never counted as a leak.
+
+### Decision rule
+
+**Both conditions, or the grounded claim does not hold:** zero `leak`, **and**
+`followed_graph` on at least 80% of probes whose evidence was verified
+present. An all-`refused` run is a **fail**, recorded as such — that is the
+outcome this second condition exists to make impossible to report as success.
+
+One leak on the held-out probes blocks the grounded claim for Phase 5, and the
+response is **to report it, not to re-iterate and re-run the held-out
+probes**. Iteration happens on the 6 development probes only, within E-007's
+3-round budget. A phase reporting "we found parametric leakage and here is
+what fixed it" is worth more than one that never looked.
+
+**What a clean run may claim.** Zero leaks over 12 held-out probes bounds the
+per-probe leak rate at **0.25 (95%, rule of three)**. The write-up states that
+bound and does **not** state "no parametric leakage".
+
+### Predictions, recorded before the run
+
+- **Leakage happens**, and most on the *contradiction* construct rather than
+  the invented-keyword one. An invented keyword leaves nothing to fall back
+  on, so the model either uses the subgraph or refuses; a card resembling a
+  known one gives it something confidently wrong to say. Compared across 3
+  constructs × 4 probes with the mandated multiple-comparison correction.
+- **Leakage appears more often in uncited connective sentences than in cited
+  claims**, scored as a frequency over E-007's support taxonomy — the same
+  seam where E-007 predicts coverage fails.
+
+### Threats to validity, recorded before the run
+
+- **Single judge**: the author authors the fictional cards and judges the
+  answers, the same threat E-003b recorded.
+- **The constructs are conspicuously artificial** and may cue the model that
+  it is being tested. The measured leak rate is therefore a **lower bound** on
+  deployment leakage over real cards the model knows well.
+- **A leak on a fictional card licenses no quantitative claim about real
+  ones.** The construct differs from the deployment condition in exactly the
+  dimension being measured, and the write-up says so rather than
+  extrapolating.
+
 - **Actual result:** _(to be filled after the run)_

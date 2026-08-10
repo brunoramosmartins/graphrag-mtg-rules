@@ -112,10 +112,9 @@ pulls and appends unseen ids under the licence posture the golden set uses
 option by a wide margin: the alternative spends a split that exists exactly
 once.
 
-Registered before any code: **E-007** (citation coverage and support, with
-coverage carrying the DoD's 100% threshold and support deliberately carrying
-none) and **E-008** (parametric leakage, measured with fictional cards in a
-disposable namespace).
+Registered before any code: **E-007** (citation coverage and support) and
+**E-008** (parametric leakage, measured with fictional cards in a disposable
+namespace).
 
 E-007 carries one scoring rule that had to be settled before the first
 answer is generated, because getting it wrong would corrupt the whole
@@ -124,6 +123,55 @@ evidence.** Phase 4 measured `interaction_multihop` rule recall at 0.12, so
 for those questions there is nothing to answer from. An audit that scored
 refusals as failures would push the prompt toward answering from parametric
 knowledge — rewarding precisely the failure E-008 exists to detect.
+
+**Both entries were red-teamed the same day, before any generation, and
+both were rewritten.** The first versions would have passed while measuring
+very little:
+
+- **The audit had a degenerate route to a pass.** A refusal contains no
+  factual claims, so 30 refusals give coverage 100% (0/0) and a DoD marked
+  met. The refusal rule was right; the guard that has to accompany it was
+  never written. Fixed by labelling subgraph **sufficiency before any answer
+  is read** — the same ordering E-003a enforces in code — and by making
+  non-zero *over-refusal* on a sufficient subgraph block the DoD regardless
+  of coverage.
+- **"Factual claim" was undefined**, and the person who segments is the
+  person who writes the prompt. The denominator of the phase's only
+  threshold was being chosen by the interested party. Fixed by mechanical
+  segmentation frozen with a hash before any citation is re-attached, an
+  exclusion rate reported beside coverage that voids it above 20%, and
+  [claim-annotation-guide.md](claim-annotation-guide.md) putting connective
+  and inferential sentences explicitly **inside** the denominator — which is
+  exactly where the entry predicts round 1 will fail.
+- **The roadmap DoD has two clauses and I had quoted one.** "citações
+  sustentam a frase" was dropped on the grounds that no threshold for
+  support was pre-registered. The reasoning about not inventing thresholds
+  post hoc was right; the premise was false, since the clause *was*
+  pre-registered in the same sentence. Fixed with a pre-committed *reading*
+  rather than an invented number: support's interval must clear a
+  shuffled-citation control, which is the only thing separating "the
+  citations support the sentences" from "any citation looked plausible to
+  this judge".
+- **No iteration budget and no held-out split**, on the sample whose only
+  job is to produce a verdict. Phase 3 had this discipline (3 documented
+  rounds on a frozen subset) and Phase 5 dropped it. Now 40 drawn, 10 for
+  prompt development, 30 touched exactly once.
+- **No ceiling on a brand-new hand-made gold**, in a project whose own
+  written default is score → ceiling → decomposition. E-003a measured this
+  annotator at 0.815 against themself, on the same wrong-leaf axis E-007
+  predicts as its commonest failure. A blind re-audit of 8 of the 30 is now
+  registered.
+
+Two more that would have cost real work: nothing pinned the model,
+temperature or prompt version — the exact omission that already retired
+three Phase 3 iterations — and E-008 never verified that the fictional
+evidence actually reached the model, so a *retrieval* miss would have been
+scored as a leak and answered with prompt changes.
+
+The generalizable part: **the red-team pass is worth most before the sample
+is drawn, not before the run.** Four of the fixes changed what gets drawn
+and what gets labelled first, and none of them would have been available
+once the answers existed.
 
 ## 2026-08-09 — The close audit found a promise the code was not keeping
 
