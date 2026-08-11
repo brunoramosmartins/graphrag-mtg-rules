@@ -19,6 +19,7 @@ from graphrag_mtg.evaluation.claims import (
     coverage,
     failure_counts,
     segment_answer,
+    segment_with_handles,
     split_sentences,
     support_clusters,
     worksheet_hash,
@@ -90,6 +91,36 @@ class TestSegmentAnswer:
     def test_a_rule_number_inside_a_sentence_does_not_split_it(self) -> None:
         answer = "Rule 613.4 orders them [rule:613.4]."
         assert segment_answer(answer) == [("Rule 613.4 orders them.", True)]
+
+
+class TestSegmentWithHandles:
+    """The labelling view. It must agree with the frozen worksheet exactly."""
+
+    ANSWER: ClassVar[str] = (
+        "It applies [rule:613.4]. So it stays a 1/1. "
+        "Both say so [rule:613.4; ruling:2]."
+    )
+
+    def test_it_returns_the_same_rows_as_the_worksheet(self) -> None:
+        """A different split here would show a sentence beside another's evidence."""
+        detailed = [(sentence, cited) for sentence, cited, _ in segment_with_handles(self.ANSWER)]
+        assert detailed == segment_answer(self.ANSWER)
+
+    def test_each_sentence_carries_the_handles_it_cited(self) -> None:
+        assert [handles for _, _, handles in segment_with_handles(self.ANSWER)] == [
+            ["rule:613.4"],
+            [],
+            ["rule:613.4", "ruling:2"],
+        ]
+
+    def test_a_marker_splitting_into_several_handles_stays_on_one_row(self) -> None:
+        (_, _, handles), = segment_with_handles("Both [rule:613.4; ruling:2].")
+        assert handles == ["rule:613.4", "ruling:2"]
+
+    def test_no_handle_is_lost_or_duplicated(self) -> None:
+        collected = [h for _, _, handles in segment_with_handles(self.ANSWER) for h in handles]
+        assert collected.count("rule:613.4") == 2
+        assert len(collected) == 3
 
 
 class TestWorksheetHash:

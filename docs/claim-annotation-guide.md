@@ -22,7 +22,7 @@ nothing while looking excellent.
 ## Step 0 — the segmentation is mechanical and comes first
 
 ```bash
-python scripts/audit_answers.py segment --run <run-id>
+python scripts/audit_answers.py segment --answers runs/e007_answers.jsonl
 ```
 
 The script strips every citation marker, splits the remaining text into
@@ -114,6 +114,33 @@ the *cited evidence* carries the claim, not whether the claim is true.
 A true sentence with a citation that does not support it is
 `unsupported`, and catching exactly that is the reason this column
 exists.
+
+## How a judgement is recorded
+
+Steps 1–3 are one command per row, never a hand-edited worksheet:
+
+```bash
+python scripts/audit_answers.py claims show --id rg-2848 --brief   # step 1, whole answer
+python scripts/audit_answers.py claims set rg-2848 0-6 factual     # step 1, in batches
+python scripts/audit_answers.py claims show --next                 # step 3, with evidence
+python scripts/audit_answers.py claims set rg-2848 3 factual --support supported
+python scripts/audit_answers.py claims status
+```
+
+Step 1 may be batched — `0-6` or `0,2,5` — because it judges what kind of
+sentence this is, and answering that one shell command at a time rewards
+the fastest label over the right one. **Step 3 may not.** `--support`
+takes a single row, because the judgement *is* reading that row's
+evidence, and a batched support flag is how a citation nobody read gets
+recorded as supported.
+
+`show` prints the question, the sentence, and **only the evidence that
+sentence cites**, which is the reading Step 3 requires. `set` refuses the
+combinations this document forbids — an `unsupported` row with no failure
+code, a `non_factual` row judged for support, a support judgement on a
+sentence carrying no marker — and re-checks the worksheet hash after
+writing, so a labelling pass cannot move the segmentation underneath
+itself.
 
 ## Step 4 — `correctness`, separately
 

@@ -165,3 +165,97 @@ class TestSegmentation:
                     force=False,
                 )
             )
+
+
+class TestClaimLabelling:
+    """The combinations a worksheet must never hold.
+
+    Every rule here is in `docs/claim-annotation-guide.md`; enforcing them
+    at write time is what keeps the report from having to interpret a row
+    whose fields contradict each other.
+    """
+
+    def worksheet(self, tmp_path: Path) -> tuple[Path, Path]:
+        sufficiency = init_sufficiency(tmp_path)
+        label(sufficiency, {"rg-1": "sufficient", "rg-2": "insufficient"})
+        audit_answers.sufficiency_freeze(argparse.Namespace(out=sufficiency))
+        worksheet = tmp_path / "claims.jsonl"
+        audit_answers.segment(
+            argparse.Namespace(
+                answers=answers_run(tmp_path),
+                out=worksheet,
+                sufficiency=sufficiency,
+                force=False,
+            )
+        )
+        return worksheet, sufficiency
+
+    def set(self, tmp_path: Path, prepared: tuple[Path, Path] | None = None, **kwargs) -> Path:
+        worksheet, sufficiency = prepared or self.worksheet(tmp_path)
+        defaults = {
+            "question_id": "rg-1",
+            "index": "0",
+            "label": "factual",
+            "support": None,
+            "failure": None,
+            "comment": "",
+            "worksheet": worksheet,
+            "sufficiency": sufficiency,
+        }
+        audit_answers.claims_set(argparse.Namespace(**{**defaults, **kwargs}))
+        return worksheet
+
+    def test_a_judgement_is_written_without_touching_the_segmentation(
+        self, tmp_path: Path
+    ) -> None:
+        """The hash covers the sentences, so labelling must leave it alone."""
+        prepared = self.worksheet(tmp_path)
+        before = audit_answers.worksheet_hash(audit_answers.load_rows(prepared[0]))
+        rows = audit_answers.load_rows(self.set(tmp_path, prepared, support="supported"))
+        assert rows[0].label.value == "factual"
+        assert rows[0].support.value == "supported"
+        assert audit_answers.worksheet_hash(rows) == before
+
+    def test_an_unsupported_row_without_a_failure_code_is_refused(self, tmp_path: Path) -> None:
+        """E-007 predicts which failure dominates; unscored, that is not a prediction."""
+        with pytest.raises(SystemExit, match="needs --failure"):
+            self.set(tmp_path, support="unsupported")
+
+    def test_a_failure_code_without_an_unsupported_row_is_refused(self, tmp_path: Path) -> None:
+        with pytest.raises(SystemExit, match="describes an unsupported row"):
+            self.set(tmp_path, support="supported", failure="wrong_leaf")
+
+    def test_a_non_factual_row_is_not_judged_for_support(self, tmp_path: Path) -> None:
+        """Excluded from the denominator means excluded, not scored as supported."""
+        with pytest.raises(SystemExit, match="not judged for support"):
+            self.set(tmp_path, label="non_factual", support="supported")
+
+    def test_an_uncited_row_has_nothing_to_support(self, tmp_path: Path) -> None:
+        """Row 1 carries no marker: a factual one there is a coverage miss."""
+        with pytest.raises(SystemExit, match="no citation marker"):
+            self.set(tmp_path, index="1", support="supported")
+
+    def test_a_row_that_does_not_exist_is_named(self, tmp_path: Path) -> None:
+        with pytest.raises(SystemExit, match="No row rg-1\\[99\\]"):
+            self.set(tmp_path, index="99")
+
+    def test_several_rows_take_one_label_at_once(self, tmp_path: Path) -> None:
+        """Step 1 judges a sentence's kind; one shell command per row invites speed."""
+        rows = audit_answers.load_rows(self.set(tmp_path, index="0,1", label="factual"))
+        assert [r.label.value for r in rows if r.question_id == "rg-1"] == ["factual", "factual"]
+
+    def test_a_range_is_accepted(self, tmp_path: Path) -> None:
+        assert audit_answers.parse_indices("0-4") == [0, 1, 2, 3, 4]
+        assert audit_answers.parse_indices("0,2,5") == [0, 2, 5]
+
+    def test_support_is_never_batched(self, tmp_path: Path) -> None:
+        """Reading one row's evidence is the judgement; a batch skips the reading."""
+        with pytest.raises(SystemExit, match="pass a single index"):
+            self.set(tmp_path, index="0,1", support="supported")
+
+    def test_a_partly_valid_batch_writes_nothing(self, tmp_path: Path) -> None:
+        prepared = self.worksheet(tmp_path)
+        with pytest.raises(SystemExit, match="No row rg-1\\[99\\]"):
+            self.set(tmp_path, prepared, index="0,99")
+        rows = audit_answers.load_rows(prepared[0])
+        assert all(r.label is audit_answers.Label.UNLABELLED for r in rows)

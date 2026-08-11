@@ -24,11 +24,12 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections import deque
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-from graphrag_mtg.generation.citations import MARKER, normalize_spacing
+from graphrag_mtg.generation.citations import MARKER, handles, normalize_spacing
 
 #: Above this share of `non_factual` rows the coverage figure is void.
 EXCLUSION_VOID = 0.20
@@ -125,6 +126,30 @@ def segment_answer(answer: str) -> list[tuple[str, bool]]:
         for chunk in chunks
         if normalize_spacing(chunk.replace(_SENTINEL, ""))
     ]
+
+
+def segment_with_handles(answer: str) -> list[tuple[str, bool, list[str]]]:
+    """:func:`segment_answer`, plus the handles each sentence cited.
+
+    Row for row identical to :func:`segment_answer` — same split, same
+    order, same exclusions — so a worksheet row can be shown next to the
+    evidence it is judged against without re-deriving the segmentation and
+    risking a different one. Markers belonging to a sentence that
+    segmentation drops are consumed with it rather than sliding onto the
+    next row.
+
+    Returns:
+        One triple per sentence: the citation-free text, whether it carried
+        a marker, and every handle those markers named, in order.
+    """
+    bodies = deque(match.group(1) for match in MARKER.finditer(answer))
+    rows: list[tuple[str, bool, list[str]]] = []
+    for chunk in split_sentences(MARKER.sub(_SENTINEL, answer)):
+        cited = [handle for _ in range(chunk.count(_SENTINEL)) for handle in handles(bodies.popleft())]
+        sentence = normalize_spacing(chunk.replace(_SENTINEL, ""))
+        if sentence:
+            rows.append((sentence, _SENTINEL in chunk, cited))
+    return rows
 
 
 @dataclass

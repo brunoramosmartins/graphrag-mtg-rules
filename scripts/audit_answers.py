@@ -8,6 +8,7 @@ the result decide the method:
     sufficiency init    worksheet of retrieved subgraphs, before generating
     sufficiency freeze  labels locked with a hash — generation may now run
     segment             citation-stripped sentences, frozen with a hash
+    claims show/set     each sentence beside the evidence it cites
     report              coverage, support, refusals, with their guards
 
 `segment` refuses while sufficiency is unfrozen, mirroring how
@@ -20,6 +21,8 @@ Usage:
     python scripts/audit_answers.py sufficiency init --retrieval runs/e007_retrieval.jsonl
     python scripts/audit_answers.py sufficiency freeze
     python scripts/audit_answers.py segment --answers runs/e007_answers.jsonl
+    python scripts/audit_answers.py claims show --next
+    python scripts/audit_answers.py claims set rg-2848 3 factual --support supported
     python scripts/audit_answers.py report
 """
 
@@ -33,6 +36,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from graphrag_mtg.evaluation.claims import (
+    EXCLUSION_VOID,
     ClaimRow,
     Failure,
     Label,
@@ -42,10 +46,13 @@ from graphrag_mtg.evaluation.claims import (
     coverage,
     failure_counts,
     segment_answer,
+    segment_with_handles,
     support_clusters,
     worksheet_hash,
 )
 from graphrag_mtg.evaluation.metrics import cluster_proportion_ci, rule_of_three_upper
+from graphrag_mtg.generation.citations import index
+from graphrag_mtg.retrieval.subgraph import Evidence, Subgraph
 
 # Question and answer text carry characters a default Windows console cannot
 # encode; force UTF-8 so the worksheet is readable rather than mojibake.
@@ -54,6 +61,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 SUFFICIENCY_PATH = Path("data/golden/e007_sufficiency.json")
 WORKSHEET_PATH = Path("data/golden/e007_claims.jsonl")
+ANSWERS_PATH = Path("runs/e007_answers.jsonl")
 RETRIEVAL_PATH = Path("runs/e007_retrieval.jsonl")
 CACHE_DIR = Path("data/interim/e007_cache")
 SPLIT_PATH = Path("data/golden/e007_split.json")
@@ -405,20 +413,13 @@ def segment(args: argparse.Namespace) -> int:
                 )
             )
 
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    with args.out.open("w", encoding="utf-8") as handle:
-        for row in rows:
-            payload = asdict(row)
-            payload["label"] = row.label.value
-            payload["support"] = row.support.value
-            payload["failure"] = row.failure.value if row.failure else None
-            handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    write_rows(args.out, rows)
 
     digest = worksheet_hash(rows)
     print(f"Segmented {len(answers)} answer(s) into {len(rows)} row(s) -> {args.out}")
     print(f"hash {digest}")
     print("Record that hash in the run log NOW, before labelling anything.")
-    print("Label every row factual | non_factual under docs/claim-annotation-guide.md.")
+    print("Next: python scripts/audit_answers.py claims show --next")
     return 0
 
 
@@ -448,6 +449,304 @@ def load_rows(path: Path) -> list[ClaimRow]:
             )
         )
     return rows
+
+
+def write_rows(path: Path, rows: list[ClaimRow]) -> None:
+    """Rewrite the worksheet. The segmentation is untouched; only labels move."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            payload = asdict(row)
+            payload["label"] = row.label.value
+            payload["support"] = row.support.value
+            payload["failure"] = row.failure.value if row.failure else None
+            handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Claims — one sentence at a time, next to the evidence it cites
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: The two judgements, in the order they are made. Kept in step with
+#: `docs/claim-annotation-guide.md`, which is the binding version.
+CLAIM_CRIB = """\
+  1. IS THIS A FACTUAL CLAIM?
+
+  factual       it asserts something about a card, a rule, a ruling, or what
+                happens in a game — including reasoning steps ("so it is
+                still a 1/1") and restatements of the question's premise
+  non_factual   only these four: pure discourse ("Let's look at the rules"),
+                a heading with no assertion, a direct quotation of the
+                question, or a sentence about the answer itself ("I cannot
+                answer this from the evidence")
+
+  Excluding a row is the only way to shrink the denominator, so `non_factual`
+  is the narrow list above and nothing else. Above 20% exclusions the
+  coverage figure is void.
+
+  2. DOES THE CITED EVIDENCE CARRY IT?   (cited factual rows only)
+
+  supported     the evidence shown below states the claim
+  unsupported   it does not — and the failure code says how:
+                  wrong_leaf                     right rule, wrong subrule
+                  right_evidence_wrong_reading   right item, misread
+                  unrelated_evidence             cites something else entirely
+                  evidence_absent                handle not in the subgraph
+                  claim_not_in_evidence          nothing here says this
+
+  Judge against the evidence printed here, not against what you know about
+  Magic. A claim that is true but unsupported by its citation is
+  `unsupported`."""
+
+
+def answers_index(path: Path) -> dict[str, dict]:
+    if not path.exists():
+        raise SystemExit(f"No answers at {path}. Run `run_e007.py generate` first.")
+    return {
+        json.loads(line)["question_id"]: json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    }
+
+
+def handle_table(record: dict) -> dict[str, Evidence]:
+    """Handle -> evidence, exactly as the answer's context showed it."""
+    subgraph = Subgraph(
+        question="",
+        evidence=[Evidence(**item) for item in record.get("evidence", [])],
+    )
+    return index(subgraph)
+
+
+def cited_by_row(answer: str) -> dict[int, list[str]]:
+    """Row index -> handles, aligned with the frozen segmentation."""
+    return {i: cited for i, (_, _, cited) in enumerate(segment_with_handles(answer))}
+
+
+def render_claim(
+    row: ClaimRow,
+    payload: dict,
+    handles_cited: list[str],
+    table: dict[str, Evidence],
+    *,
+    position: str = "",
+) -> str:
+    """One sentence, its citation resolved, and the standard it is judged by."""
+    lines = [
+        RULE,
+        f"{row.question_id}  claim {row.index}  {position}".rstrip(),
+        "",
+        "  QUESTION",
+        wrap(payload.get("questionSimple") or payload.get("question", "")),
+        "",
+        "  SENTENCE",
+        wrap(row.sentence),
+        "",
+    ]
+    if not handles_cited:
+        lines += [
+            "  CITED: no marker on this sentence.",
+            "  If this row is factual it is an uncited claim — a coverage miss, and",
+            "  there is no support judgement to make.",
+        ]
+    else:
+        lines.append(f"  CITED: {', '.join(handles_cited)}")
+        for handle in handles_cited:
+            item = table.get(handle)
+            if item is None:
+                lines.append(f"    [{handle}] NOT IN THE SUBGRAPH — this is evidence_absent.")
+                continue
+            lines.append(f"    [{handle}] {item.kind} {item.key}")
+            lines.append(wrap(item.text)[:1200])
+            if item.path:
+                lines.append(f"      path: {item.path}")
+    decided = row.label.value if row.label is not Label.UNLABELLED else "—"
+    support = row.support.value if row.support is not Support.NOT_APPLICABLE else "—"
+    lines += [
+        "",
+        CLAIM_CRIB,
+        "",
+        f"  decided: {decided}   support: {support}",
+        f"  -> python scripts/audit_answers.py claims set {row.question_id} {row.index} "
+        "<factual|non_factual> [--support supported|unsupported --failure <code>]",
+    ]
+    return "\n".join(lines)
+
+
+def claims_show(args: argparse.Namespace) -> int:
+    """Print claims to judge, with their evidence. Reads only; `set` writes."""
+    require_frozen(args.sufficiency)
+    rows = load_rows(args.worksheet)
+    answers = answers_index(args.answers)
+    records = retrieval_index(args.retrieval)
+
+    if args.id:
+        chosen = [row for row in rows if row.question_id == args.id]
+        if not chosen:
+            raise SystemExit(f"No rows for {args.id} in {args.worksheet}.")
+    elif args.all:
+        chosen = rows
+    else:
+        chosen = [row for row in rows if row.label is Label.UNLABELLED]
+        if not chosen:
+            print("Every claim is labelled. Next: `audit_answers.py report`.")
+            return 0
+        chosen = chosen[: args.count]
+
+    if args.brief:
+        # The step-1 survey: every sentence of an answer in reading order, so
+        # `factual` / `non_factual` is decided on the answer as a whole. No
+        # evidence and no citation shown — step 1 judges the sentence alone.
+        current = ""
+        for row in chosen:
+            if row.question_id != current:
+                current = row.question_id
+                payload = cached_question(current, args.cache_dir)
+                print(f"\n{RULE}\n{current}")
+                print(wrap(payload.get("questionSimple") or payload.get("question", "")))
+                print()
+            state = row.label.value if row.label is not Label.UNLABELLED else "·"
+            print(f"  [{row.index:>3}] {state:<12} {row.sentence[:96]}")
+        print(f"\n{RULE}")
+        return 0
+
+    done = sum(1 for row in rows if row.label is not Label.UNLABELLED)
+    tables: dict[str, dict[str, Evidence]] = {}
+    marks: dict[str, dict[int, list[str]]] = {}
+    for i, row in enumerate(chosen, start=1):
+        if row.question_id not in tables:
+            tables[row.question_id] = handle_table(records[row.question_id])
+            marks[row.question_id] = cited_by_row(answers[row.question_id]["text"])
+        print(
+            render_claim(
+                row,
+                cached_question(row.question_id, args.cache_dir),
+                marks[row.question_id].get(row.index, []),
+                tables[row.question_id],
+                position=f"[{i} of {len(chosen)} shown; {done}/{len(rows)} done]",
+            )
+        )
+    print(RULE)
+    return 0
+
+
+def parse_indices(raw: str) -> list[int]:
+    """``"3"``, ``"0,2,5"`` or ``"0-4"`` — the rows one command applies to."""
+    chosen: list[int] = []
+    for part in raw.split(","):
+        part = part.strip()
+        if "-" in part.lstrip("-"):
+            start, _, end = part.partition("-")
+            chosen.extend(range(int(start), int(end) + 1))
+        elif part:
+            chosen.append(int(part))
+    return chosen
+
+
+def claims_set(args: argparse.Namespace) -> int:
+    """Record claim judgements, validated, without hand-editing the worksheet.
+
+    Several rows may take one label at once — ``0,2,5`` or ``0-4`` — because
+    step 1 of the guide is a decision about a sentence's *kind* and reading
+    thirty of them one shell command at a time invites the fastest label
+    rather than the right one. A **support** judgement is different: it
+    requires reading that row's evidence, so it stays one row per command.
+    """
+    require_frozen(args.sufficiency)
+    rows = load_rows(args.worksheet)
+    before = worksheet_hash(rows)
+
+    indices = parse_indices(args.index)
+    if args.support and len(indices) != 1:
+        raise SystemExit(
+            "--support judges one row against its own evidence; pass a single index. "
+            "Batching support is how a citation nobody read gets scored as supported."
+        )
+    by_index = {r.index: r for r in rows if r.question_id == args.question_id}
+    missing = [i for i in indices if i not in by_index]
+    if missing:
+        raise SystemExit(
+            f"No row {args.question_id}[{missing[0]}] in {args.worksheet}."
+            + (f" ({len(missing)} of {len(indices)} not found)" if len(missing) > 1 else "")
+        )
+
+    support = Support(args.support) if args.support else Support.NOT_APPLICABLE
+    failure = Failure(args.failure) if args.failure else None
+    label = Label(args.label)
+
+    # The rules the guide states, enforced here so a worksheet can never
+    # hold a combination the report would have to interpret.
+    if label is Label.NON_FACTUAL and (args.support or args.failure):
+        raise SystemExit("A non_factual row is not judged for support — it is out of the denominator.")
+    if support is Support.UNSUPPORTED and failure is None:
+        raise SystemExit(
+            "An unsupported row needs --failure. Without it E-007's prediction about "
+            "which failure dominates cannot be scored, and an unfalsifiable prediction "
+            "is not a prediction."
+        )
+    if failure is not None and support is not Support.UNSUPPORTED:
+        raise SystemExit("--failure describes an unsupported row; pass --support unsupported.")
+    if args.support and not by_index[indices[0]].cited:
+        raise SystemExit(
+            f"{args.question_id}[{indices[0]}] carries no citation marker, so there is "
+            "nothing to judge for support. A factual row with no citation is a coverage "
+            "miss, which the report counts on its own."
+        )
+
+    for i in indices:
+        row = by_index[i]
+        row.label = label
+        row.support = support
+        row.failure = failure
+        if args.comment:
+            row.comment = args.comment
+    write_rows(args.worksheet, rows)
+
+    if worksheet_hash(rows) != before:
+        raise SystemExit(
+            "The worksheet hash moved while writing a label. The segmentation must not "
+            "change after freezing — investigate before labelling anything else."
+        )
+
+    done = sum(1 for r in rows if r.label is not Label.UNLABELLED)
+    tail = f"   support: {support.value}" if support is not Support.NOT_APPLICABLE else ""
+    written = ",".join(str(i) for i in indices)
+    print(f"{args.question_id}[{written}]: {label.value}{tail}   [{done}/{len(rows)} done]")
+    owed = [i for i in indices if by_index[i].cited and support is Support.NOT_APPLICABLE]
+    if label is Label.FACTUAL and owed:
+        preview = ", ".join(f"{args.question_id}[{i}]" for i in owed[:8])
+        print(f"  still needs --support (factual and cited): {preview}")
+    return 0
+
+
+def claims_status(args: argparse.Namespace) -> int:
+    """What is labelled, what is still owed, and the exclusion rate so far."""
+    rows = load_rows(args.worksheet)
+    counts: dict[str, int] = {}
+    for row in rows:
+        counts[row.label.value] = counts.get(row.label.value, 0) + 1
+    owed = [
+        r for r in rows
+        if r.label is Label.FACTUAL and r.cited and r.support is Support.NOT_APPLICABLE
+    ]
+    left = [r for r in rows if r.label is Label.UNLABELLED]
+
+    print(f"{len(rows) - len(left)}/{len(rows)} row(s) labelled")
+    print(f"  mix: {dict(sorted(counts.items()))}")
+    print(f"  worksheet hash {worksheet_hash(rows)[:12]}")
+    if left:
+        preview = ", ".join(f"{r.question_id}[{r.index}]" for r in left[:8])
+        print(f"  left: {preview}{' ...' if len(left) > 8 else ''}")
+    if owed:
+        preview = ", ".join(f"{r.question_id}[{r.index}]" for r in owed[:8])
+        print(f"  awaiting --support: {preview}{' ...' if len(owed) > 8 else ''}")
+    excluded = counts.get(Label.NON_FACTUAL.value, 0)
+    judged = len(rows) - len(left)
+    if judged:
+        share = excluded / judged
+        verdict = "VOID above 0.20" if share > EXCLUSION_VOID else "within the registered limit"
+        print(f"  exclusions {excluded}/{judged} = {share:.3f} — {verdict}")
+    return 0
 
 
 def report(args: argparse.Namespace) -> int:
@@ -563,10 +862,43 @@ def main() -> int:
     seg.add_argument("--force", action="store_true")
     seg.set_defaults(func=segment)
 
+    claims = sub.add_parser("claims", help="label the segmented claims, one at a time")
+    claims_sub = claims.add_subparsers(dest="stage", required=True)
+
+    claim_show = claims_sub.add_parser("show", help="one claim with the evidence it cites")
+    claim_show.add_argument("--worksheet", type=Path, default=WORKSHEET_PATH)
+    claim_show.add_argument("--answers", type=Path, default=ANSWERS_PATH)
+    claim_show.add_argument("--retrieval", type=Path, default=RETRIEVAL_PATH)
+    claim_show.add_argument("--sufficiency", type=Path, default=SUFFICIENCY_PATH)
+    claim_show.add_argument("--cache-dir", type=Path, default=CACHE_DIR)
+    claim_show.add_argument("--id", help="every row of one answer")
+    claim_show.add_argument("--all", action="store_true")
+    claim_show.add_argument("--next", action="store_true", help="the next unlabelled (default)")
+    claim_show.add_argument("--count", type=int, default=1)
+    claim_show.add_argument(
+        "--brief", action="store_true", help="one line per sentence, no evidence — for step 1"
+    )
+    claim_show.set_defaults(func=claims_show)
+
+    claim_set = claims_sub.add_parser("set", help="record one claim judgement")
+    claim_set.add_argument("question_id")
+    claim_set.add_argument("index", help="one row, or several: 3 | 0,2,5 | 0-4")
+    claim_set.add_argument("label", choices=[Label.FACTUAL.value, Label.NON_FACTUAL.value])
+    claim_set.add_argument("--support", choices=[Support.SUPPORTED.value, Support.UNSUPPORTED.value])
+    claim_set.add_argument("--failure", choices=[f.value for f in Failure])
+    claim_set.add_argument("--comment", default="", help="where a bad split is noted, not fixed")
+    claim_set.add_argument("--worksheet", type=Path, default=WORKSHEET_PATH)
+    claim_set.add_argument("--sufficiency", type=Path, default=SUFFICIENCY_PATH)
+    claim_set.set_defaults(func=claims_set)
+
+    claim_status = claims_sub.add_parser("status", help="what is labelled and what is owed")
+    claim_status.add_argument("--worksheet", type=Path, default=WORKSHEET_PATH)
+    claim_status.set_defaults(func=claims_status)
+
     rep = sub.add_parser("report", help="coverage, support and refusals")
     rep.add_argument("--worksheet", type=Path, default=WORKSHEET_PATH)
     rep.add_argument("--sufficiency", type=Path, default=SUFFICIENCY_PATH)
-    rep.add_argument("--answers", type=Path, default=Path("runs/e007_answers.jsonl"))
+    rep.add_argument("--answers", type=Path, default=ANSWERS_PATH)
     rep.set_defaults(func=report)
 
     args = parser.parse_args()
