@@ -175,3 +175,17 @@ The sentence is replaced by the instruction that actually helps: if no
 handle supports the sentence, do not write it. This is the last of the
 three registered iteration rounds; the audit side runs on whatever `p5-a3`
 measures.
+
+### 2026-08-10 — sufficiency re-frozen after the audit-side re-label
+
+`data/golden/e007_sufficiency.json`, 42 labels, still **before any answer
+on the audit side was generated**.
+
+    sha-256  534547ed84547aac1bb6fd2074f2de01d190da4cdd8138a8f58645d9fd40f5d0
+    previous c8cafaf69c1dbb62c268dfdf2995a14e68d7165bf7179b6f8d6d559fcadc76f4
+
+Overall: `partial` 24, `insufficient` 11, `sufficient` 7. The ten
+development labels inside this hash are the ones carried over from the
+previous freeze and are marked stale in the file — they describe the
+pre-`card_core` subgraphs, and the reason is recorded with the previous
+hash in the same file.
