@@ -38,7 +38,7 @@ from graphrag_mtg.retrieval.subgraph import Outcome, Subgraph, serialize
 #: Recorded with every run, per the E-007 configuration. A figure whose
 #: prompt version is unknown is a figure that cannot be reproduced, and
 #: this project has already retired three iterations for less.
-PROMPT_VERSION = "p5-a1"
+PROMPT_VERSION = "p5-a3"
 
 #: What the model writes when the context cannot answer the question.
 #: Matched case-insensitively; the model is asked to follow it with one
@@ -68,11 +68,14 @@ that feel like reasoning rather than facts — "so the creature is still a
 
 HOW TO CITE.
 Copy the handles exactly as they appear in the context, in square brackets:
-  [rule:613.4]                       one handle
-  [rule:613.4; ruling:2009-10-01]    several in one marker
-Cite ONLY handles that appear in the context. Do not write graph paths, rule
-text, or dates into the marker — the renderer builds those from the evidence
-itself. A handle you invent will be marked UNVERIFIED in the output.
+  [rule:613.4]              one handle
+  [rule:613.4; ruling:3]    several in one marker
+Cite ONLY handles that appear in the context, character for character. Do not
+invent a handle, do not put a rule number in the `ruling:` namespace, and do
+not write graph paths, rule text, or dates into the marker — the renderer
+builds all of that from the evidence itself. If no handle in the context
+supports what you are about to write, do not write that sentence: say what
+is missing instead.
 
 SHOW THE RULE-BY-RULE REASONING.
 Walk the applicable rules in the order they apply, one step per sentence,

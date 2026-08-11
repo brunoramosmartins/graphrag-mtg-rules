@@ -18,7 +18,7 @@ from graphrag_mtg.generation.citations import (
     strip_citations,
     uncited_sentences,
 )
-from graphrag_mtg.retrieval.subgraph import Evidence, Subgraph
+from graphrag_mtg.retrieval.subgraph import Evidence, Subgraph, serialize
 
 
 def subgraph() -> Subgraph:
@@ -115,8 +115,9 @@ class TestFabricatedCitations:
 
 
 class TestLookup:
-    def test_the_index_keys_on_the_handle_the_prompt_shows(self) -> None:
-        assert set(index(subgraph())) == {"rule:613.4", "ruling:2009-10-01"}
+    def test_the_index_accepts_the_ordinal_and_the_real_id(self) -> None:
+        """The context shows `ruling:1`; a correctly copied id resolves too."""
+        assert set(index(subgraph())) == {"rule:613.4", "ruling:1", "ruling:2009-10-01"}
 
     def test_resolving_separates_known_from_unknown(self) -> None:
         citation = resolve("rule:613.4; rule:999.9", index(subgraph()))
@@ -133,3 +134,37 @@ class TestPreAuditHint:
         """Sanity: this counts sentences, and E-007 counts labelled claims."""
         text = "You asked about Humility. It applies [rule:613.4]."
         assert uncited_sentences(text) == ["You asked about Humility."]
+
+
+class TestShortHandlesForRulings:
+    """A ruling id is 32 random hex characters and models mistype them.
+
+    Round 1 produced `64146c8d7bb54c70da3bf95e60124` for
+    `64146c8ff8d7bb54c70da3bf95e60124` — a citation pointing at the right
+    ruling and failing to resolve. Scoring that as a fabricated citation
+    fills a measurement of grounding with noise from typing, so the context
+    numbers rulings instead. The reader still sees the real id.
+    """
+
+    def test_the_context_shows_an_ordinal_not_the_id(self) -> None:
+        rendered = serialize(subgraph())
+        assert "[ruling:1]" in rendered
+        assert "[ruling:2009-10-01]" not in rendered
+
+    def test_a_rule_keeps_its_own_number(self) -> None:
+        """Rule numbers are short, meaningful and the project's whole point."""
+        assert "[rule:613.4]" in serialize(subgraph())
+
+    def test_the_ordinal_renders_as_the_real_id(self) -> None:
+        rendered, unknown = expand("As ruled [ruling:1].", subgraph())
+        assert unknown == []
+        assert "[ruling 2009-10-01]" in rendered
+
+    def test_a_correctly_copied_real_id_still_resolves(self) -> None:
+        """Generous on input: no reason to punish getting the hard thing right."""
+        _, unknown = expand("As ruled [ruling:2009-10-01].", subgraph())
+        assert unknown == []
+
+    def test_an_invented_ordinal_is_still_caught(self) -> None:
+        _, unknown = expand("As ruled [ruling:9].", subgraph())
+        assert unknown == ["ruling:9"]

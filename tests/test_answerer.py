@@ -18,6 +18,7 @@ from graphrag_mtg.generation.answerer import (
     build_prompt,
     is_refusal,
 )
+from graphrag_mtg.generation.citations import UNVERIFIED
 from graphrag_mtg.retrieval.subgraph import Evidence, Outcome, Subgraph
 
 
@@ -86,7 +87,17 @@ class TestGrounding:
         assert "1/1" in SYSTEM and "claim about the game" in SYSTEM
 
     def test_it_forbids_writing_paths(self) -> None:
-        assert "Do not write graph paths" in SYSTEM
+        """Matched on unwrapped text: rewording a line must not silence this."""
+        assert "do not write graph paths" in " ".join(SYSTEM.split()).lower()
+
+    def test_it_never_names_the_marker_the_renderer_owns(self) -> None:
+        """`p5-a2` explained UNVERIFIED, and round 2 answers started writing it.
+
+        Naming a token the audit machinery emits teaches the model to emit it
+        too, which turns a mechanical signal — "this handle is not in the
+        context" — into something the model can assert about itself.
+        """
+        assert UNVERIFIED not in SYSTEM
 
     def test_refusal_is_offered_as_a_correct_answer(self) -> None:
         assert REFUSAL in SYSTEM and "not a failure" in SYSTEM

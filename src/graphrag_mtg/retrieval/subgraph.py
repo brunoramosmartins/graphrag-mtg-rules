@@ -121,6 +121,31 @@ class Subgraph:
             seen.setdefault(item.cite(), None)
         return list(seen)
 
+    def handles(self) -> dict[str, Evidence]:
+        """The handle a generated answer must write, per evidence item.
+
+        Everything keeps its natural key — a rule number, a card name — with
+        one exception. A ruling id is 32 random hex characters, and a model
+        asked to copy one gets it wrong: the first Phase 5 round produced
+        ``64146c8d7bb54c70da3bf95e60124`` for
+        ``64146c8ff8d7bb54c70da3bf95e60124``, a citation pointing at the
+        right ruling and failing to resolve. Scoring that as a fabricated
+        citation would fill the measurement of *grounding* with noise from
+        *typing*, so rulings are numbered within the subgraph instead.
+
+        The reader never sees the ordinal: `generation/citations.py` renders
+        the real id from the evidence, exactly as it renders the path.
+        """
+        table: dict[str, Evidence] = {}
+        ordinal = 0
+        for item in self.evidence:
+            if item.kind == "ruling":
+                ordinal += 1
+                table[f"ruling:{ordinal}"] = item
+            else:
+                table.setdefault(item.cite(), item)
+        return table
+
 
 def add_evidence(
     subgraph: Subgraph,
@@ -190,6 +215,7 @@ def serialize(subgraph: Subgraph) -> str:
     if subgraph.is_empty:
         return f"NO EVIDENCE ({subgraph.outcome}). {subgraph.note}".strip()
 
+    handle_for = {id(item): handle for handle, item in subgraph.handles().items()}
     lines: list[str] = []
     for kind in ("card", "keyword", "rule", "ruling", "legality"):
         items = [e for e in subgraph.evidence if e.kind == kind]
@@ -197,7 +223,7 @@ def serialize(subgraph: Subgraph) -> str:
             continue
         lines.append(f"## {kind}")
         for item in items:
-            lines.append(f"[{item.cite()}] {item.text}")
+            lines.append(f"[{handle_for.get(id(item), item.cite())}] {item.text}")
             lines.append(f"    via {item.template}: {item.path}")
     if subgraph.dropped or subgraph.capped:
         lines.append(

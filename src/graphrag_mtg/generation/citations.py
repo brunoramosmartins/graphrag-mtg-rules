@@ -108,8 +108,16 @@ class Citation:
 
 
 def index(subgraph: Subgraph) -> dict[str, Evidence]:
-    """Map every handle in a subgraph to its evidence, first occurrence wins."""
-    table: dict[str, Evidence] = {}
+    """Map every handle a citation may use to its evidence.
+
+    Generous on input, strict on output. The context shows rulings under a
+    short ordinal — `ruling:3` — because a model cannot reliably copy 32
+    random hex characters, and a mistyped id is a *typing* failure being
+    scored as a *grounding* failure. But a correctly copied real id still
+    resolves, since there is no reason to punish the model for getting the
+    hard thing right.
+    """
+    table = dict(subgraph.handles())
     for item in subgraph.evidence:
         table.setdefault(item.cite(), item)
     return table
