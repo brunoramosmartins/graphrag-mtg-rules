@@ -9,6 +9,7 @@ the result decide the method:
     sufficiency freeze  labels locked with a hash — generation may now run
     segment             citation-stripped sentences, frozen with a hash
     claims show/set     each sentence beside the evidence it cites
+    control build       the same claims, citations permuted — judged blind
     report              coverage, support, refusals, with their guards
 
 `segment` refuses while sufficiency is unfrozen, mirroring how
@@ -30,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import sys
 import textwrap
 from dataclasses import asdict
@@ -62,6 +64,7 @@ if hasattr(sys.stdout, "reconfigure"):
 SUFFICIENCY_PATH = Path("data/golden/e007_sufficiency.json")
 WORKSHEET_PATH = Path("data/golden/e007_claims.jsonl")
 ANSWERS_PATH = Path("runs/e007_answers.jsonl")
+CONTROL_PATH = Path("data/golden/e007_control.jsonl")
 RETRIEVAL_PATH = Path("runs/e007_retrieval.jsonl")
 CACHE_DIR = Path("data/interim/e007_cache")
 SPLIT_PATH = Path("data/golden/e007_split.json")
@@ -530,11 +533,20 @@ def render_claim(
     table: dict[str, Evidence],
     *,
     position: str = "",
+    header: str = "",
+    command: str = "",
+    crib: str = "",
 ) -> str:
-    """One sentence, its citation resolved, and the standard it is judged by."""
+    """One sentence, its citation resolved, and the standard it is judged by.
+
+    ``header`` and ``command`` are overridable because the shuffled-citation
+    control shows the same view with the row's identity withheld — printing
+    the question id and claim index there would let the annotator pair a
+    control row with the real one and stop judging it on its own evidence.
+    """
     lines = [
         RULE,
-        f"{row.question_id}  claim {row.index}  {position}".rstrip(),
+        f"{header or f'{row.question_id}  claim {row.index}'}  {position}".rstrip(),
         "",
         "  QUESTION",
         wrap(payload.get("questionSimple") or payload.get("question", "")),
@@ -564,11 +576,14 @@ def render_claim(
     support = row.support.value if row.support is not Support.NOT_APPLICABLE else "—"
     lines += [
         "",
-        CLAIM_CRIB,
+        crib or CLAIM_CRIB,
         "",
         f"  decided: {decided}   support: {support}",
-        f"  -> python scripts/audit_answers.py claims set {row.question_id} {row.index} "
-        "<factual|non_factual> [--support supported|unsupported --failure <code>]",
+        command
+        or (
+            f"  -> python scripts/audit_answers.py claims set {row.question_id} {row.index} "
+            "<factual|non_factual> [--support supported|unsupported --failure <code>]"
+        ),
     ]
     return "\n".join(lines)
 
@@ -749,6 +764,253 @@ def claims_status(args: argparse.Namespace) -> int:
     return 0
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Shuffled-citation control — the only pre-committed reading support has
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: Support judged with the citations permuted. Registered in E-007 before any
+#: answer existed: the second DoD clause holds only if the real arm's lower
+#: bound clears this arm's upper bound.
+CONTROL_CRIB = """\
+  DOES THE EVIDENCE SHOWN CARRY THIS SENTENCE?
+
+  supported     it states the claim, or the sentence restates it
+  unsupported   it does not — with the code saying how:
+                  wrong_leaf | right_evidence_wrong_reading |
+                  unrelated_evidence | evidence_absent | claim_not_in_evidence
+
+  Judge only what is printed above. Do not reconstruct what the answer
+  "meant" to cite, and do not consult your own Magic knowledge — a true
+  sentence whose evidence does not carry it is `unsupported`."""
+
+
+def derange(n: int, rng: random.Random) -> list[int]:
+    """A permutation of ``range(n)`` with no fixed point.
+
+    A fixed point would hand a control row its own true citation and score
+    it as if the pairing were random, which biases the control arm toward
+    the real one — the direction that makes the DoD easier to pass.
+    """
+    if n < 2:
+        raise ValueError("a derangement needs at least two elements")
+    order = list(range(n))
+    while any(i == j for i, j in enumerate(order)):
+        rng.shuffle(order)
+    return order
+
+
+def control_build(args: argparse.Namespace) -> int:
+    """Pair every cited factual claim with another claim's citation.
+
+    Permuted **within an answer**, as registered: across answers the
+    evidence would come from a different subgraph entirely and every row
+    would be trivially unsupported, which measures nothing. An answer
+    holding a single cited factual claim cannot be deranged against itself
+    and is excluded — counted and printed, never silently dropped.
+    """
+    require_frozen(args.sufficiency)
+    if args.out.exists() and not args.force:
+        raise SystemExit(f"{args.out} already exists — refusing to rebuild over judgements.")
+
+    rows = load_rows(args.worksheet)
+    unlabelled = [r for r in rows if r.label is Label.UNLABELLED]
+    if unlabelled:
+        raise SystemExit(
+            f"{len(unlabelled)} row(s) still unlabelled. The control covers cited factual "
+            "claims, so which rows those are must be settled first."
+        )
+    answers = answers_index(args.answers)
+
+    rng = random.Random(args.seed)
+    entries: list[dict] = []
+    excluded: list[str] = []
+    for question_id in sorted({r.question_id for r in rows}):
+        marks = cited_by_row(answers[question_id]["text"])
+        eligible = [
+            r for r in rows
+            if r.question_id == question_id
+            and r.label is Label.FACTUAL
+            and r.cited
+            and marks.get(r.index)
+        ]
+        if len(eligible) < 2:
+            excluded += [f"{question_id}[{r.index}]" for r in eligible]
+            continue
+        order = derange(len(eligible), rng)
+        for position, row in enumerate(eligible):
+            entries.append(
+                {
+                    "question_id": question_id,
+                    "index": row.index,
+                    "sentence": row.sentence,
+                    "handles": marks[row.index],
+                    "arm": "real",
+                    "support": "",
+                    "failure": None,
+                    "comment": "",
+                }
+            )
+            entries.append(
+                {
+                    "question_id": question_id,
+                    "index": row.index,
+                    "sentence": row.sentence,
+                    "handles": marks[eligible[order[position]].index],
+                    "arm": "shuffled",
+                    "support": "",
+                    "failure": None,
+                    "comment": "",
+                }
+            )
+
+    # Presentation order is randomised over the whole file so a row and its
+    # twin are far apart. This weakens recognition; it does not eliminate it,
+    # and the registry amendment says so.
+    rng.shuffle(entries)
+    for slot, entry in enumerate(entries):
+        entry["slot"] = slot
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    with args.out.open("w", encoding="utf-8") as handle:
+        for entry in entries:
+            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    real = sum(1 for e in entries if e["arm"] == "real")
+    print(f"Wrote {len(entries)} row(s) -> {args.out}   ({real} real + {real} shuffled)")
+    print(f"seed {args.seed} — record it in the run log; the pairing is not reproducible without it.")
+    if excluded:
+        print(f"  excluded, one cited claim in the answer: {', '.join(excluded)}")
+    print("Judge every row by slot. The arm is in the file and is never printed.")
+    return 0
+
+
+def load_control(path: Path) -> list[dict]:
+    if not path.exists():
+        raise SystemExit(f"No control at {path}. Run `control build` first.")
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def control_show(args: argparse.Namespace) -> int:
+    """Print control rows by slot, with the arm withheld."""
+    entries = load_control(args.control)
+    records = retrieval_index(args.retrieval)
+
+    if args.slot is not None:
+        chosen = [e for e in entries if e["slot"] == args.slot]
+        if not chosen:
+            raise SystemExit(f"No slot {args.slot} in {args.control}.")
+    else:
+        chosen = [e for e in entries if not e["support"]][: args.count]
+        if not chosen:
+            print("Every control row is judged. Next: `control compare`.")
+            return 0
+
+    done = sum(1 for e in entries if e["support"])
+    for i, entry in enumerate(chosen, start=1):
+        row = ClaimRow(
+            entry["question_id"],
+            entry["index"],
+            entry["sentence"],
+            cited=True,
+            label=Label.FACTUAL,
+            support=Support(entry["support"]) if entry["support"] else Support.NOT_APPLICABLE,
+        )
+        print(
+            render_claim(
+                row,
+                cached_question(entry["question_id"], args.cache_dir),
+                entry["handles"],
+                handle_table(records[entry["question_id"]]),
+                position=f"[{i} of {len(chosen)} shown; {done}/{len(entries)} done]",
+                header=f"slot {entry['slot']}",
+                command=f"  -> python scripts/audit_answers.py control set {entry['slot']} "
+                "<supported|unsupported> [--failure <code>]",
+                crib=CONTROL_CRIB,
+            )
+        )
+    print(RULE)
+    return 0
+
+
+def control_set(args: argparse.Namespace) -> int:
+    """Record one control judgement. One slot at a time, like support itself."""
+    entries = load_control(args.control)
+    matches = [e for e in entries if e["slot"] == args.slot]
+    if not matches:
+        raise SystemExit(f"No slot {args.slot} in {args.control}.")
+    if args.support == Support.UNSUPPORTED.value and not args.failure:
+        raise SystemExit("An unsupported row needs --failure, here as everywhere.")
+    if args.failure and args.support != Support.UNSUPPORTED.value:
+        raise SystemExit("--failure describes an unsupported row.")
+
+    entry = matches[0]
+    entry["support"] = args.support
+    entry["failure"] = args.failure
+    if args.comment:
+        entry["comment"] = args.comment
+    with args.control.open("w", encoding="utf-8") as handle:
+        for row in entries:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    done = sum(1 for e in entries if e["support"])
+    print(f"slot {args.slot}: {args.support}   [{done}/{len(entries)} done]")
+    return 0
+
+
+def control_status(args: argparse.Namespace) -> int:
+    """Progress only. Per-arm counts stay hidden until every row is judged."""
+    entries = load_control(args.control)
+    done = sum(1 for e in entries if e["support"])
+    print(f"{done}/{len(entries)} control row(s) judged")
+    if done < len(entries):
+        left = [str(e["slot"]) for e in entries if not e["support"]]
+        print(f"  next slots: {', '.join(left[:10])}{' ...' if len(left) > 10 else ''}")
+        print("  per-arm results are withheld until the last row is judged.")
+    else:
+        print("  complete — run `control compare`.")
+    return 0
+
+
+def control_compare(args: argparse.Namespace) -> int:
+    """Apply the registered reading of the second DoD clause. No new rule here."""
+    entries = load_control(args.control)
+    pending = [e for e in entries if not e["support"]]
+    if pending:
+        raise SystemExit(
+            f"{len(pending)} control row(s) unjudged. Comparing now would let the "
+            "remaining judgements be made against a visible gap."
+        )
+
+    intervals = {}
+    for arm in ("real", "shuffled"):
+        clusters: dict[str, list[bool]] = {}
+        for entry in entries:
+            if entry["arm"] == arm:
+                clusters.setdefault(entry["question_id"], []).append(
+                    entry["support"] == Support.SUPPORTED.value
+                )
+        intervals[arm] = cluster_proportion_ci(list(clusters.values()))
+
+    real, shuffled = intervals["real"], intervals["shuffled"]
+    print(f"real      {real.point:.3f} [{real.low:.3f}, {real.high:.3f}]  {real.n_docs} cluster(s)")
+    print(f"shuffled  {shuffled.point:.3f} [{shuffled.low:.3f}, {shuffled.high:.3f}]")
+    print()
+    if real.low > shuffled.high:
+        print("Second DoD clause MET: the real arm's lower bound clears the control's upper bound.")
+    else:
+        print(
+            "Second DoD clause NOT MET: the intervals overlap. Whatever coverage reads, "
+            "this run cannot claim its citations support their sentences rather than "
+            "merely looking plausible to this judge."
+        )
+    print("Registered before any answer existed; nothing here is decided now.")
+    return 0
+
+
 def report(args: argparse.Namespace) -> int:
     meta = require_frozen(args.sufficiency)
     rows = load_rows(args.worksheet)
@@ -894,6 +1156,43 @@ def main() -> int:
     claim_status = claims_sub.add_parser("status", help="what is labelled and what is owed")
     claim_status.add_argument("--worksheet", type=Path, default=WORKSHEET_PATH)
     claim_status.set_defaults(func=claims_status)
+
+    ctl = sub.add_parser("control", help="the shuffled-citation control")
+    ctl_sub = ctl.add_subparsers(dest="stage", required=True)
+
+    ctl_build = ctl_sub.add_parser("build", help="pair each cited claim with another's citation")
+    ctl_build.add_argument("--worksheet", type=Path, default=WORKSHEET_PATH)
+    ctl_build.add_argument("--answers", type=Path, default=ANSWERS_PATH)
+    ctl_build.add_argument("--sufficiency", type=Path, default=SUFFICIENCY_PATH)
+    ctl_build.add_argument("--out", type=Path, default=CONTROL_PATH)
+    ctl_build.add_argument("--seed", type=int, required=True, help="recorded in the run log")
+    ctl_build.add_argument("--force", action="store_true")
+    ctl_build.set_defaults(func=control_build)
+
+    ctl_show = ctl_sub.add_parser("show", help="one slot, with the arm withheld")
+    ctl_show.add_argument("--control", type=Path, default=CONTROL_PATH)
+    ctl_show.add_argument("--retrieval", type=Path, default=RETRIEVAL_PATH)
+    ctl_show.add_argument("--cache-dir", type=Path, default=CACHE_DIR)
+    ctl_show.add_argument("--slot", type=int)
+    ctl_show.add_argument("--next", action="store_true", help="the next unjudged (default)")
+    ctl_show.add_argument("--count", type=int, default=1)
+    ctl_show.set_defaults(func=control_show)
+
+    ctl_set = ctl_sub.add_parser("set", help="record one control judgement")
+    ctl_set.add_argument("slot", type=int)
+    ctl_set.add_argument("support", choices=[Support.SUPPORTED.value, Support.UNSUPPORTED.value])
+    ctl_set.add_argument("--failure", choices=[f.value for f in Failure])
+    ctl_set.add_argument("--comment", default="")
+    ctl_set.add_argument("--control", type=Path, default=CONTROL_PATH)
+    ctl_set.set_defaults(func=control_set)
+
+    ctl_status = ctl_sub.add_parser("status", help="progress, without per-arm counts")
+    ctl_status.add_argument("--control", type=Path, default=CONTROL_PATH)
+    ctl_status.set_defaults(func=control_status)
+
+    ctl_compare = ctl_sub.add_parser("compare", help="apply the registered reading")
+    ctl_compare.add_argument("--control", type=Path, default=CONTROL_PATH)
+    ctl_compare.set_defaults(func=control_compare)
 
     rep = sub.add_parser("report", help="coverage, support and refusals")
     rep.add_argument("--worksheet", type=Path, default=WORKSHEET_PATH)

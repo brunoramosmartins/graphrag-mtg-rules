@@ -765,6 +765,36 @@ labels no longer described the subgraphs they were labelled against.
   the annotator judged twice; the two are confounded by construction and
   nothing here isolates either. E-007c is unaffected and still required.
 
+### Amendment — how the shuffled-citation control is administered (2026-08-10)
+
+The control was registered above before any answer existed; what was *not*
+registered is how a human judges it. Written down now, before the audit
+answers exist, and an amendment rather than an edit to the text above.
+
+- **Permutation is within an answer**, by a derangement — no row may draw
+  its own citation. Across answers the evidence would come from a different
+  subgraph and every control row would be trivially unsupported, which
+  measures the sampling, not the judge.
+- **An answer holding a single cited factual claim is excluded** and
+  enumerated in the output. It cannot be deranged against itself.
+- **Both arms are judged in one blind pass.** Each cited factual claim
+  appears twice — once with its real citation, once with another claim's —
+  in a seeded random order over the whole file, addressed by an opaque slot
+  number. The arm is in the file and is never printed, and per-arm counts
+  are withheld until the last row is judged.
+- **The seed is recorded in the run log.** Without it the pairing cannot be
+  reproduced and the control cannot be re-derived by a reader.
+- **`compare` refuses while any row is unjudged**, so the remaining
+  judgements cannot be aimed at a verdict already half visible.
+
+**Threat this does not remove.** The same sentence is shown twice to the
+same annotator, and a distinctive sentence is recognisable however far
+apart the two slots fall. Blinding here bounds rubber-stamping; it does not
+achieve independence. The honest reading is that the control detects a
+judge who accepts any plausible-looking citation, and does not rule out a
+judge who remembers giving this sentence a different verdict earlier. A
+second annotator would fix it and this project has one.
+
 ### E-007c — is `partial` a judgement or a shrug? (registered 2026-08-10, not yet run)
 
 - **Registered before the first generation**, and before any disagreement is

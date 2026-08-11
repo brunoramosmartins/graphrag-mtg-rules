@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 
@@ -259,3 +261,121 @@ class TestClaimLabelling:
             self.set(tmp_path, prepared, index="0,99")
         rows = audit_answers.load_rows(prepared[0])
         assert all(r.label is audit_answers.Label.UNLABELLED for r in rows)
+
+
+class TestShuffledCitationControl:
+    """The control the second DoD clause is read against, and its blinding.
+
+    Without it a support figure says only that the citations looked
+    plausible to the person scoring them.
+    """
+
+    ANSWER: ClassVar[str] = (
+        "A holds [rule:1.1]. B follows [rule:2.2]. C ends it [ruling:3]."
+    )
+
+    def prepared(self, tmp_path: Path) -> tuple[Path, Path, Path]:
+        answers = write(
+            tmp_path / "answers.jsonl",
+            [{"question_id": "rg-1", "text": self.ANSWER, "refused": False},
+             {"question_id": "rg-2", "text": "Only one cited [rule:9.9].", "refused": False}],
+        )
+        sufficiency = init_sufficiency(tmp_path)
+        label(sufficiency, {"rg-1": "sufficient", "rg-2": "partial"})
+        audit_answers.sufficiency_freeze(argparse.Namespace(out=sufficiency))
+        worksheet = tmp_path / "claims.jsonl"
+        audit_answers.segment(
+            argparse.Namespace(
+                answers=answers, out=worksheet, sufficiency=sufficiency, force=False
+            )
+        )
+        return worksheet, answers, sufficiency
+
+    def labelled(self, tmp_path: Path) -> tuple[Path, Path, Path]:
+        worksheet, answers, sufficiency = self.prepared(tmp_path)
+        for question_id, indices in (("rg-1", "0-2"), ("rg-2", "0")):
+            audit_answers.claims_set(
+                argparse.Namespace(
+                    question_id=question_id,
+                    index=indices,
+                    label="factual",
+                    support=None,
+                    failure=None,
+                    comment="",
+                    worksheet=worksheet,
+                    sufficiency=sufficiency,
+                )
+            )
+        return worksheet, answers, sufficiency
+
+    def build(self, tmp_path: Path, seed: int = 7) -> list[dict]:
+        worksheet, answers, sufficiency = self.labelled(tmp_path)
+        out = tmp_path / "control.jsonl"
+        audit_answers.control_build(
+            argparse.Namespace(
+                worksheet=worksheet,
+                answers=answers,
+                sufficiency=sufficiency,
+                out=out,
+                seed=seed,
+                force=False,
+            )
+        )
+        return audit_answers.load_control(out)
+
+    def test_a_derangement_never_returns_a_row_its_own_citation(self) -> None:
+        """A fixed point would score a real pairing as if it were random."""
+        rng = random.Random(3)
+        for n in range(2, 9):
+            order = audit_answers.derange(n, rng)
+            assert sorted(order) == list(range(n))
+            assert all(i != j for i, j in enumerate(order))
+
+    def test_a_single_claim_cannot_be_deranged_against_itself(self) -> None:
+        with pytest.raises(ValueError):
+            audit_answers.derange(1, random.Random(0))
+
+    def test_each_claim_appears_once_per_arm(self, tmp_path: Path) -> None:
+        entries = self.build(tmp_path)
+        assert sum(1 for e in entries if e["arm"] == "real") == 3
+        assert sum(1 for e in entries if e["arm"] == "shuffled") == 3
+
+    def test_a_shuffled_row_never_carries_its_own_citation(self, tmp_path: Path) -> None:
+        entries = self.build(tmp_path)
+        truth = {e["index"]: e["handles"] for e in entries if e["arm"] == "real"}
+        assert all(
+            e["handles"] != truth[e["index"]] for e in entries if e["arm"] == "shuffled"
+        )
+
+    def test_an_answer_with_one_cited_claim_is_excluded(self, tmp_path: Path) -> None:
+        """Permuting across answers would cite another subgraph entirely."""
+        entries = self.build(tmp_path)
+        assert {e["question_id"] for e in entries} == {"rg-1"}
+
+    def test_building_before_the_claims_are_labelled_is_refused(self, tmp_path: Path) -> None:
+        worksheet, answers, sufficiency = self.prepared(tmp_path)
+        with pytest.raises(SystemExit, match="still unlabelled"):
+            audit_answers.control_build(
+                argparse.Namespace(
+                    worksheet=worksheet,
+                    answers=answers,
+                    sufficiency=sufficiency,
+                    out=tmp_path / "control.jsonl",
+                    seed=1,
+                    force=False,
+                )
+            )
+
+    def test_comparing_before_every_row_is_judged_is_refused(self, tmp_path: Path) -> None:
+        """A visible gap would let the last judgements aim at the verdict."""
+        self.build(tmp_path)
+        with pytest.raises(SystemExit, match="unjudged"):
+            audit_answers.control_compare(
+                argparse.Namespace(control=tmp_path / "control.jsonl")
+            )
+
+    def test_the_same_seed_rebuilds_the_same_pairing(self, tmp_path: Path, tmp_path_factory) -> None:
+        other = tmp_path_factory.mktemp("again")
+        first = [(e["slot"], e["arm"], e["handles"]) for e in self.build(tmp_path, seed=11)]
+        second = [(e["slot"], e["arm"], e["handles"]) for e in self.build(other, seed=11)]
+        assert first == second

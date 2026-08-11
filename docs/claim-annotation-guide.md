@@ -182,6 +182,30 @@ Do not revisit a sufficiency label while auditing an answer. If one looks
 wrong, note it and leave it — that file was frozen precisely so this
 judgement could not follow the result.
 
+## The shuffled-citation control
+
+Support has no numeric threshold. What the DoD's second clause is read
+against is this control, and it is judged **before** any real support
+figure is looked at:
+
+```bash
+python scripts/audit_answers.py control build --seed <n>
+python scripts/audit_answers.py control show --next
+python scripts/audit_answers.py control set 41 unsupported --failure claim_not_in_evidence
+python scripts/audit_answers.py control compare
+```
+
+Every cited factual claim appears twice — once with its real citation,
+once with another claim's from the same answer — in random order, under a
+slot number. **You are not told which is which**, and the per-arm counts
+stay hidden until the last slot is judged. Judge each slot on the evidence
+printed with it and nothing else.
+
+The clause holds only if the real arm's lower bound clears the control
+arm's upper bound. If the intervals overlap, the honest reading is that
+any plausible-looking citation passed, and Phase 5 reports the clause not
+met whatever coverage says.
+
 ## The blind re-audit (M2)
 
 Eight of the thirty answers are re-audited blind: fresh worksheet,
