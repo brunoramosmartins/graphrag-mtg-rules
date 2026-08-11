@@ -90,3 +90,88 @@ registered floor of 12 answerable, so the contingency did not fire.
 `token_budget` 6000, `kind_cap` 25, `rule_search` on, `text2cypher` off,
 oracle-text expansions on.
 10 calls, ~35,299 input + ~7,000 output tokens, **~$0.01**.
+
+### 2026-08-10 — generation round 1, development subset (prompt `p5-a1`)
+
+10 answers, ~$0.01. **7 answered, 3 refused.** Refusal behaviour against the
+frozen sufficiency labels was clean:
+
+| sufficiency | n | behaviour |
+|---|---|---|
+| `sufficient` | 3 | 3 answered — **zero over-refusal** |
+| `insufficient` | 2 | 2 refused — **zero unsupported answering** |
+| `partial` | 5 | 4 answered, 1 refused — both correct by the registered rule |
+
+**Three unresolvable citation handles, and only one is a fabrication:**
+
+- `ruling:64146c8d7bb54c70da3bf95e60124` against the real
+  `64146c8ff8d7bb54c70da3bf95e60124` — a **transcription** error on 32 random
+  hex characters, pointing at the right ruling;
+- `ruling:702.16f` — a rule number written into the `ruling:` namespace, a
+  **format** error;
+- `rule:701.7` — a real CR rule that is not in the context. The only genuine
+  `evidence_absent`.
+
+Coverage and support were **not** measured this round; the diagnosis above is
+mechanical (handle resolution and the frozen sufficiency labels) and needed no
+claim labelling. Recorded as a deviation from "each round records coverage,
+support and refusal": rounds that fail on an instrument defect are diagnosed
+from mechanical signals, and the claim pass runs when the instrument is sound.
+
+**Instrument fix, not a prompt patch.** Rulings are now shown in the context
+under a short ordinal (`[ruling:3]`) because a model cannot reliably copy a
+32-character hex id, and scoring a mistyped id as a fabricated citation fills
+a measurement of *grounding* with noise from *typing*. Rule numbers keep their
+own value — short, meaningful, and the project's differentiator. A correctly
+copied real id still resolves. Prompt version `p5-a1` -> `p5-a2`.
+
+## 2026-08-10 — `card_core`: 164 → 195 cards, and 32 labels reopened
+
+Found by hand-reading one sufficiency case rather than by any metric.
+*Guardian of the Guildpact* linked correctly, exists in the graph, and
+appeared in no subgraph: it has zero rulings, and every card traversal
+reached the node through a relationship. A card with no rulings and no
+keywords contributed nothing at all — not even its oracle text.
+
+| | before | after |
+|---|---|---|
+| distinct cards reaching a subgraph | 164 | 195 |
+| median evidence items per question | 30.0 | 30.5 |
+| outcomes | 42 resolved | 42 resolved |
+
+The residual gap is repeated mentions, not a defect: **264 card traversals
+planned, 195 distinct cards**, 27 questions naming the same card more than
+once (rg-1186: 13 calls, 6 cards). Retrieval re-run to
+`runs/e007_retrieval.jsonl`; **evidence changed on 42 of 42 questions**.
+
+**Reopened the audit side only** — 32 labels — keeping the 10 development
+labels marked stale. Re-labelled composition, still before any answer on
+that side was generated:
+
+| | `sufficient` | `partial` | `insufficient` |
+|---|---|---|---|
+| before | 5 | 20 | 7 |
+| after | 4 | 19 | 9 |
+
+21 of 32 unchanged, 7 of the 11 moves away from sufficiency. The prediction
+that oracle text would convert `partial` into `sufficient` was wrong, and
+is recorded as wrong. Contingency re-checked against the unchanged floor:
+23 against 12, does not fire.
+
+**The generation guard fired on this and was comparing the wrong thing.**
+It compared the serialized context; what a sufficiency label describes is
+the evidence — these nodes, this text, these paths — not its formatting.
+It now compares `evidence_fingerprint()` over `kind|key|text|template|
+path|distance`. That check earned its keep immediately: when rulings moved
+to short handles, **0 of 42 fingerprints differed while 41 contexts did**,
+so the labels provably still held and no re-labelling was spent on a
+presentation change.
+
+**Round 3 queued (`p5-a2` → `p5-a3`), one change only.** `p5-a2` explained
+what happens to an unresolvable handle, naming the `UNVERIFIED` marker, and
+round 2's answers started writing `[UNVERIFIED]` themselves — a token the
+audit machinery emits became something the model could assert about itself.
+The sentence is replaced by the instruction that actually helps: if no
+handle supports the sentence, do not write it. This is the last of the
+three registered iteration rounds; the audit side runs on whatever `p5-a3`
+measures.

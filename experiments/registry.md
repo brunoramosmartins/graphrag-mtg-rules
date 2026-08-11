@@ -733,6 +733,38 @@ forbids. What follows is therefore a **limitation, not a revised gate**:
   gates. Coverage and support keep a healthy denominator — up to 25
   answering questions — which is the half this sample can actually speak to.
 
+### Reopened after a retrieval defect, and re-labelled (2026-08-10, still before generation)
+
+The section above is **superseded on the audit side** and kept as written,
+because a pre-registration that edits its own record of what it found is
+worth nothing.
+
+A defect found while hand-reading one case: a card with no rulings and no
+keywords never entered any subgraph, since every card traversal reached the
+node through a relationship. `card_core` fixed it (164 → 195 cards over the
+pool) and the evidence changed on **42 of 42** questions — so the frozen
+labels no longer described the subgraphs they were labelled against.
+
+- **Reopened: the 32 audit labels only.** The 10 development labels are kept
+  and marked `stale_labels`. Their answers had already been read, and
+  re-labelling a question whose answer the annotator has seen is the
+  contamination the ordering in this experiment exists to prevent. The
+  development side therefore carries a stated limitation — its labels
+  describe weaker evidence than the run they will score — and no repair.
+- **Re-labelled composition (audit, n=32): 4 `sufficient`, 19 `partial`,
+  9 `insufficient`** (before: 5 / 20 / 7). The contingency is re-checked
+  against the same floor and still does not fire: `sufficient` + `partial`
+  is 23 against 12.
+- **The gates got thinner, not fatter.** Over-refusal now rests on **4**
+  audit questions, bounded at 3/4 = 0.75 by rule of three; unsupported
+  answering on 9, bounded at 3/9 = 0.33. The prediction that oracle text
+  would convert `partial` into `sufficient` was **wrong**: 21 of 32 labels
+  are unchanged and 7 of the 11 that moved went away from sufficiency. The
+  evidence these questions lack is rules and rulings, not card text.
+- **The 11 changes are not an agreement measurement.** Evidence changed and
+  the annotator judged twice; the two are confounded by construction and
+  nothing here isolates either. E-007c is unaffected and still required.
+
 ### E-007c — is `partial` a judgement or a shrug? (registered 2026-08-10, not yet run)
 
 - **Registered before the first generation**, and before any disagreement is

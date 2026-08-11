@@ -90,6 +90,51 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — A card with no rulings was never in the subgraph; 32 labels reopened
+
+*Guardian of the Guildpact* is linked correctly, exists in the graph, and
+reached no subgraph at all. Every card traversal arrived at the node
+through a relationship — rulings, keywords, legality — so a card with
+none of those contributed nothing to a question that named it, **not even
+its oracle text**, which is the evidence a rules question about that card
+most needs. `card_core` now runs unconditionally for every resolved card
+and is the only template emitting the card node; the duplicate emits on
+`card_rulings`, `card_legality` and `card_interaction` were removed rather
+than left to print the card twice. Cards reaching a subgraph across
+E-007's pool: **164 → 195**. The residual gap is one card mentioned
+several times in one question (264 traversals planned, 195 distinct
+cards).
+
+Evidence changed on **42 of 42** questions, so the sufficiency labels no
+longer described the subgraphs they were frozen against. The decision:
+reopen the **audit** side only — 32 labels — and keep the 10 development
+labels as they are, marked `stale_labels`. Re-judging a question whose
+generated answer the annotator has already read is precisely the
+contamination E-007's ordering exists to prevent; for the development side
+re-labelling would not merely be expensive, it would be invalid. So the
+development labels stay, flagged, and the stronger evidence they now sit
+on is a limitation carried into the write-up rather than a correction
+applied after the fact. `sufficiency reopen` demands a written reason and
+records it with the previous hash, because a frozen label that moves
+without a reason in the file was never frozen.
+
+**The re-label did not go the way I predicted.** I expected oracle text to
+turn `partial` into `sufficient` on many questions. Over the 32:
+
+| | `sufficient` | `partial` | `insufficient` |
+|---|---|---|---|
+| before the fix | 5 | 20 | 7 |
+| after the fix | 4 | 19 | 9 |
+
+21 of 32 unchanged; of the 11 that moved, 7 moved *away* from sufficiency.
+So the evidence these questions are missing is rules and rulings, not card
+text — the fix repaired a real hole without making the sample easier. Two
+things are confounded here and I cannot separate them: the evidence
+genuinely changed, and the annotator judged the same 32 questions twice.
+An 11-of-32 disagreement is **not** an agreement measurement and is not
+reported as one; E-007c still has to measure the ceiling on unchanged
+evidence.
+
 ## 2026-08-10 — The contingency held, and I did not move it
 
 Sufficiency labelled on all 42 before any answer existed. Audit side: **5
