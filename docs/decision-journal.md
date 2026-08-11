@@ -90,6 +90,46 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — Development-side peek: coverage 0.361, and no decision is taken here
+
+118 claim rows labelled on the 10 development answers under `p5-a3`.
+Recorded because a peek that is not written down is a peek that can be
+denied later.
+
+    coverage   0.361 = 35/97 factual claims, 9 answering clusters
+    exclusions 21/118 = 0.178 (void above 0.20)
+    support    0.429 [0.265, 0.595], 9 clusters, 35 cited claims
+    failures   claim_not_in_evidence 15, right_evidence_wrong_reading 4,
+               unrelated_evidence 1, wrong_leaf 0, evidence_absent 0
+    refusals   over-refusal 0, unsupported answering 0, correct refusal 2
+
+**No decision is taken here.** This is the split the prompt was written
+against; it carries no threshold, and the DoD is read on the audit side
+only. Three things are worth writing down anyway:
+
+- **The three registered prompt rounds are spent.** Coverage at 0.361
+  against a threshold of 1.0 means the first DoD clause is very likely to
+  fail on the audit. A fourth round chosen *now*, after seeing that number,
+  would be the registry's whole purpose defeated — the budget was three,
+  and the audit runs on `p5-a3`.
+- **The prediction about where support fails looks wrong.** E-007 predicted
+  `wrong_leaf` — right rule family, wrong subrule — would dominate. On dev
+  it is **zero of 20**, and `claim_not_in_evidence` is 15: the model cites a
+  real, relevant-looking item that simply does not contain the sentence.
+  Not scored here; predictions are scored on the audit.
+- **Exclusions came in at 0.178 against a void at 0.20.** Some of that is
+  segmentation artefact — answers written as numbered lists produce rows
+  like `3.` — and the guide forbids re-splitting them. If the audit clears
+  0.20 the coverage figure is void by a rule written before any of this
+  existed, and that outcome is reported, not repaired.
+
+One limitation is now visible and is going into the write-up rather than
+into a fix: the claim unit is a **sentence**, and this model cites at the
+end of a numbered bullet covering three or four sentences. Sentence-level
+coverage counts those as uncited, which is what the unit was registered to
+do. Whether a bullet-level unit measures the same thing is a question for a
+successor experiment, not a redefinition of this one.
+
 ## 2026-08-10 — A card with no rulings was never in the subgraph; 32 labels reopened
 
 *Guardian of the Guildpact* is linked correctly, exists in the graph, and

@@ -189,3 +189,65 @@ development labels inside this hash are the ones carried over from the
 previous freeze and are marked stale in the file — they describe the
 pre-`card_core` subgraphs, and the reason is recorded with the previous
 hash in the same file.
+
+### 2026-08-10 — generation, round 3 (`p5-a3`) on the development side
+
+10 questions, `gpt-4o-mini` @ temperature 0, ~$0.01. Mechanical read only —
+the claim pass is a separate step and has not run.
+
+| | round 1 | round 2 | round 3 |
+|---|---|---|---|
+| citations written | 31 | 21 | 34 |
+| unresolvable handles | 3 | 1 | **0** |
+| `[UNVERIFIED]` written by the model | — | yes | **no** |
+
+Namespaces cited in round 3: `ruling` 15, `card` 11, `rule` 6, `keyword` 2.
+The card citations are new and are `card_core` evidence — the oracle text
+that used to be absent is now being cited.
+
+Refusals against the frozen sufficiency labels: **2 refusals, both on the
+2 `insufficient` questions; all 3 `sufficient` answered.** Zero
+over-refusal, zero answering where the evidence was labelled absent.
+
+**Read with the caveat that these ten labels are stale**: they describe
+the pre-`card_core` subgraphs and are marked as such in the file. The
+development side is where the prompt was iterated, so it carries no
+threshold — this is the instrument reporting itself sound, not a result.
+The three registered prompt rounds are spent; the audit side runs once on
+`p5-a3` with no further iteration.
+
+### 2026-08-10 — claim worksheet segmented (development side)
+
+10 answers -> **118 rows**, `data/golden/e007_claims.jsonl`.
+
+    sha-256  c4bcec635f0fc1227de0a738f318260701f0d6375e52fed304f2f33a9ad537de
+
+Recorded before a single label was written, and before the annotator was
+told anything about the rows — including how many carry a citation, which
+is the numerator of coverage. Knowing that split while deciding which
+sentences are `factual` is precisely the pressure the exclusion rule and
+the 20% void exist to remove.
+
+### 2026-08-10 — development-side claim pass (descriptive; no verdict)
+
+118 rows labelled, worksheet `c4bcec635f0f`, sufficiency `534547ed8454`.
+
+    coverage   0.361 = 35/97   exclusions 21/118 = 0.178
+    support    0.429 [0.265, 0.595]   9 clusters, 35 cited claims
+    failures   claim_not_in_evidence 15, right_evidence_wrong_reading 4,
+               unrelated_evidence 1, wrong_leaf 0, evidence_absent 0
+    refusals   over-refusal 0, unsupported answering 0, correct refusal 2
+
+The development split is where the prompt was iterated; it carries no
+threshold and no branch of the decision rule is evaluated on it. Logged as
+a peek in [../docs/decision-journal.md](../docs/decision-journal.md) with
+the numbers seen and the sentence that no decision is taken from them.
+
+`wrong_leaf` is **zero of 20 unsupported rows** — the failure E-007
+predicted would dominate. `claim_not_in_evidence` is 15. Scored on the
+audit, not here.
+
+**Support cannot be read on the audit until the shuffled-citation control
+exists.** The registry commits the second DoD clause to a comparison
+against that control and to nothing else, so a support interval reported
+without it has no pre-committed reading.
