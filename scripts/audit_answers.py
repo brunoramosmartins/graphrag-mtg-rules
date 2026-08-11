@@ -21,7 +21,7 @@ makes the ordering awkward to break rather than trusting memory.
 Usage:
     python scripts/audit_answers.py sufficiency init --retrieval runs/e007_retrieval.jsonl
     python scripts/audit_answers.py sufficiency freeze
-    python scripts/audit_answers.py segment --answers runs/e007_answers.jsonl
+    python scripts/audit_answers.py segment --answers runs/e007_answers_audit.jsonl
     python scripts/audit_answers.py claims show --next
     python scripts/audit_answers.py claims set rg-2848 3 factual --support supported
     python scripts/audit_answers.py report
@@ -62,8 +62,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 SUFFICIENCY_PATH = Path("data/golden/e007_sufficiency.json")
-WORKSHEET_PATH = Path("data/golden/e007_claims.jsonl")
-ANSWERS_PATH = Path("runs/e007_answers.jsonl")
+WORKSHEET_PATH = Path("data/golden/e007_claims_audit.jsonl")
+ANSWERS_PATH = Path("runs/e007_answers_audit.jsonl")
 CONTROL_PATH = Path("data/golden/e007_control.jsonl")
 RETRIEVAL_PATH = Path("runs/e007_retrieval.jsonl")
 CACHE_DIR = Path("data/interim/e007_cache")
@@ -821,9 +821,13 @@ def control_build(args: argparse.Namespace) -> int:
         )
     answers = answers_index(args.answers)
 
+    if args.per_answer and args.per_answer < 2:
+        raise SystemExit("--per-answer must be at least 2; one claim cannot be deranged.")
+
     rng = random.Random(args.seed)
     entries: list[dict] = []
     excluded: list[str] = []
+    sampled = 0
     for question_id in sorted({r.question_id for r in rows}):
         marks = cited_by_row(answers[question_id]["text"])
         eligible = [
@@ -836,6 +840,12 @@ def control_build(args: argparse.Namespace) -> int:
         if len(eligible) < 2:
             excluded += [f"{question_id}[{r.index}]" for r in eligible]
             continue
+        if args.per_answer and len(eligible) > args.per_answer:
+            # Sampled per answer rather than over the pool, because the
+            # bootstrap resamples questions: keeping every cluster present
+            # is what the interval depends on, not claims per cluster.
+            sampled += len(eligible) - args.per_answer
+            eligible = sorted(rng.sample(eligible, args.per_answer), key=lambda r: r.index)
         order = derange(len(eligible), rng)
         for position, row in enumerate(eligible):
             entries.append(
@@ -878,6 +888,11 @@ def control_build(args: argparse.Namespace) -> int:
     real = sum(1 for e in entries if e["arm"] == "real")
     print(f"Wrote {len(entries)} row(s) -> {args.out}   ({real} real + {real} shuffled)")
     print(f"seed {args.seed} — record it in the run log; the pairing is not reproducible without it.")
+    if sampled:
+        print(
+            f"  {sampled} cited claim(s) left out by --per-answer {args.per_answer}: every "
+            "answer keeps a pair, so the cluster count is untouched."
+        )
     if excluded:
         print(f"  excluded, one cited claim in the answer: {', '.join(excluded)}")
     print("Judge every row by slot. The arm is in the file and is never printed.")
@@ -1166,6 +1181,9 @@ def main() -> int:
     ctl_build.add_argument("--sufficiency", type=Path, default=SUFFICIENCY_PATH)
     ctl_build.add_argument("--out", type=Path, default=CONTROL_PATH)
     ctl_build.add_argument("--seed", type=int, required=True, help="recorded in the run log")
+    ctl_build.add_argument(
+        "--per-answer", type=int, default=None, help="cap cited claims per answer (min 2)"
+    )
     ctl_build.add_argument("--force", action="store_true")
     ctl_build.set_defaults(func=control_build)
 

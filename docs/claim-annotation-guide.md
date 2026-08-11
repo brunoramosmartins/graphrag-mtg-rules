@@ -22,7 +22,7 @@ nothing while looking excellent.
 ## Step 0 — the segmentation is mechanical and comes first
 
 ```bash
-python scripts/audit_answers.py segment --answers runs/e007_answers.jsonl
+python scripts/audit_answers.py segment --answers runs/e007_answers_audit.jsonl
 ```
 
 The script strips every citation marker, splits the remaining text into
@@ -189,15 +189,16 @@ against is this control, and it is judged **before** any real support
 figure is looked at:
 
 ```bash
-python scripts/audit_answers.py control build --seed <n>
+python scripts/audit_answers.py control build --seed <n> --per-answer 2
 python scripts/audit_answers.py control show --next
 python scripts/audit_answers.py control set 41 unsupported --failure claim_not_in_evidence
 python scripts/audit_answers.py control compare
 ```
 
-Every cited factual claim appears twice — once with its real citation,
-once with another claim's from the same answer — in random order, under a
-slot number. **You are not told which is which**, and the per-arm counts
+Up to two cited factual claims per answer appear twice — once with the
+real citation, once with another claim's from the same answer — in random
+order, under a slot number. Every answer that can contribute a pair does,
+because the interval is a bootstrap over questions. **You are not told which is which**, and the per-arm counts
 stay hidden until the last slot is judged. Judge each slot on the evidence
 printed with it and nothing else.
 

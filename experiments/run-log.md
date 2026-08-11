@@ -251,3 +251,47 @@ audit, not here.
 exists.** The registry commits the second DoD clause to a comparison
 against that control and to nothing else, so a support interval reported
 without it has no pre-committed reading.
+
+### 2026-08-10 — generation, audit side (32 questions) — and one loss
+
+`p5-a3`, temperature 0, ~$0.02. **28 answered, 4 refused** (rg-119,
+rg-2027, rg-1973, rg-1766). No claim has been labelled yet.
+
+**The development answers were destroyed by this run.** `generate` wrote
+to a single default path for both sides, `runs/` is gitignored, and the
+audit run overwrote the ten development answers. What survives: the
+labelled worksheet (118 rows, hash `c4bcec635f0f`, now
+`data/golden/e007_claims_dev.jsonl`) and every figure it produced, already
+in this log. What does not: the answer text those labels described, so the
+development rows can no longer be re-read or re-derived, and no control
+can be built for that side.
+
+Nothing about the audit is compromised — its answers are the file that
+survived, generated after a freeze that was recorded before it. The
+development side was the iteration split and carried no threshold, which
+is the only reason this is a loss rather than a void run.
+
+Fixed rather than noted: `generate` now writes `e007_answers_<side>.jsonl`
+and refuses to overwrite an existing answers file without `--force`, and
+the refusal fires before anything is read so a paid run cannot die after
+the damage. Two tests pin it.
+
+### 2026-08-10 — audit claim worksheet segmented
+
+32 answers -> **411 rows**, `data/golden/e007_claims_audit.jsonl`.
+
+    sha-256  3cdfdf85fb211aada77e43db37dd341cb8cb0637fcfe15482f90e7db321adb93
+
+12.8 sentences per answer, against 11.8 on the development side — the same
+shape, so the segmentation is behaving consistently across sides. Recorded
+before any label exists, and before the annotator has been told how many
+rows carry a citation.
+
+**Control capped at two cited claims per answer** (registry amendment, same
+day, before any support judgement existed). 411 rows put the full control
+near 240 blind slots on top of the real support pass, and a control that
+does not get finished measures nothing. Every answer that can contribute a
+pair still does — the bootstrap resamples questions, so the interval lives
+on the cluster count. The deviation is conservative: a smaller sample
+widens both arms, and the clause needs the real arm's lower bound to clear
+the control's upper bound.

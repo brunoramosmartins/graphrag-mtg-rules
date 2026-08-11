@@ -787,6 +787,23 @@ answers exist, and an amendment rather than an edit to the text above.
 - **`compare` refuses while any row is unjudged**, so the remaining
   judgements cannot be aimed at a verdict already half visible.
 
+**Amended the same day, before any support label existed: the control is
+capped at two cited claims per answer.** The audit worksheet came back at
+411 rows, which puts the full control near 240 blind slots on top of the
+real support pass, and a control that does not get finished measures
+nothing at all. The cap is sampled with the recorded seed, and **every
+answer that contributes a pair still contributes one** — the cluster
+bootstrap resamples questions, so the interval depends on the number of
+clusters far more than on claims within a cluster.
+
+The deviation runs in the conservative direction and that is why it is
+acceptable here: a smaller control sample widens **both** arms' intervals,
+and the clause requires the real arm's lower bound to clear the control
+arm's upper bound. Less data makes this harder to satisfy, never easier.
+It was chosen from the row count, before a single support judgement
+existed, and the alternative — starting a 240-slot pass and abandoning it
+part-way — would leave the arms judged under different levels of fatigue.
+
 **Threat this does not remove.** The same sentence is shown twice to the
 same annotator, and a distinctive sentence is recognisable however far
 apart the two slots fall. Blinding here bounds rubber-stamping; it does not

@@ -318,6 +318,7 @@ class TestShuffledCitationControl:
                 sufficiency=sufficiency,
                 out=out,
                 seed=seed,
+                per_answer=None,
                 force=False,
             )
         )
@@ -362,6 +363,7 @@ class TestShuffledCitationControl:
                     sufficiency=sufficiency,
                     out=tmp_path / "control.jsonl",
                     seed=1,
+                    per_answer=None,
                     force=False,
                 )
             )
@@ -379,3 +381,37 @@ class TestShuffledCitationControl:
         first = [(e["slot"], e["arm"], e["handles"]) for e in self.build(tmp_path, seed=11)]
         second = [(e["slot"], e["arm"], e["handles"]) for e in self.build(other, seed=11)]
         assert first == second
+
+    def test_a_cap_keeps_every_answer_in_the_control(self, tmp_path: Path) -> None:
+        """The bootstrap resamples questions, so clusters matter, not claims."""
+        worksheet, answers, sufficiency = self.labelled(tmp_path)
+        out = tmp_path / "capped.jsonl"
+        audit_answers.control_build(
+            argparse.Namespace(
+                worksheet=worksheet,
+                answers=answers,
+                sufficiency=sufficiency,
+                out=out,
+                seed=5,
+                per_answer=2,
+                force=False,
+            )
+        )
+        entries = audit_answers.load_control(out)
+        assert {e["question_id"] for e in entries} == {"rg-1"}
+        assert sum(1 for e in entries if e["arm"] == "real") == 2
+
+    def test_a_cap_of_one_is_refused(self, tmp_path: Path) -> None:
+        worksheet, answers, sufficiency = self.labelled(tmp_path)
+        with pytest.raises(SystemExit, match="at least 2"):
+            audit_answers.control_build(
+                argparse.Namespace(
+                    worksheet=worksheet,
+                    answers=answers,
+                    sufficiency=sufficiency,
+                    out=tmp_path / "one.jsonl",
+                    seed=5,
+                    per_answer=1,
+                    force=False,
+                )
+            )
