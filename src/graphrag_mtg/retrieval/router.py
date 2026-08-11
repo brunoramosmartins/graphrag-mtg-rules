@@ -149,6 +149,12 @@ def plan(
         )
     for card in entities.cards:
         name = card_key(card)
+        # First and unconditionally: the card itself. Every other card
+        # traversal reaches the node through a relationship, so a card with
+        # no rulings and no keywords used to contribute nothing at all —
+        # not even its oracle text, which is the evidence a rules question
+        # about that card most needs.
+        calls.append(Call("card_core", {"normalized_name": name, "limit": row_limit}))
         calls.append(Call("card_keyword_rules", {"normalized_name": name, "limit": row_limit}))
         calls.append(Call("card_rulings", {"normalized_name": name, "limit": row_limit}))
         # Legality only when the question names a format. Running it always

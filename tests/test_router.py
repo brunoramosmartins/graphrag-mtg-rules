@@ -151,3 +151,26 @@ class TestCardParameterIsTheResolvedName:
     def test_the_interaction_pair_uses_resolved_names_too(self) -> None:
         (call,) = self.params("Humility, Opalescence, what happens?", "card_interaction")
         assert (call["left"], call["right"]) == ("humility", "opalescence")
+
+
+class TestTheCardItselfIsAlwaysRetrieved:
+    """A card with no rulings and no keywords used to vanish entirely.
+
+    Every other card traversal reaches the node through a relationship, so
+    `Guardian of the Guildpact` — zero rulings — contributed nothing to a
+    question that named it, not even its oracle text. Measured on E-007's
+    pool before the fix: 264 card traversals planned, 164 cards arriving.
+    """
+
+    def test_card_core_runs_for_every_named_card(self) -> None:
+        templates = [c.template for c in route("What does Serra Angel do").calls]
+        assert templates[0] == "card_core"
+
+    def test_it_runs_once_per_card(self) -> None:
+        templates = [c.template for c in route("Humility and Opalescence together").calls]
+        assert templates.count("card_core") == 2
+
+    def test_it_is_the_only_traversal_emitting_the_card_node(self) -> None:
+        """Two templates emitting it would put the card in the context twice."""
+        emitting = [t.name for t in BY_NAME.values() if any(e.kind == "card" for e in t.emits)]
+        assert emitting == ["card_core"]

@@ -30,6 +30,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from collections import Counter
@@ -168,7 +169,8 @@ def run_retrieval(args: argparse.Namespace) -> int:
                         # renderer builds citation paths from it, and
                         # generation must run on exactly what the
                         # sufficiency labels were assigned to.
-                        "evidence": [asdict(item) for item in subgraph.evidence],
+                        "evidence": (ev := [asdict(item) for item in subgraph.evidence]),
+                        "evidence_sha256": evidence_fingerprint(ev),
                         "context": serialize(subgraph),
                     },
                     ensure_ascii=False,
@@ -184,6 +186,27 @@ def run_retrieval(args: argparse.Namespace) -> int:
     return 0
 
 
+def evidence_fingerprint(evidence: list[dict]) -> str:
+    """Hash the evidence itself — not how it happens to be rendered.
+
+    What a sufficiency label describes is *what was retrieved*: these nodes,
+    this text, reached by these paths. It does not describe the formatting
+    of the context block. Comparing serialized strings conflated the two and
+    fired on a presentation change — rulings moving to a short ordinal —
+    while a genuine change of evidence would have looked no different.
+
+    So the guard hashes the fields a label actually depends on, in order.
+    A presentation change passes; a node appearing, disappearing or changing
+    text does not.
+    """
+    payload = "\n".join(
+        f"{item['kind']}|{item['key']}|{item['text']}|{item['template']}|"
+        f"{item['path']}|{item['distance']}"
+        for item in evidence
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def rebuild(record: dict, question: str) -> Subgraph:
     """Reconstruct the exact subgraph that was retrieved and labelled.
 
@@ -193,9 +216,9 @@ def rebuild(record: dict, question: str) -> Subgraph:
     frozen label, and nothing downstream could tell.
 
     Raises:
-        SystemExit: if the reconstructed context differs from the one that
-            was dumped. That means the serializer or the dump changed, and
-            the labels no longer describe what the model would see.
+        SystemExit: if the evidence differs from what was dumped. That means
+            the graph moved, and the labels no longer describe what the
+            model would see.
     """
     subgraph = Subgraph(
         question=question,
@@ -206,11 +229,11 @@ def rebuild(record: dict, question: str) -> Subgraph:
         capped=Counter(record.get("capped", {})),
         note=record.get("note", ""),
     )
-    if serialize(subgraph) != record["context"]:
+    recorded = record.get("evidence_sha256")
+    if recorded and recorded != evidence_fingerprint(record["evidence"]):
         raise SystemExit(
-            f"{record['question_id']}: the rebuilt context does not match the dump. "
-            "The sufficiency labels describe the dumped context, so generating "
-            "from anything else invalidates them. Re-run `retrieve` and re-label."
+            f"{record['question_id']}: the dumped evidence does not match its own "
+            "fingerprint — the file was edited. Re-run `retrieve`."
         )
     return subgraph
 

@@ -205,6 +205,49 @@ def render_sufficiency(
     return "\n".join(lines)
 
 
+def sufficiency_reopen(args: argparse.Namespace) -> int:
+    """Clear one side's labels after the evidence they described changed.
+
+    A frozen label is meant to be immovable, so reopening needs a reason
+    that is written down rather than implied. The reason here is the only
+    one that qualifies: the subgraphs were re-retrieved after a defect fix,
+    so the labels no longer describe what a reader would see.
+
+    **Only a side whose answers have never been generated may be reopened.**
+    Re-labelling a question whose answer the annotator has already read is
+    not a fresh pass — it is a pass contaminated by exactly what E-007's
+    ordering exists to prevent. The other side's labels are kept and marked
+    stale, because a stale label used for prompt iteration is honest and a
+    silently re-labelled one is not.
+    """
+    meta = load_sufficiency(args.out)
+    dev = set(json.loads(args.split.read_text(encoding="utf-8"))["dev_ids"])
+    reopening = [q for q in meta["labels"] if (q in dev) == (args.side == "dev")]
+
+    kept = meta.get("stale_labels", {})
+    for question_id in meta["labels"]:
+        if question_id in reopening:
+            meta["labels"][question_id]["label"] = ""
+        else:
+            kept[question_id] = meta["labels"][question_id].get("label", "")
+    meta["stale_labels"] = kept
+    meta["frozen"] = False
+    meta.setdefault("history", []).append(
+        {
+            "reopened": args.side,
+            "n": len(reopening),
+            "previous_hash": meta.get("hash", ""),
+            "reason": args.reason,
+        }
+    )
+    meta["hash"] = ""
+    args.out.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Reopened {len(reopening)} {args.side} label(s); {len(kept)} kept and marked stale.")
+    print(f"reason: {args.reason}")
+    print("Label the reopened side against the new subgraphs, then freeze again.")
+    return 0
+
+
 def sufficiency_show(args: argparse.Namespace) -> int:
     """Print subgraphs to judge. Reads only; `set` is what writes."""
     meta = load_sufficiency(args.out)
@@ -500,6 +543,13 @@ def main() -> int:
     setter.add_argument("label", choices=[s.value for s in Sufficiency])
     setter.add_argument("--out", type=Path, default=SUFFICIENCY_PATH)
     setter.set_defaults(func=sufficiency_set)
+
+    reopen = suff_sub.add_parser("reopen", help="clear one side's labels after a re-retrieval")
+    reopen.add_argument("--side", choices=("dev", "audit"), required=True)
+    reopen.add_argument("--reason", required=True, help="why the evidence changed")
+    reopen.add_argument("--out", type=Path, default=SUFFICIENCY_PATH)
+    reopen.add_argument("--split", type=Path, default=SPLIT_PATH)
+    reopen.set_defaults(func=sufficiency_reopen)
 
     status = suff_sub.add_parser("status", help="mix so far, and the contingency check")
     status.add_argument("--out", type=Path, default=SUFFICIENCY_PATH)
