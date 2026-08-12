@@ -415,3 +415,34 @@ class TestShuffledCitationControl:
                     force=False,
                 )
             )
+
+
+class TestWhatCountsAsUnfinished:
+    """`--next` once stopped at the labels and called the pass complete.
+
+    A factual cited row with no support judgement is labelled and still
+    owes the judgement the support metric is built from, so a selector
+    that only looks at `label` reports a finished pass that is not one.
+    """
+
+    def rows(self) -> list:
+        return [
+            audit_answers.ClaimRow("rg-1", 0, "A.", cited=True, label=audit_answers.Label.FACTUAL),
+            audit_answers.ClaimRow("rg-1", 1, "B.", cited=False, label=audit_answers.Label.FACTUAL),
+        ]
+
+    def test_a_cited_factual_row_without_support_is_still_owed(self) -> None:
+        rows = self.rows()
+        owed = [
+            r for r in rows
+            if r.label is audit_answers.Label.FACTUAL
+            and r.cited
+            and r.support is audit_answers.Support.NOT_APPLICABLE
+        ]
+        assert [r.index for r in owed] == [0]
+
+    def test_an_uncited_factual_row_owes_nothing(self) -> None:
+        """It is a coverage miss, counted on its own; there is nothing to read."""
+        rows = self.rows()
+        assert rows[1].support is audit_answers.Support.NOT_APPLICABLE
+        assert not rows[1].cited

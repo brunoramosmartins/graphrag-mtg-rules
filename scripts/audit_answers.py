@@ -602,9 +602,20 @@ def claims_show(args: argparse.Namespace) -> int:
     elif args.all:
         chosen = rows
     else:
+        # Two kinds of unfinished row, and the second is invisible if you only
+        # look at `label`: a factual cited row whose support has not been
+        # judged is labelled, and still owes the judgement the metric needs.
         chosen = [row for row in rows if row.label is Label.UNLABELLED]
         if not chosen:
-            print("Every claim is labelled. Next: `audit_answers.py report`.")
+            chosen = [
+                row for row in rows
+                if row.label is Label.FACTUAL
+                and row.cited
+                and row.support is Support.NOT_APPLICABLE
+            ]
+        if not chosen:
+            print("Every claim is labelled and every cited one judged.")
+            print("Next: `audit_answers.py control build --seed <n> --per-answer 2`.")
             return 0
         chosen = chosen[: args.count]
 
