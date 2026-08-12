@@ -90,6 +90,37 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — Coverage voided by one row, and the row was not reclassified
+
+The audit's 411 claim rows came back **83 `non_factual`, 328 `factual`**.
+`83/411 = 0.2019` against a void at `0.20`, and `0.20 × 411 = 82.2` — the
+figure is void by **eight tenths of one row**.
+
+One reclassification clears it. That is the entire reason none was made.
+The threshold was written before any answer existed precisely for the case
+where honouring it costs something, and a rule honoured only at
+comfortable margins is not a rule. The entry written two days into this
+labelling pass — while the outcome was still open — said the annotator was
+told the running rate and told not to let it move a label. That held.
+
+**The diagnosis, offered as a diagnosis:** 47 of the 83 exclusions are
+bare list markers produced by the registered segmenter; genuine exclusions
+are 36, or 8.8% of rows. Without the artefact the rate would be nowhere
+near the void. This is what the rule says it detects — coverage measuring
+the segmentation rather than the answers — so the rule identified its own
+target. It is not converted into a corrected coverage figure, because a
+denominator recomputed after seeing the verdict is the thing being guarded
+against, whatever justification is attached.
+
+**What Phase 5 can and cannot say.** Coverage is unreadable this run, so
+the DoD's first clause has no reading; the second clause is still read
+against the shuffled-citation control, and the over-refusal gate is
+unaffected — it rests on the frozen sufficiency labels and no claim label
+touches it. E-007d is the registered path to a readable coverage number,
+and it was registered mid-labelling, before this outcome existed, with its
+reading pre-committed and an explicit statement that its number does not
+retroactively become E-007's.
+
 ## 2026-08-10 — The exclusion rate may void coverage, and the segmenter is not being touched
 
 Recorded **mid-labelling, before the outcome is known**, which is the only

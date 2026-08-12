@@ -308,3 +308,30 @@ annotator was given the number together with the instruction that it must
 not move a single label. E-007d is registered for the successor question —
 whether a list-aware claim unit measures the same thing — and explicitly
 does not become E-007's result.
+
+### 2026-08-10 — audit claim labels complete: coverage is VOID by one row
+
+    411 rows   328 factual   83 non_factual
+    exclusions 83/411 = 0.2019   void above 0.20   (0.20 x 411 = 82.2)
+
+    of the 83 exclusions:
+      bare list markers   47   (11.4% of all rows)
+      genuine             36   ( 8.8% of all rows)
+
+The registered rule voids the coverage figure and it is applied as
+written. **One reclassification would clear it**, which is precisely why
+none is made: a denominator that moves when the result is inconvenient is
+what this threshold exists to prevent, and a rule is not worth less
+because the margin is thin.
+
+The diagnosis is unambiguous and is reported as a diagnosis, never as a
+repaired figure: without the segmenter's list-marker rows the exclusion
+rate would be 8.8%. That is what the void rule says it detects — the
+metric measuring the segmentation rather than the answers. E-007d, which
+asks whether a list-aware claim unit measures the same thing, was
+registered **before this number existed**, with its reading committed in
+advance.
+
+Coverage itself has not been read yet: eight support judgements remain and
+there is no reason to look at a figure before the pass that feeds it is
+closed.
