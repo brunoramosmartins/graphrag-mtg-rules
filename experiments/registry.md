@@ -812,6 +812,32 @@ judge who accepts any plausible-looking citation, and does not rule out a
 judge who remembers giving this sentence a different verdict earlier. A
 second annotator would fix it and this project has one.
 
+### E-007d — does the claim unit survive a list? (registered 2026-08-10, not yet run)
+
+- **Registered mid-labelling of E-007's audit side, before its exclusion
+  rate is final**, and prompted by a row count rather than by a result: 49
+  of 411 worksheet rows are a bare list marker (`2.`), because the
+  registered segmenter splits on punctuation + whitespace + a sentence
+  opener and a numbered list matches that. It changes nothing about E-007,
+  whose worksheet stays frozen and whose void rule stands as written.
+- **Objective:** whether a claim unit aware of list structure measures the
+  same thing as the sentence unit. Two failure modes are in play and pull
+  opposite ways: bare markers inflate the exclusion rate toward the void,
+  and a citation at the end of a bullet spanning four sentences reads as
+  three uncited claims plus one cited.
+- **Design:** re-segment E-007's audit answers under a unit that treats a
+  list item as one claim, label from scratch under the same guide, and
+  report coverage under **both** units side by side. The frozen E-007
+  worksheet is the comparison, not the thing corrected.
+- **Pre-committed reading:** if the two coverage figures agree within their
+  intervals, the sentence unit was sound and the artefact was cosmetic. If
+  they disagree, E-007's coverage is reported as unit-dependent and the
+  successor's number does **not** retroactively become E-007's result.
+- **Threat, stated now:** the answers are already read, so this is not a
+  blind pass and cannot be one. It is a measurement of the instrument, not
+  of the system, and the write-up says so.
+- **Actual result:** _(to be filled after the run)_
+
 ### E-007c — is `partial` a judgement or a shrug? (registered 2026-08-10, not yet run)
 
 - **Registered before the first generation**, and before any disagreement is

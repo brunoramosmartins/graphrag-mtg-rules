@@ -295,3 +295,16 @@ pair still does — the bootstrap resamples questions, so the interval lives
 on the cluster count. The deviation is conservative: a smaller sample
 widens both arms, and the clause needs the real arm's lower bound to clear
 the control's upper bound.
+
+### 2026-08-10 — mid-labelling: the exclusion rate may void coverage
+
+    bare list-marker rows   49 of 411 (11.9%), across 12 answers
+    labelled                210 rows — 150 factual, 60 non_factual
+    exclusions              38 artefact + 22 genuine = 0.286, void at 0.20
+
+Written down before the pass is finished and before the outcome is known.
+The segmenter is registered and frozen and is not being changed; the
+annotator was given the number together with the instruction that it must
+not move a single label. E-007d is registered for the successor question —
+whether a list-aware claim unit measures the same thing — and explicitly
+does not become E-007's result.

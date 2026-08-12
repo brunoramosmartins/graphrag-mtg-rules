@@ -90,6 +90,39 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — The exclusion rate may void coverage, and the segmenter is not being touched
+
+Recorded **mid-labelling, before the outcome is known**, which is the only
+time this entry is worth anything.
+
+Numbered-list answers produce worksheet rows that are a bare list marker —
+`2.` and nothing else. The registered segmenter splits on punctuation +
+whitespace + a sentence opener, and `2. Merieke activates…` matches that
+as exactly as `Ends here. Next one` does. It is the instrument behaving as
+registered, not a defect discovered late.
+
+    bare list-marker rows          49 of 411 (11.9%), 12 answers, up to 6 in one
+    labelled so far                210 rows: 150 factual, 60 non_factual
+    of those exclusions            38 are bare markers, 22 are genuine (10.5%)
+    exclusion rate so far          0.286, against a void at 0.20
+
+Where it lands is open — 11 markers remain among 201 unlabelled rows, so
+the floor is 0.173 and the realistic projection is near 0.22.
+
+**No repair.** Re-segmenting now would rebuild the worksheet after seeing
+that its exclusion rate is uncomfortable, which is the move the frozen
+hash exists to make visible. The annotator was told the number and told
+plainly not to let it move a label: a bare `2.` is `non_factual` under the
+guide's closed list, and it stays that way whether or not the consequence
+is a void figure.
+
+If the rate clears 0.20, Phase 5 reports **coverage void** and reports why:
+a decomposition into artefact exclusions and genuine ones, offered as a
+diagnosis and never as a repaired coverage figure. The void rule says the
+metric would be measuring the segmentation rather than the answers, and
+that is precisely what 38 bare markers in 60 exclusions would mean. The
+rule firing correctly is not the rule failing.
+
 ## 2026-08-10 — Development-side peek: coverage 0.361, and no decision is taken here
 
 118 claim rows labelled on the 10 development answers under `p5-a3`.
