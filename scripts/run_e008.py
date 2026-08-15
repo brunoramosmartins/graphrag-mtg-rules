@@ -469,6 +469,18 @@ def generate(args: argparse.Namespace) -> int:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def coding_path(args: argparse.Namespace) -> Path:
+    """One coding file per answers file, derived rather than shared.
+
+    A single default path is what let the audit answers overwrite the
+    development ones earlier in this phase; the same shape here would let
+    the development codes and the held-out codes land on each other.
+    """
+    if args.coding:
+        return args.coding
+    return CODING_PATH.with_name(args.answers.stem.replace("answers", "coding") + ".jsonl")
+
+
 def load_coding(path: Path, answers: Path, fixture: dict) -> list[dict]:
     """Coding rows, created from the answers on first use."""
     if path.exists():
@@ -509,8 +521,9 @@ def write_coding(path: Path, rows: list[dict]) -> None:
 def code(args: argparse.Namespace) -> int:
     """Print one probe with its answer and its pre-written discriminator."""
     fixture = load_fixture(args.fixture)
-    rows = load_coding(args.coding, args.answers, fixture)
-    write_coding(args.coding, rows)
+    path = coding_path(args)
+    rows = load_coding(path, args.answers, fixture)
+    write_coding(path, rows)
 
     pending = [r for r in rows if not r["outcome"]]
     chosen = [r for r in rows if r["probe_id"] == args.id] if args.id else pending[: args.count]
@@ -538,21 +551,34 @@ def code(args: argparse.Namespace) -> int:
         print(CODING_CRIB)
         print(f"\n  coded: {row['outcome'] or '—'}")
         print(f"  -> python scripts/run_e008.py set {row['probe_id']} <{'|'.join(OUTCOMES)}>")
+        print("     (the split comes from the probe id; no path flags needed)")
     print(RULE)
     return 0
 
 
 def set_outcome(args: argparse.Namespace) -> int:
-    """Record one probe's outcome."""
+    """Record one probe's outcome.
+
+    The split comes from the probe id rather than from a flag the caller
+    has to remember: `code` shows a development probe and `set` defaulting
+    to the held-out files then reports that no answers exist, which says
+    nothing about what actually went wrong.
+    """
     fixture = load_fixture(args.fixture)
-    rows = load_coding(args.coding, args.answers, fixture)
+    known = {p["id"]: p for p in fixture["probes"]}
+    if args.probe_id not in known:
+        raise SystemExit(f"No probe {args.probe_id} in {args.fixture}.")
+    split = known[args.probe_id]["split"]
+    answers = args.answers or ANSWERS_PATH.with_name(f"e008_answers_{split}.jsonl")
+    path = args.coding or CODING_PATH.with_name(f"e008_coding_{split}.jsonl")
+    rows = load_coding(path, answers, fixture)
     matches = [r for r in rows if r["probe_id"] == args.probe_id]
     if not matches:
-        raise SystemExit(f"No probe {args.probe_id} in {args.coding}.")
+        raise SystemExit(f"No probe {args.probe_id} in {path}.")
     matches[0]["outcome"] = args.outcome
     if args.comment:
         matches[0]["comment"] = args.comment
-    write_coding(args.coding, rows)
+    write_coding(path, rows)
     done = sum(1 for r in rows if r["outcome"])
     print(f"{args.probe_id}: {args.outcome}   [{done}/{len(rows)} coded]")
     return 0
@@ -633,7 +659,7 @@ def main() -> int:
     coder = sub.add_parser("code", help="one probe, its answer, and the discriminator")
     coder.add_argument("--fixture", type=Path, default=FIXTURE_PATH)
     coder.add_argument("--answers", type=Path, default=ANSWERS_PATH.with_name("e008_answers_held_out.jsonl"))
-    coder.add_argument("--coding", type=Path, default=CODING_PATH)
+    coder.add_argument("--coding", type=Path, default=None)
     coder.add_argument("--id")
     coder.add_argument("--next", action="store_true")
     coder.add_argument("--count", type=int, default=1)
@@ -644,12 +670,12 @@ def main() -> int:
     setter.add_argument("outcome", choices=OUTCOMES)
     setter.add_argument("--comment", default="")
     setter.add_argument("--fixture", type=Path, default=FIXTURE_PATH)
-    setter.add_argument("--answers", type=Path, default=ANSWERS_PATH.with_name("e008_answers_held_out.jsonl"))
-    setter.add_argument("--coding", type=Path, default=CODING_PATH)
+    setter.add_argument("--answers", type=Path, default=None)
+    setter.add_argument("--coding", type=Path, default=None)
     setter.set_defaults(func=set_outcome)
 
     rep = sub.add_parser("report", help="apply the registered decision rule")
-    rep.add_argument("--coding", type=Path, default=CODING_PATH)
+    rep.add_argument("--coding", type=Path, default=CODING_PATH.with_name("e008_coding_held_out.jsonl"))
     rep.set_defaults(func=report)
 
     down = sub.add_parser("teardown", help="delete every fixture node and prove it")
