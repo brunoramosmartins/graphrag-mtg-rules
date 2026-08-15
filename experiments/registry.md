@@ -1013,7 +1013,66 @@ iteration budget and no held-out split on the sample that produces the
 verdict; the roadmap DoD's second clause quoted away; and no ceiling on a
 brand-new hand-made gold.
 
-- **Actual result:** _(to be filled after the run)_
+- **Actual result (2026-08-10, 32 audit questions, `p5-a3`, one run):**
+
+      worksheet    3cdfdf85fb21      sufficiency  534547ed8454
+      coverage     0.369 = 121/328 factual claims, 32 answering / 32 answers
+      exclusions   83/411 = 0.2019   VOID above 0.20
+      support      0.488 [0.400, 0.583]  31 clusters, 121 cited claims
+      control      real 0.565 [0.435, 0.694]   shuffled 0.161 [0.065, 0.274]
+      refusals     over-refusal 0 | unsupported answering 8 | correct refusal 1
+                   partial: 3 refused / 16 answered
+
+  **The DoD is not met, blocked on its first clause.** Coverage is 0.369
+  against a threshold of 1.0, and the iteration budget of three rounds is
+  spent, which is exactly the branch registered for this case: the audit
+  runs anyway and the DoD is reported not met with the measured figure.
+
+  **The coverage figure is also void, and the two facts are independent.**
+  Exclusions came in at 0.2019 against a void at 0.20 — over by eight
+  tenths of a row, and no row was reclassified to clear it. But the void
+  does not rescue or worsen the verdict: excluded rows were never in the
+  denominator, so a perfect segmenter leaves coverage at 121/328 and
+  nowhere near 1.0. What the void costs is the right to publish 0.369 as a
+  measurement *of the answers*; 47 of the 83 exclusions are bare list
+  markers, and genuine exclusions are 36, or 8.8% of rows.
+
+  **The second clause is met, under both readings of "support's interval".**
+  The registered sentence does not say whether the comparison uses the full
+  support interval or the control's own real arm, and they agree: full
+  support's lower bound is 0.400 and the control arm's is 0.435, both above
+  the shuffled arm's upper bound of 0.274. The citations that exist do
+  support their sentences at a rate the permuted control does not reach.
+
+  **Over-refusal is zero and the gate is clear.** All 4 `sufficient`
+  subgraphs were answered. By rule of three over 4 clusters the over-refusal
+  rate is bounded at 0.75, which is what the thin-sample limitation
+  registered before generation said it would be.
+
+  **Unsupported answering is 8 of 9, and it is the finding that matters
+  most.** Only one `insufficient` subgraph produced a refusal; the other
+  eight were answered. It carries no DoD threshold by design — the
+  registered rule puts the threshold only on over-refusal — but a system
+  that answers 89% of the questions whose evidence its own annotator
+  judged absent is the parametric-leak surface, and E-008 now has a
+  concrete rate to test against rather than a hypothesis.
+
+  **Predictions, scored:**
+
+  | prediction | outcome |
+  |---|---|
+  | coverage below 1.0 | **confirmed** — 0.369 |
+  | …failing on connective sentences | **partly** — 91 of 207 uncited factual claims (44%) open with a connective or conditional; the rest are mostly list-item lead sentences |
+  | commonest support failure is `wrong_leaf` | **wrong** — 0 of 62 unsupported rows. `claim_not_in_evidence` 45, `right_evidence_wrong_reading` 9, `evidence_absent` 4, `unrelated_evidence` 4 |
+  | refusal dominates on `partial` | **wrong** — 16 answered against 3 refused |
+  | over-refusal on `sufficient` is zero | **confirmed** — 0 of 4 |
+
+  Two of five predictions were wrong and one only partly right. The
+  `wrong_leaf` prediction was transferred from E-003a's finding about this
+  annotator's own disagreements, and it did not transfer: the model does not
+  pick a neighbouring subrule, it cites a real and topically plausible item
+  that does not contain the sentence. That is a different failure with a
+  different fix, and E-003a's number said nothing about it.
 
 ## E-008 — does the model answer from the graph or from what it already knows?
 

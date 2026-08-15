@@ -90,6 +90,44 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — E-007 read: the DoD fails on coverage, and the real problem is elsewhere
+
+The decision rule was applied as written; nothing was invented at reading
+time.
+
+**Clause 1 not met.** Coverage 0.369 = 121/328 against a threshold of 1.0,
+with the three-round iteration budget spent. The registered branch for
+that case says the audit runs anyway and the DoD is reported not met with
+the measured figure, so that is what Phase 5 reports.
+
+**Clause 2 met.** Support 0.488 [0.400, 0.583] against a shuffled-citation
+control at 0.161 [0.065, 0.274]. The registered sentence is ambiguous
+about which interval it means — the full support figure or the control's
+own real arm — and it does not matter: 0.400 and 0.435 both clear 0.274.
+Recorded rather than quietly resolved, because the next experiment should
+fix the wording.
+
+**Over-refusal zero, gate clear**, on 4 `sufficient` subgraphs, bounded at
+0.75 by rule of three exactly as the thin-sample limitation predicted
+before generation.
+
+**The finding that matters is not in the DoD.** 8 of 9 `insufficient`
+subgraphs were answered rather than refused. The registered rule puts a
+threshold only on over-refusal, deliberately, so nothing here fails — and
+a system answering 89% of the questions whose evidence its own annotator
+judged absent is the parametric-leak surface E-008 exists to test. E-008
+now has a rate to test against instead of a hypothesis.
+
+**Two of five predictions were wrong.** `wrong_leaf` was predicted to be
+the commonest support failure and came in at **zero of 62**;
+`claim_not_in_evidence` is 45. That prediction was transferred from
+E-003a's measurement of this annotator disagreeing with themself, and the
+transfer failed: the model does not pick a neighbouring subrule, it cites
+a real and topically plausible item that does not contain the sentence.
+Concepts transfer, constants do not — and apparently error *shapes* do not
+either. Refusal was also predicted to dominate on `partial` and did not:
+16 answered against 3 refused.
+
 ## 2026-08-10 — Coverage voided by one row, and the row was not reclassified
 
 The audit's 411 claim rows came back **83 `non_factual`, 328 `factual`**.

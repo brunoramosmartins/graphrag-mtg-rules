@@ -335,3 +335,38 @@ advance.
 Coverage itself has not been read yet: eight support judgements remain and
 there is no reason to look at a figure before the pass that feeds it is
 closed.
+
+### 2026-08-10 — shuffled-citation control built
+
+    seed        20260810
+    cap         --per-answer 2
+    slots       124 = 62 real + 62 shuffled
+    clusters    31 of 31 answers holding cited claims — every one represented
+    left out    59 cited claims, by the cap
+
+Judged blind by slot, arm withheld, per-arm counts withheld until the last
+slot. The real arm's support distribution exists in the worksheet and is
+deliberately not being read or reported before the control pass closes:
+an annotator who knows the real rate can aim the control at it, which is
+the same reason `compare` refuses while any slot is open.
+
+### 2026-08-10 — E-007 audit result
+
+    coverage   0.369 = 121/328   exclusions 83/411 = 0.2019 VOID
+    support    0.488 [0.400, 0.583]   31 clusters, 121 cited claims
+    control    real 0.565 [0.435, 0.694]   shuffled 0.161 [0.065, 0.274]
+    failures   claim_not_in_evidence 45, right_evidence_wrong_reading 9,
+               evidence_absent 4, unrelated_evidence 4, wrong_leaf 0
+    refusals   over-refusal 0 | unsupported answering 8 | correct refusal 1
+               partial: 3 refused / 16 answered
+
+DoD **not met on clause 1** (coverage 0.369 against 1.0, budget spent),
+**met on clause 2** (real lower bound 0.400 or 0.435 depending on which
+interval the registered sentence means, both above the control's 0.274),
+over-refusal gate clear at zero.
+
+The headline risk is not in the DoD at all: **8 of 9 `insufficient`
+subgraphs were answered rather than refused.** No threshold covers it by
+design, and it is exactly the surface E-008 tests.
+
+Full verdict and scored predictions in the registry entry.
