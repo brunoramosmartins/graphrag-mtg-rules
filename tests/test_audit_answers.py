@@ -504,3 +504,41 @@ class TestBlindReaudit:
         printed = capsys.readouterr().out
         assert "exact agreement 1/2" in printed
         assert "rg-2: insufficient -> partial" in printed
+
+    def test_the_claim_pass_is_rebuilt_blank_and_verified(self, tmp_path: Path) -> None:
+        """Regenerating the segmentation is also a check that it reproduces."""
+        sufficiency = self.frozen(tmp_path)
+        answers = answers_run(tmp_path)
+        source = tmp_path / "claims.jsonl"
+        audit_answers.segment(
+            argparse.Namespace(answers=answers, out=source, sufficiency=sufficiency, force=False)
+        )
+        out = tmp_path / "claims_m2.jsonl"
+        audit_answers.reaudit_claims(
+            argparse.Namespace(
+                source=source, answers=answers, sufficiency=sufficiency,
+                out=out, n=2, seed=3, force=False,
+            )
+        )
+        rows = audit_answers.load_rows(out)
+        assert rows and all(r.label is audit_answers.Label.UNLABELLED for r in rows)
+        assert all(r.support is audit_answers.Support.NOT_APPLICABLE for r in rows)
+
+    def test_a_worksheet_that_no_longer_reproduces_is_refused(self, tmp_path: Path) -> None:
+        """An agreement number over rows that moved compares different sentences."""
+        sufficiency = self.frozen(tmp_path)
+        answers = answers_run(tmp_path)
+        source = tmp_path / "claims.jsonl"
+        audit_answers.segment(
+            argparse.Namespace(answers=answers, out=source, sufficiency=sufficiency, force=False)
+        )
+        rows = audit_answers.load_rows(source)
+        rows[0].sentence = "Something else entirely."
+        audit_answers.write_rows(source, rows)
+        with pytest.raises(SystemExit, match="segment differently"):
+            audit_answers.reaudit_claims(
+                argparse.Namespace(
+                    source=source, answers=answers, sufficiency=sufficiency,
+                    out=tmp_path / "m2.jsonl", n=2, seed=3, force=False,
+                )
+            )

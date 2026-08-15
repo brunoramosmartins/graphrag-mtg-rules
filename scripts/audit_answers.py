@@ -1074,6 +1074,82 @@ def reaudit_sufficiency(args: argparse.Namespace) -> int:
     return 0
 
 
+def reaudit_claims(args: argparse.Namespace) -> int:
+    """A blank second claim pass over a sample of answers.
+
+    The segmentation is **regenerated** from the citation-stripped text
+    rather than copied, which is both what the guide specifies and a check
+    in itself: if the same answers segment differently, the worksheet the
+    first pass was frozen against was not reproducible.
+    """
+    require_frozen(args.sufficiency)
+    if args.out.exists() and not args.force:
+        raise SystemExit(f"{args.out} already exists — refusing to overwrite a pass in progress.")
+    first = load_rows(args.source)
+    answers = answers_index(args.answers)
+
+    rng = random.Random(args.seed)
+    questions = sorted({row.question_id for row in first})
+    chosen = set(rng.sample(questions, min(args.n, len(questions))))
+
+    rebuilt: list[ClaimRow] = []
+    for question_id in sorted(chosen):
+        for i, (sentence, cited) in enumerate(segment_answer(answers[question_id]["text"])):
+            rebuilt.append(ClaimRow(question_id=question_id, index=i, sentence=sentence, cited=cited))
+
+    original = {(r.question_id, r.index): r for r in first if r.question_id in chosen}
+    drifted = [
+        f"{row.question_id}[{row.index}]"
+        for row in rebuilt
+        if (row.question_id, row.index) not in original
+        or original[(row.question_id, row.index)].sentence != row.sentence
+    ]
+    if drifted:
+        raise SystemExit(
+            f"{len(drifted)} row(s) segment differently than the frozen worksheet: "
+            f"{', '.join(drifted[:5])}. The first pass is not reproducible, which has to be "
+            "understood before an agreement number means anything."
+        )
+
+    write_rows(args.out, rebuilt)
+    print(f"Wrote {len(rebuilt)} blank row(s) over {len(chosen)} answer(s) -> {args.out}")
+    print(f"seed {args.seed}   source hash {worksheet_hash(first)[:12]}")
+    print("Segmentation reproduced the frozen worksheet exactly.")
+    print(f"Label them with:  claims show --worksheet {args.out} --next")
+    print("Do not open the first pass until every row here is judged.")
+    return 0
+
+
+def reaudit_claims_score(args: argparse.Namespace) -> int:
+    """Exact agreement on the claim labels, and on support where both judged."""
+    second = load_rows(args.out)
+    pending = [r for r in second if r.label is Label.UNLABELLED]
+    if pending:
+        raise SystemExit(f"{len(pending)} row(s) still unlabelled.")
+    first = {(r.question_id, r.index): r for r in load_rows(args.source)}
+
+    label_hits = [first[(r.question_id, r.index)].label is r.label for r in second]
+    both_support = [
+        (first[(r.question_id, r.index)], r)
+        for r in second
+        if r.support is not Support.NOT_APPLICABLE
+        and first[(r.question_id, r.index)].support is not Support.NOT_APPLICABLE
+    ]
+    labels = cluster_proportion_ci([[hit] for hit in label_hits])
+    print(f"label agreement   {sum(label_hits)}/{len(label_hits)} = {labels.point:.3f} "
+          f"[{labels.low:.3f}, {labels.high:.3f}]")
+    if both_support:
+        hits = [a.support is b.support for a, b in both_support]
+        support = cluster_proportion_ci([[hit] for hit in hits])
+        print(f"support agreement {sum(hits)}/{len(hits)} = {support.point:.3f} "
+              f"[{support.low:.3f}, {support.high:.3f}]")
+    else:
+        print("support agreement: no row was judged for support in both passes.")
+    print("\nThe ceiling coverage and support are read against — E-003a put this")
+    print("annotator at 0.815, so a figure reported against 1.0 is reported against nothing.")
+    return 0
+
+
 def reaudit_score(args: argparse.Namespace) -> int:
     """Exact agreement between the two passes, with an interval."""
     second = load_sufficiency(args.out)
@@ -1308,6 +1384,21 @@ def main() -> int:
     re_score = re_sub.add_parser("score", help="exact agreement between the two passes")
     re_score.add_argument("--out", type=Path, default=Path("data/golden/e007_sufficiency_m2.json"))
     re_score.set_defaults(func=reaudit_score)
+
+    re_claims = re_sub.add_parser("claims-build", help="blank claim worksheet over sampled answers")
+    re_claims.add_argument("--source", type=Path, default=WORKSHEET_PATH)
+    re_claims.add_argument("--answers", type=Path, default=ANSWERS_PATH)
+    re_claims.add_argument("--sufficiency", type=Path, default=SUFFICIENCY_PATH)
+    re_claims.add_argument("--out", type=Path, default=Path("data/golden/e007_claims_m2.jsonl"))
+    re_claims.add_argument("--n", type=int, default=8)
+    re_claims.add_argument("--seed", type=int, required=True)
+    re_claims.add_argument("--force", action="store_true")
+    re_claims.set_defaults(func=reaudit_claims)
+
+    re_cscore = re_sub.add_parser("claims-score", help="agreement on labels and support")
+    re_cscore.add_argument("--source", type=Path, default=WORKSHEET_PATH)
+    re_cscore.add_argument("--out", type=Path, default=Path("data/golden/e007_claims_m2.jsonl"))
+    re_cscore.set_defaults(func=reaudit_claims_score)
 
     rep = sub.add_parser("report", help="coverage, support and refusals")
     rep.add_argument("--worksheet", type=Path, default=WORKSHEET_PATH)
