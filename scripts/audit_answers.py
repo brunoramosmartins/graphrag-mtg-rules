@@ -1037,6 +1037,77 @@ def control_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Blind re-audit (M2) — the ceiling every hand-made label is reported against
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def reaudit_sufficiency(args: argparse.Namespace) -> int:
+    """A blank second pass over a sample of subgraphs, originals hidden.
+
+    E-003a measured this annotator at 0.815 against themself. A label with
+    no ceiling is reported against a 1.0 that does not exist, so E-007c
+    re-labels a sample and scores exact agreement. The originals are not
+    copied into the new file — a worksheet that carries the answer is not a
+    blind pass.
+    """
+    original = require_frozen(args.source)
+    if args.out.exists() and not args.force:
+        raise SystemExit(f"{args.out} already exists — refusing to overwrite a pass in progress.")
+
+    rng = random.Random(args.seed)
+    chosen = sorted(rng.sample(sorted(original["labels"]), args.n))
+    payload = {
+        "frozen": False,
+        "pass": "m2",
+        "source": str(args.source),
+        "source_hash": original.get("hash", ""),
+        "seed": args.seed,
+        "labels": {question: {"label": ""} for question in chosen},
+    }
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Wrote {len(chosen)} blank row(s) -> {args.out}   seed {args.seed}")
+    print(f"source hash {original.get('hash', '')[:12]} — recorded, not copied.")
+    print(f"Label them with:  sufficiency show --out {args.out} --next")
+    print("Do not open the original file until every row here is labelled.")
+    return 0
+
+
+def reaudit_score(args: argparse.Namespace) -> int:
+    """Exact agreement between the two passes, with an interval."""
+    second = load_sufficiency(args.out)
+    pending = [q for q, row in second["labels"].items() if not (row.get("label") or "").strip()]
+    if pending:
+        raise SystemExit(
+            f"{len(pending)} row(s) still unlabelled. Scoring now would let the rest be "
+            "labelled against a visible agreement rate."
+        )
+    first = load_sufficiency(Path(second["source"]))
+    if second.get("source_hash") and second["source_hash"] != first.get("hash"):
+        raise SystemExit(
+            "The source file's hash has changed since this pass was built. The first pass "
+            "moved, so an agreement number would compare against something that no longer "
+            "exists."
+        )
+
+    pairs = [
+        (first["labels"][q]["label"], second["labels"][q]["label"]) for q in second["labels"]
+    ]
+    agreed = [a == b for a, b in pairs]
+    interval = cluster_proportion_ci([[hit] for hit in agreed])
+    print(f"exact agreement {sum(agreed)}/{len(agreed)} = {interval.point:.3f} "
+          f"[{interval.low:.3f}, {interval.high:.3f}]")
+    disagreements = [(q, a, b) for (q, (a, b)) in zip(second["labels"], pairs, strict=True) if a != b]
+    if disagreements:
+        print("\ndisagreements (pass 1 -> pass 2):")
+        for question, before, after in disagreements:
+            print(f"  {question}: {before} -> {after}")
+    print("\nThis is the ceiling the sufficiency-dependent figures are read against,")
+    print("not a score for the system. E-003a put this annotator at 0.815.")
+    return 0
+
+
 def report(args: argparse.Namespace) -> int:
     meta = require_frozen(args.sufficiency)
     rows = load_rows(args.worksheet)
@@ -1222,6 +1293,21 @@ def main() -> int:
     ctl_compare = ctl_sub.add_parser("compare", help="apply the registered reading")
     ctl_compare.add_argument("--control", type=Path, default=CONTROL_PATH)
     ctl_compare.set_defaults(func=control_compare)
+
+    re_ = sub.add_parser("reaudit", help="the blind second pass (M2 / E-007c)")
+    re_sub = re_.add_subparsers(dest="stage", required=True)
+
+    re_build = re_sub.add_parser("build", help="blank worksheet over a sample, originals hidden")
+    re_build.add_argument("--source", type=Path, default=SUFFICIENCY_PATH)
+    re_build.add_argument("--out", type=Path, default=Path("data/golden/e007_sufficiency_m2.json"))
+    re_build.add_argument("--n", type=int, default=10)
+    re_build.add_argument("--seed", type=int, required=True)
+    re_build.add_argument("--force", action="store_true")
+    re_build.set_defaults(func=reaudit_sufficiency)
+
+    re_score = re_sub.add_parser("score", help="exact agreement between the two passes")
+    re_score.add_argument("--out", type=Path, default=Path("data/golden/e007_sufficiency_m2.json"))
+    re_score.set_defaults(func=reaudit_score)
 
     rep = sub.add_parser("report", help="coverage, support and refusals")
     rep.add_argument("--worksheet", type=Path, default=WORKSHEET_PATH)

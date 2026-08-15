@@ -118,14 +118,23 @@ def load_pool(pool: Path, split: Path, side: str) -> list[dict]:
     return rows if wanted is None else [row for row in rows if row["id"] in wanted]
 
 
-def build_stack(cr: Path):
-    """Assemble the shipped retrieval stack, exactly as E-006 ran it."""
+def build_stack(cr: Path, *, extra_cards: list[dict] | None = None, extra_keywords=()):
+    """Assemble the shipped retrieval stack, exactly as E-006 ran it.
+
+    Args:
+        cr: The Comprehensive Rules text to parse.
+        extra_cards: Cards to add to the lexicon beyond the Scryfall bulk.
+            E-008 loads fictional cards into the graph, and a linker that
+            cannot resolve them would score a retrieval miss as a leak.
+        extra_keywords: Keyword display names likewise absent from the CR.
+    """
     doc = parse_cr(cr)
-    cards = list(iter_bulk(bulk_path(ORACLE_CARDS_STEM)))
+    cards = list(iter_bulk(bulk_path(ORACLE_CARDS_STEM))) + list(extra_cards or [])
     lexicon = build_card_lexicon(cards)
     keywords_by_oracle = {c["oracle_id"]: c.get("keywords", []) for c in cards}
     oracle_text = {c["oracle_id"]: c.get("oracle_text", "") for c in cards}
     keyword_names = {row["display_name"] for row in keyword_definition_rows(doc)}
+    keyword_names |= set(extra_keywords)
     with driver_session() as probe:
         formats = [r["name"] for r in probe.run("MATCH (f:Format) RETURN f.name AS name")]
     linker = QueryLinker(lexicon, keyword_names, keywords_by_oracle, formats=formats)
@@ -238,6 +247,17 @@ def rebuild(record: dict, question: str) -> Subgraph:
     return subgraph
 
 
+def answers_path(args: argparse.Namespace) -> Path:
+    """Where this side's answers go — one file per side, never a shared one.
+
+    A single default path let the audit run overwrite the development run,
+    and `runs/` is gitignored, so those answers were not recoverable. The
+    claim worksheet derived from them survives and the numbers were in the
+    run log, but the text a label described did not.
+    """
+    return args.out or ANSWERS_PATH.with_name(f"e007_answers_{args.side}.jsonl")
+
+
 def run_generation(args: argparse.Namespace) -> int:
     """Generate answers for retrieved questions, after the labels are frozen."""
     meta = json.loads(args.sufficiency.read_text(encoding="utf-8")) if args.sufficiency.exists() else {}
@@ -246,6 +266,14 @@ def run_generation(args: argparse.Namespace) -> int:
             f"{args.sufficiency} is not frozen. Label every subgraph and run "
             "`audit_answers.py sufficiency freeze` first — generating before that "
             "voids the run, and nothing downstream can detect it afterwards."
+        )
+
+    out = answers_path(args)
+    if out.exists() and not args.force and not args.dry_run:
+        raise SystemExit(
+            f"{out} already exists. Generated answers are the only copy of what a claim "
+            "label describes, and `runs/` is gitignored — pass --force only if you mean "
+            "to destroy them."
         )
 
     records = [
@@ -279,8 +307,8 @@ def run_generation(args: argparse.Namespace) -> int:
         print("\nDry run: nothing was sent.")
         return 0
 
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    with args.out.open("w", encoding="utf-8") as handle:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", encoding="utf-8") as handle:
         for record, question in prepared:
             subgraph = rebuild(record, question)
             # A failed or empty subgraph never reaches the model — answer()
@@ -308,8 +336,8 @@ def run_generation(args: argparse.Namespace) -> int:
             )
             print(f"  {record['question_id']}: {'refused' if result.refused else 'answered'}")
 
-    print(f"\nWrote {len(records)} answer(s) -> {args.out}")
-    print(f"Next: python scripts/audit_answers.py segment --answers {args.out}")
+    print(f"\nWrote {len(records)} answer(s) -> {out}")
+    print(f"Next: python scripts/audit_answers.py segment --answers {out}")
     return 0
 
 
@@ -338,7 +366,8 @@ def main() -> int:
     gen = sub.add_parser("generate", parents=[common], help="generate answers (costs tokens)")
     gen.add_argument("--retrieval", type=Path, default=RETRIEVAL_PATH)
     gen.add_argument("--sufficiency", type=Path, default=SUFFICIENCY_PATH)
-    gen.add_argument("--out", type=Path, default=ANSWERS_PATH)
+    gen.add_argument("--out", type=Path, default=None, help="defaults to runs/e007_answers_<side>.jsonl")
+    gen.add_argument("--force", action="store_true", help="overwrite an existing answers file")
     gen.add_argument("--model", default=None, help="defaults to LLM_MODEL in .env")
     gen.add_argument("--limit", type=int, default=0, help="answer at most N questions")
     gen.add_argument("--dry-run", action="store_true", help="print the estimate, send nothing")

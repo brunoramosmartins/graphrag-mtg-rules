@@ -446,3 +446,61 @@ class TestWhatCountsAsUnfinished:
         rows = self.rows()
         assert rows[1].support is audit_answers.Support.NOT_APPLICABLE
         assert not rows[1].cited
+
+
+class TestBlindReaudit:
+    """The second pass is only a ceiling if it cannot see the first."""
+
+    def frozen(self, tmp_path: Path) -> Path:
+        out = init_sufficiency(tmp_path)
+        label(out, {"rg-1": "sufficient", "rg-2": "insufficient"})
+        audit_answers.sufficiency_freeze(argparse.Namespace(out=out))
+        return out
+
+    def build(self, tmp_path: Path, n: int = 2) -> tuple[Path, Path]:
+        source = self.frozen(tmp_path)
+        out = tmp_path / "m2.json"
+        audit_answers.reaudit_sufficiency(
+            argparse.Namespace(source=source, out=out, n=n, seed=1, force=False)
+        )
+        return source, out
+
+    def test_the_new_worksheet_carries_no_original_label(self, tmp_path: Path) -> None:
+        _, out = self.build(tmp_path)
+        meta = json.loads(out.read_text(encoding="utf-8"))
+        assert all(row["label"] == "" for row in meta["labels"].values())
+        assert "sufficient" not in out.read_text(encoding="utf-8")
+
+    def test_it_records_the_source_hash_without_the_answers(self, tmp_path: Path) -> None:
+        source, out = self.build(tmp_path)
+        meta = json.loads(out.read_text(encoding="utf-8"))
+        assert meta["source_hash"] == json.loads(source.read_text(encoding="utf-8"))["hash"]
+
+    def test_scoring_before_the_pass_is_finished_is_refused(self, tmp_path: Path) -> None:
+        _, out = self.build(tmp_path)
+        with pytest.raises(SystemExit, match="still unlabelled"):
+            audit_answers.reaudit_score(argparse.Namespace(out=out))
+
+    def test_a_moved_first_pass_cannot_be_scored_against(self, tmp_path: Path) -> None:
+        """An agreement number against a file that changed compares to nothing."""
+        source, out = self.build(tmp_path)
+        meta = json.loads(out.read_text(encoding="utf-8"))
+        for row in meta["labels"].values():
+            row["label"] = "partial"
+        out.write_text(json.dumps(meta), encoding="utf-8")
+        first = json.loads(source.read_text(encoding="utf-8"))
+        first["hash"] = "0" * 64
+        source.write_text(json.dumps(first), encoding="utf-8")
+        with pytest.raises(SystemExit, match="hash has changed"):
+            audit_answers.reaudit_score(argparse.Namespace(out=out))
+
+    def test_agreement_is_scored_over_the_sample(self, tmp_path: Path, capsys) -> None:
+        _, out = self.build(tmp_path)
+        meta = json.loads(out.read_text(encoding="utf-8"))
+        meta["labels"]["rg-1"]["label"] = "sufficient"
+        meta["labels"]["rg-2"]["label"] = "partial"
+        out.write_text(json.dumps(meta), encoding="utf-8")
+        audit_answers.reaudit_score(argparse.Namespace(out=out))
+        printed = capsys.readouterr().out
+        assert "exact agreement 1/2" in printed
+        assert "rg-2: insufficient -> partial" in printed
