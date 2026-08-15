@@ -892,7 +892,7 @@ second annotator would fix it and this project has one.
   of the system, and the write-up says so.
 - **Actual result:** _(to be filled after the run)_
 
-### E-007c — is `partial` a judgement or a shrug? (registered 2026-08-10, not yet run)
+### E-007c — is `partial` a judgement or a shrug? (registered 2026-08-10, run 2026-08-10)
 
 - **Registered before the first generation**, and before any disagreement is
   inspected. Prompted by the composition above rather than by a result:

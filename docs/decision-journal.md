@@ -90,6 +90,44 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-15 — Phase 5 closes with its DoD failed on two of three items
+
+Closing the phase rather than extending it until the checkboxes tick. The
+audit ran, the rule was applied, and the rule says no on coverage and no on
+honest refusal. Extending the phase to fix the number would be iterating
+against the measurement that judges it — the iteration budget was fixed at
+three rounds precisely so that this moment could not be negotiated.
+
+What closes: `answerer.py`, `citations.py`, the audit harness, E-007,
+E-007c, its M2 ceiling, E-008, and the Phase 5 section of
+[evaluation.md](evaluation.md). Support is met against its control; over-
+refusal is clear at zero.
+
+What does not, and is carried rather than quietly dropped:
+
+- **Citable negative answers, half delivered.** The mechanism exists —
+  `legality` is an evidence kind and the `HAS_LEGALITY` edge renders as a
+  path — but the roadmap's `as_of` does not, because Scryfall's bulk
+  `legalities` is a current-state snapshot with no ban dates. Delivering it
+  needs a B&R announcement source this project does not ingest. Scope not
+  delivered, not a bug. The path also has no end-to-end measurement: every
+  audited question came from RulesGuru, which asks about rules and not
+  formats.
+- **8 of 9 `insufficient` subgraphs answered.** No registered threshold
+  covers it, the sufficiency instrument that produced it is the least
+  reliable one measured (0.800), and both of that instrument's disagreements
+  ran toward *more* subgraphs being unanswerable. It goes to Phase 6 as its
+  own experiment: a subgraph that provably lacks the answer, where refusal
+  is the correct behaviour.
+- **A precision-side companion for E-001**, forced by E-006's re-run.
+
+Phase 6 therefore opens carrying three items, and the tag ships on a phase
+whose headline result is a failure with its causes decomposed. That is the
+version worth shipping: a phase that reports 0.369 with a void, a ceiling
+that splits its own registered rule, and eight unexplained answers is more
+useful to whoever reads this repo than one that reports a number it tuned
+until it passed.
+
 ## 2026-08-15 — E-006 re-run came back identical, and the metric is why
 
 The three linking defects E-008 found landed after E-006 run 3 and after
