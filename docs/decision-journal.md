@@ -90,15 +90,102 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-15 — Four registrations red-teamed the day they were written, and eleven objections landed
+
+The four Phase 6 entries — the E-001 configuration, E-009, E-010, E-011 —
+were red-teamed before any of the code they describe exists and with nothing
+measured. Eleven findings were blocking. About half were defects I had put
+in that morning. Amending on the same day, before a run, is the one moment
+when an amendment is free, and every change below is an **addition**: no
+registered sentence was rewritten.
+
+**The worst one was a hole in the word "protocol".** I pinned chunking,
+embeddings, generator, budget and judge as shared across the three arms, and
+called that parity. It governs *affordances*. The asymmetry lives in the
+*source data*: all 20 `legality_1hop` questions carry an empty
+`gold_cr_rules`, because "Is X legal in Modern?" is answered by Scryfall's
+structured legality field and by **no document in CR + rulings + MTR**.
+Fifteen of them are in the evaluation split — **26% of the 57**. As pinned,
+the vector arm could not answer a quarter of the benchmark, the graph would
+sweep the stratum, and the per-stratum table would have read "graph wins"
+for a reason with nothing to do with graphs. That is the roadmap's own
+*critical* credibility risk, and I built the door it came through. Fixed by
+requiring that every fact any arm may cite is in every arm's index, and by
+giving that stratum its own retrieval metric, since rule-number recall is
+undefined where there are no gold rules.
+
+**The second was mine and it was subtler.** E-009 removes a rule from a
+subgraph — and `serialize()` appends "NOTICE: this context is incomplete …
+Say so if the answer depends on what is missing" whenever anything was
+dropped. The ablated arm would have been *told to hedge* and the control arm
+would not. I would have measured whether the model obeys a string. And the
+deployment case the experiment exists to explain — E-007's eight of nine
+thin subgraphs answered — usually carries no NOTICE at all, so a clean pass
+would have been published as "the system refuses when evidence is absent"
+while the eight of nine stayed exactly as unexplained. Fixed with an
+ablation invisible to the prompt and a third arm that replays the real thin
+subgraphs.
+
+**The third is the one I flagged myself yesterday and was right to
+distrust.** E-011's per-label thresholds were constants I picked while
+looking at the ceilings. One of them, 0.85 for claim support, sits above
+0.818 — the lower bound of the ceiling it was meant to respect — so the
+entry stated a principle and broke it one row later. And it never said
+whether a threshold applies to a point estimate or to a bound, which at the
+audit's size is the difference between 29 of 34 and 33 of 34. The M2
+ambiguity, third occurrence. The threshold is now a **function** of the
+ceiling — the agreement interval's lower bound must clear the ceiling
+interval's lower bound — and the constants are withdrawn.
+
+**And a correction to something I wrote confidently.** I argued that a judge
+cannot agree with a human more often than the human agrees with themself.
+That is a heuristic, not a bound: judge-vs-human is *inter*-rater and every
+ceiling I borrowed is *intra*-rater, and this project's own
+[annotation-methodology.md](annotation-methodology.md) names that exact
+confusion as a common slip. A judge that shares the first pass's bias
+exceeds it comfortably. The ceilings are now published as a reference band,
+each labelled with the sample and the elapsed days it came from.
+
+The rest, briefly: `hedged` had no side in E-009's refusal rate and my own
+prediction said it would dominate; E-010's prediction was `1/k < 1` and could
+not fail; E-010's blinding was defeated by `via template: path` on every
+graph item; arm C's TF-IDF text half endangers **C vs A**, the README figure,
+not just C vs B, so C now uses arm A's retriever with TF-IDF kept as an
+ablation; the multi-hop dichotomy was a false dilemma when the reranker two
+items above it already showed the flag-and-ablate pattern — and the parity
+clause ran one way, granting iteration to A alone in an experiment about
+path-shaped questions while arm B stays single-shot by construction.
+
+One thing I want kept, because it is the pattern and not the incident: **the
+phrase that broke the M2 ceiling appeared three more times in entries I
+wrote after learning that lesson.** "Matches the predicted stratification",
+"agreement ≥ 0.85", "refusal rate". Each looked decidable until someone
+asked what it would return. Writing a criterion is not the same as writing a
+criterion that can only return one answer, and I do not seem to be able to
+tell the difference from the inside.
+
 ## 2026-08-15 — Phase 6 opens carrying three items, and one registered threshold I do not believe
 
 Gate check on Phase 5 passed on code and failed on outcome, which was the
 point of closing it that way. Carried into Phase 6 as explicit tasks rather
 than as hopes: the experiment for the 8-of-9 answering on `insufficient`
 subgraphs, a precision-side companion for E-001, and E-007d. The `as_of`
-half of citable negative answers is **dropped**, not carried — Scryfall's
-bulk carries no ban dates and ingesting B&R announcements is a new data
-source, which is a scope decision and not a bug to fix.
+half of citable negative answers is **dropped**, not carried, and the reason
+is measured rather than argued: **0 of the 20 `legality_1hop` questions asks
+for a date.** All twenty are "Is X legal in Y?", answerable from `status`
+alone, which already ships. `negative_temporal` turns out not to be about
+temporal legality at all — it is negative *rule* answers ("indestructible
+with toughness 0?" — no). The feature has no measurement that would exercise
+it. Its code side is half a day; its data side is a scraper over B&R
+announcement articles with no stable contract, inside a project whose whole
+ingestion discipline is hash-verified idempotency and whose IP rules forbid
+committing the article text. So it is dropped and the reason is published as
+a result: **the edge answers whether a card is legal, not since when,
+because the canonical source carries no dates and the golden set does not
+ask.** If it is ever wanted, the honest order is inverted — author the
+questions first, watch them survive curation, and only then go looking for a
+source. Building the ingestion and then hunting for what it measures is how
+dead features are made.
 
 The thing worth writing down on the day the phase opens is a problem with
 its own DoD, found by reading it against what Phase 5 just measured.
