@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from itertools import pairwise
+from typing import ClassVar
 
 from graphrag_mtg.extraction.linker import Lexicon
 from graphrag_mtg.retrieval.linking import (
@@ -193,3 +194,51 @@ class TestClausePunctuation:
 
     def test_an_english_phrase_is_still_not_a_card(self) -> None:
         assert linker().link("extra card draw each turn, please").cards == ()
+
+
+class TestAFaceIsWeakerThanAWholeName:
+    """Both defects E-008's evidence check caught, before a token was spent.
+
+    The lexicon indexes "Fire // Ice" under the combined name *and* each
+    face, in the same tables and with equal standing. On the loaded corpus
+    that made *Lightning Bolt* ambiguous against a face of "Emeritus of
+    Conflict // Lightning Bolt", and made the word "what" resolve
+    *Who // What // When // Where // Why* in any question containing it —
+    23 of E-007's 42 subgraphs carried that card.
+    """
+
+    CARDS: ClassVar[list[tuple[str, str]]] = [
+        ("Lightning Bolt", "bolt"),
+        ("Emeritus of Conflict // Lightning Bolt", "emeritus"),
+        ("Who // What // When // Where // Why", "wwwww"),
+        ("Humility", "hum"),
+    ]
+
+    def linker(self) -> QueryLinker:
+        return QueryLinker(Lexicon.build(self.CARDS), keywords=["Flying"])
+
+    def cards(self, question: str) -> list[str]:
+        return [c.key for c in self.linker().link(question).cards]
+
+    def test_a_whole_name_outranks_a_face_of_another_card(self) -> None:
+        assert self.cards("Ana casts Lightning Bolt at a creature.") == ["bolt"]
+
+    def test_a_single_word_that_is_only_a_face_does_not_resolve(self) -> None:
+        """It skipped the capitalization gate, so any 'what' pulled the card in."""
+        assert self.cards("Ana casts Lightning Bolt. Who or what takes the damage?") == ["bolt"]
+
+    def test_a_single_word_whole_name_still_resolves(self) -> None:
+        assert self.cards("Nico casts Humility and passes.") == ["hum"]
+
+    def test_the_face_is_still_indexed_for_the_ingestion_linker(self) -> None:
+        """`Lexicon.build` was measured in E-003; only the query side changed."""
+        lexicon = Lexicon.build(self.CARDS)
+        assert "wwwww" in lexicon.single_word["what"]
+        assert lexicon.faces["what"] == {"wwwww"}
+
+
+class TestKeywordPunctuation:
+    def test_a_keyword_followed_by_a_comma_still_resolves(self) -> None:
+        """The trim the card path already had, missing from the keyword path."""
+        linker = QueryLinker(Lexicon.build([("Humility", "hum")]), keywords=["Flying"])
+        assert [k.key for k in linker.link("Does Flying, or trample, apply?").keywords] == ["Flying"]

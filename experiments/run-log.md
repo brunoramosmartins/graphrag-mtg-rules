@@ -370,3 +370,19 @@ subgraphs were answered rather than refused.** No threshold covers it by
 design, and it is exactly the surface E-008 tests.
 
 Full verdict and scored predictions in the registry entry.
+
+### 2026-08-10 — E-008 loaded and verified; three linking defects on the way
+
+    load      nodes 117435 -> 117441   rels 894982 -> 894985   fixture nodes 9
+    verify    evidence present 11/18  ->  after the fixes, 18/18
+
+The seven misses were not fixture defects. A face of a multi-face name
+outranked nothing, so *Lightning Bolt* was AMBIGUOUS against a face of
+"Emeritus of Conflict // Lightning Bolt"; the word "what" resolved
+*Who // What // When // Where // Why* in any question containing it; and
+keyword surfaces kept clause punctuation, so `Tidebind,` matched nothing.
+
+**23 of E-007's 42 subgraphs carried the interrogative card.** E-007 is not
+re-run and its figures stand as a description of the system as measured;
+this is recorded as a threat to validity with a count. E-006 is owed a
+re-run against the fix before Phase 6 quotes its reach numbers.

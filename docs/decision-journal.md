@@ -90,6 +90,43 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — E-008's evidence check found three linking defects before a token was spent
+
+`run_e008.py verify` came back 11 of 18 probes with their fiction absent —
+the entire fictional-ruling construct. The graph was correct: Lightning
+Bolt was there and the injected ruling hung off it. The linker was not.
+
+- **A face of a multi-face name outranked nothing.** `Lexicon.build`
+  indexes "Fire // Ice" under the combined name *and* each face, in the
+  same tables with equal standing, so *Lightning Bolt* came back
+  **AMBIGUOUS** against a face of "Emeritus of Conflict // Lightning Bolt".
+  A whole-name match now outranks a face match.
+- **"what" resolved *Who // What // When // Where // Why*.** Single-word
+  surfaces skip the capitalization gate, so any question containing the
+  word pulled that card in. A single word that is only ever a face no
+  longer resolves; the cost is a bare "Fire" for *Fire // Ice*, a missed
+  card rather than a wrong one.
+- **Keyword surfaces kept clause punctuation.** `Tidebind,` matched
+  nothing. The card path had this trim; the keyword path never got it.
+
+Only the query-time linker changed. The `faces` table is additive and the
+ingestion linker does not read it, because its behaviour was measured in
+E-003 and changing a measured component from underneath its result is how
+a number stops meaning what it says.
+
+**The uncomfortable part: 23 of E-007's 42 subgraphs carried the
+interrogative card.** E-007 is **not** re-run and its numbers are not
+replaced. The labels were made against those subgraphs, and the result
+describes the system as it was measured. What this becomes is a threat to
+validity with a count attached: irrelevant evidence occupied budget in
+more than half the questions, and it plausibly inflated the
+`claim_not_in_evidence` failures that dominate the support taxonomy. A
+re-measurement is a new registered experiment, not a retroactive repair.
+
+E-006 must be re-run against the fix before Phase 6 quotes its reach
+numbers — the same check the earlier linking fixes got, where it came back
+unchanged.
+
 ## 2026-08-10 — E-007 read: the DoD fails on coverage, and the real problem is elsewhere
 
 The decision rule was applied as written; nothing was invented at reading

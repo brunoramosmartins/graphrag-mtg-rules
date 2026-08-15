@@ -334,10 +334,14 @@ class QueryLinker:
         return EntityKind.FORMAT, name, LinkMethod.EXACT, ()
 
     def _match_keyword(self, surface: str):
-        name = self.keywords.get(normalize_name(surface))
-        if name is None:
-            return None
-        return EntityKind.KEYWORD, name, LinkMethod.EXACT, ()
+        # Same clause punctuation the card path already trims: "governs
+        # Tidebind, and what does it say" arrives as `Tidebind,` and matched
+        # nothing, which reads from outside like a keyword the graph lacks.
+        for candidate in _variants(surface):
+            name = self.keywords.get(normalize_name(candidate))
+            if name is not None:
+                return EntityKind.KEYWORD, name, LinkMethod.EXACT, ()
+        return None
 
     def _match_card(self, surface: str, gate: bool):
         """Exact then loose, under one policy about capitalization.
@@ -387,6 +391,27 @@ class QueryLinker:
             hits = self.lexicon.single_word.get(norm)
             method = LinkMethod.SURFACE
         if not hits:
+            return None
+
+        # A *face* of a multi-face card is weaker evidence than a whole
+        # name, and the lexicon indexes both under the same key. Two
+        # consequences, both measured on the loaded corpus:
+        #
+        # - *Lightning Bolt* came back AMBIGUOUS, because a face of
+        #   "Emeritus of Conflict // Lightning Bolt" shares the name. A card
+        #   whose whole name matches outranks one where only a face does.
+        # - "what" resolved *Who // What // When // Where // Why* in any
+        #   question containing the word, since single-word surfaces skip
+        #   the capitalization gate. A single word that is only ever a face
+        #   does not resolve at all; the cost is a bare "Fire" for
+        #   *Fire // Ice*, which is a missed card rather than a wrong one.
+        faces = self.lexicon.faces.get(norm, frozenset()) | self.lexicon.faces.get(
+            loose_name(surface), frozenset()
+        )
+        whole = hits - faces
+        if whole:
+            hits = whole
+        elif not multiword:
             return None
         return self._decide(hits, method, force_ambiguous=not gate)
 
