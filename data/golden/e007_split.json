@@ -1,0 +1,29 @@
+{
+  "purpose": "Phase 4 development subset \u2014 templates are written against these only",
+  "seed": 20260810,
+  "n": 10,
+  "total": 42,
+  "drawn_at": "2026-08-10",
+  "dev_strata": {
+    "negative_temporal": 4,
+    "interaction_multihop": 6
+  },
+  "eval_strata": {
+    "interaction_multihop": 20,
+    "negative_temporal": 11,
+    "keyword_rule_2hop": 1
+  },
+  "rule": "Everything not listed here is the E-001 evaluation set. Retrieval code may be iterated against dev ids only; the evaluation set is touched once, in Phase 6.",
+  "dev_ids": [
+    "rg-1049",
+    "rg-1186",
+    "rg-134",
+    "rg-241",
+    "rg-2420",
+    "rg-2848",
+    "rg-361",
+    "rg-48",
+    "rg-685",
+    "rg-7500"
+  ]
+}

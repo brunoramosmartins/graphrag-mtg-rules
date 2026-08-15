@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from graphrag_mtg.retrieval.linking import QueryLinker, build_card_lexicon
 from graphrag_mtg.retrieval.pipeline import retrieve
 from graphrag_mtg.retrieval.subgraph import Outcome
@@ -209,3 +211,27 @@ class TestLongTailFallback:
             text2cypher=self.layer("MATCH (c:Card) RETURN c.name LIMIT 5"),
         )
         assert "not_citable" in subgraph.note
+
+
+class TestCardWithNothingHangingOffIt:
+    """The evidence a rules question needs most is the card's own text."""
+
+    # Keyed on a fragment only CARD_CORE's Cypher contains, since the fake
+    # runner matches queries by text rather than by template name.
+    ROWS: ClassVar[dict[str, list[dict]]] = {
+        "type_line AS type_line": [
+            {
+                "card": "Guardian of the Guildpact",
+                "card_text": "Protection from monocolored.",
+                "type_line": "Creature",
+            }
+        ]
+    }
+
+    def test_a_card_with_no_rulings_is_still_evidence(self) -> None:
+        subgraph = retrieve("Tell me about Serra Angel", linker=linker(), run=runner(self.ROWS))
+        assert "card:Guardian of the Guildpact" in subgraph.citations()
+
+    def test_it_is_not_a_silent_empty_subgraph(self) -> None:
+        subgraph = retrieve("Tell me about Serra Angel", linker=linker(), run=runner(self.ROWS))
+        assert subgraph.outcome is Outcome.RESOLVED

@@ -14,6 +14,7 @@ stays light, and 120 annotated rulings do not need numpy.
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -194,6 +195,73 @@ def rule_of_three_upper(n_clusters: int) -> float:
     resample documents.
     """
     return 3.0 / n_clusters if n_clusters else 1.0
+
+
+@dataclass(frozen=True)
+class McNemar:
+    """A paired before/after comparison on the same items.
+
+    Attributes:
+        improved: Items the first round got wrong and the second got right.
+        regressed: Items the first got right and the second got wrong.
+        p_value: Exact two-sided binomial p over the discordant pairs.
+        n_pairs: Items compared.
+    """
+
+    improved: int
+    regressed: int
+    p_value: float
+    n_pairs: int
+
+    @property
+    def discordant(self) -> int:
+        return self.improved + self.regressed
+
+    def __str__(self) -> str:
+        return (
+            f"+{self.improved}/-{self.regressed} of {self.n_pairs} paired, "
+            f"p={self.p_value:.3f}"
+        )
+
+
+def mcnemar(before: Sequence[bool], after: Sequence[bool]) -> McNemar:
+    """Exact McNemar test for two rounds scored on the same items.
+
+    E-007 iterates a prompt and re-scores the *same* development questions,
+    which makes round-over-round a paired comparison — and the registry's
+    reporting rules require a paired test for one. An unpaired proportion
+    comparison here would throw away the pairing and understate a real
+    improvement while overstating a coincidental one.
+
+    Only discordant pairs carry information: items both rounds got right,
+    or both got wrong, say nothing about which round is better. The exact
+    binomial is used rather than the chi-square approximation because the
+    discordant count on 10 development questions will be small, which is
+    exactly where the approximation misbehaves.
+
+    Args:
+        before: Per-item outcome in the earlier round.
+        after: Per-item outcome in the later round, same order.
+
+    Returns:
+        A :class:`McNemar`. With no discordant pairs the p-value is 1.0 —
+        no evidence of a difference, which is not the same as evidence of
+        no difference.
+
+    Raises:
+        ValueError: If the two sequences are not the same length, since
+            that means they are not paired.
+    """
+    if len(before) != len(after):
+        raise ValueError(f"unpaired sequences: {len(before)} vs {len(after)}")
+    improved = sum(1 for b, a in zip(before, after, strict=True) if not b and a)
+    regressed = sum(1 for b, a in zip(before, after, strict=True) if b and not a)
+    n = improved + regressed
+    if n == 0:
+        return McNemar(0, 0, 1.0, len(before))
+    smaller = min(improved, regressed)
+    tail = sum(math.comb(n, k) for k in range(smaller + 1)) / (2**n)
+    return McNemar(improved, regressed, min(1.0, 2 * tail), len(before))
 
 
 @dataclass(frozen=True)

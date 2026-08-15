@@ -1,0 +1,236 @@
+{
+  "frozen": true,
+  "labels": {
+    "rg-4825": {
+      "outcome": "resolved",
+      "evidence": 16,
+      "label": "partial"
+    },
+    "rg-119": {
+      "outcome": "resolved",
+      "evidence": 28,
+      "label": "insufficient"
+    },
+    "rg-260": {
+      "outcome": "resolved",
+      "evidence": 15,
+      "label": "partial"
+    },
+    "rg-6817": {
+      "outcome": "resolved",
+      "evidence": 11,
+      "label": "insufficient"
+    },
+    "rg-2848": {
+      "outcome": "resolved",
+      "evidence": 56,
+      "label": "sufficient"
+    },
+    "rg-5257": {
+      "outcome": "resolved",
+      "evidence": 11,
+      "label": "sufficient"
+    },
+    "rg-6461": {
+      "outcome": "resolved",
+      "evidence": 27,
+      "label": "partial"
+    },
+    "rg-320": {
+      "outcome": "resolved",
+      "evidence": 51,
+      "label": "partial"
+    },
+    "rg-1015": {
+      "outcome": "resolved",
+      "evidence": 26,
+      "label": "insufficient"
+    },
+    "rg-1154": {
+      "outcome": "resolved",
+      "evidence": 18,
+      "label": "insufficient"
+    },
+    "rg-47": {
+      "outcome": "resolved",
+      "evidence": 28,
+      "label": "partial"
+    },
+    "rg-6687": {
+      "outcome": "resolved",
+      "evidence": 26,
+      "label": "sufficient"
+    },
+    "rg-48": {
+      "outcome": "resolved",
+      "evidence": 36,
+      "label": "partial"
+    },
+    "rg-4298": {
+      "outcome": "resolved",
+      "evidence": 7,
+      "label": "partial"
+    },
+    "rg-6586": {
+      "outcome": "resolved",
+      "evidence": 19,
+      "label": "sufficient"
+    },
+    "rg-7500": {
+      "outcome": "resolved",
+      "evidence": 44,
+      "label": "sufficient"
+    },
+    "rg-6417": {
+      "outcome": "resolved",
+      "evidence": 30,
+      "label": "partial"
+    },
+    "rg-1704": {
+      "outcome": "resolved",
+      "evidence": 29,
+      "label": "partial"
+    },
+    "rg-1186": {
+      "outcome": "resolved",
+      "evidence": 42,
+      "label": "partial"
+    },
+    "rg-2420": {
+      "outcome": "resolved",
+      "evidence": 39,
+      "label": "insufficient"
+    },
+    "rg-4747": {
+      "outcome": "resolved",
+      "evidence": 20,
+      "label": "partial"
+    },
+    "rg-256": {
+      "outcome": "resolved",
+      "evidence": 15,
+      "label": "partial"
+    },
+    "rg-1049": {
+      "outcome": "resolved",
+      "evidence": 38,
+      "label": "partial"
+    },
+    "rg-2027": {
+      "outcome": "resolved",
+      "evidence": 49,
+      "label": "partial"
+    },
+    "rg-6388": {
+      "outcome": "resolved",
+      "evidence": 27,
+      "label": "partial"
+    },
+    "rg-1660": {
+      "outcome": "resolved",
+      "evidence": 31,
+      "label": "partial"
+    },
+    "rg-2208": {
+      "outcome": "resolved",
+      "evidence": 34,
+      "label": "insufficient"
+    },
+    "rg-66": {
+      "outcome": "resolved",
+      "evidence": 19,
+      "label": "insufficient"
+    },
+    "rg-685": {
+      "outcome": "resolved",
+      "evidence": 23,
+      "label": "sufficient"
+    },
+    "rg-1973": {
+      "outcome": "resolved",
+      "evidence": 25,
+      "label": "partial"
+    },
+    "rg-1702": {
+      "outcome": "resolved",
+      "evidence": 36,
+      "label": "insufficient"
+    },
+    "rg-5610": {
+      "outcome": "resolved",
+      "evidence": 42,
+      "label": "sufficient"
+    },
+    "rg-361": {
+      "outcome": "resolved",
+      "evidence": 43,
+      "label": "insufficient"
+    },
+    "rg-1766": {
+      "outcome": "resolved",
+      "evidence": 35,
+      "label": "partial"
+    },
+    "rg-220": {
+      "outcome": "resolved",
+      "evidence": 26,
+      "label": "partial"
+    },
+    "rg-241": {
+      "outcome": "resolved",
+      "evidence": 56,
+      "label": "partial"
+    },
+    "rg-32": {
+      "outcome": "resolved",
+      "evidence": 20,
+      "label": "insufficient"
+    },
+    "rg-3859": {
+      "outcome": "resolved",
+      "evidence": 33,
+      "label": "partial"
+    },
+    "rg-1411": {
+      "outcome": "resolved",
+      "evidence": 34,
+      "label": "partial"
+    },
+    "rg-503": {
+      "outcome": "resolved",
+      "evidence": 34,
+      "label": "partial"
+    },
+    "rg-910": {
+      "outcome": "resolved",
+      "evidence": 32,
+      "label": "insufficient"
+    },
+    "rg-134": {
+      "outcome": "resolved",
+      "evidence": 34,
+      "label": "partial"
+    }
+  },
+  "hash": "534547ed84547aac1bb6fd2074f2de01d190da4cdd8138a8f58645d9fd40f5d0",
+  "stale_labels": {
+    "rg-2848": "sufficient",
+    "rg-48": "partial",
+    "rg-7500": "sufficient",
+    "rg-1186": "partial",
+    "rg-2420": "insufficient",
+    "rg-1049": "partial",
+    "rg-685": "sufficient",
+    "rg-361": "insufficient",
+    "rg-241": "partial",
+    "rg-134": "partial"
+  },
+  "history": [
+    {
+      "reopened": "audit",
+      "n": 32,
+      "previous_hash": "c8cafaf69c1dbb62c268dfdf2995a14e68d7165bf7179b6f8d6d559fcadc76f4",
+      "reason": "card_core added: cards with no rulings were absent from every subgraph; evidence changed on all 42 questions"
+    }
+  ]
+}

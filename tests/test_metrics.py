@@ -11,6 +11,7 @@ from graphrag_mtg.evaluation.metrics import (
     by_family,
     cluster_proportion_ci,
     evaluate_by_stratum,
+    mcnemar,
     micro_prf,
     rule_family,
     rule_of_three_upper,
@@ -148,3 +149,39 @@ class TestRuleOfThree:
 
     def test_no_trials_bounds_nothing(self) -> None:
         assert rule_of_three_upper(0) == 1.0
+
+
+class TestMcNemar:
+    """Round-over-round on the same questions is paired, and E-007 says so."""
+
+    def test_only_discordant_pairs_carry_information(self) -> None:
+        """Items both rounds agree on say nothing about which round is better."""
+        before = [True, True, False, False, True]
+        after = [True, True, False, False, True]
+        result = mcnemar(before, after)
+        assert result.discordant == 0
+        assert result.p_value == 1.0
+
+    def test_no_discordance_is_not_evidence_of_no_difference(self) -> None:
+        result = mcnemar([True] * 5, [True] * 5)
+        assert result.p_value == 1.0 and result.n_pairs == 5
+
+    def test_it_counts_both_directions(self) -> None:
+        before = [False, False, True, True]
+        after = [True, True, False, True]
+        result = mcnemar(before, after)
+        assert (result.improved, result.regressed) == (2, 1)
+
+    def test_a_one_sided_sweep_is_significant(self) -> None:
+        result = mcnemar([False] * 8, [True] * 8)
+        assert result.improved == 8 and result.regressed == 0
+        assert result.p_value == pytest.approx(2 / 2**8)
+
+    def test_a_single_flip_proves_nothing(self) -> None:
+        """One improvement out of ten questions is a coin toss, and reads as one."""
+        result = mcnemar([True] * 9 + [False], [True] * 10)
+        assert result.p_value == 1.0
+
+    def test_unpaired_lengths_are_a_programming_error(self) -> None:
+        with pytest.raises(ValueError, match="unpaired"):
+            mcnemar([True, False], [True])

@@ -33,7 +33,7 @@ import argparse
 import json
 import random
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import date
 from pathlib import Path
 
@@ -50,10 +50,16 @@ DEFAULT_SEED = 20260809
 QUESTION_FILES = ("authored_v0.jsonl", "definitions_v0.jsonl", "ids_v0.jsonl")
 
 
-def load_questions(directory: Path) -> list[dict]:
-    """Golden-set questions, identified by carrying a ``gold_path``."""
+def load_questions(directory: Path, files: Sequence[str] = QUESTION_FILES) -> list[dict]:
+    """Questions from the named files under ``directory``.
+
+    ``files`` is overridable so the same seeded, largest-remainder draw can
+    split a pool that is not the golden set — E-007 needs 10 of its 40
+    audit questions for prompt development, and a second implementation of
+    "draw a stratified subset" is a second thing that can be subtly wrong.
+    """
     rows = []
-    for name in QUESTION_FILES:
+    for name in files:
         path = directory / name
         if not path.exists():
             continue
@@ -62,7 +68,9 @@ def load_questions(directory: Path) -> list[dict]:
                 if not line.strip():
                     continue
                 row = json.loads(line)
-                if "gold_path" in row:
+                # `gold_path` marks a golden-set row; an E-007 pool skeleton
+                # has no gold path and is admitted on its stratum alone.
+                if "gold_path" in row or "stratum" in row:
                     rows.append(row)
     return rows
 
@@ -112,9 +120,9 @@ def cmd_draw(args: argparse.Namespace) -> int:
         print("only if no retrieval code has been written against it yet.")
         return 1
 
-    rows = load_questions(args.golden)
+    rows = load_questions(args.golden, args.questions or QUESTION_FILES)
     if not rows:
-        print(f"No golden-set questions in {args.golden}.")
+        print(f"No questions in {args.golden}.")
         return 1
     dev_ids = draw(rows, args.n, args.seed)
     dev = set(dev_ids)
@@ -156,7 +164,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         print(f"No split at {args.split}. Run `split_golden.py draw` first.")
         return 1
     meta = json.loads(args.split.read_text(encoding="utf-8"))
-    rows = load_questions(args.golden)
+    rows = load_questions(args.golden, args.questions or QUESTION_FILES)
     known = {row["id"] for row in rows}
     missing = [qid for qid in meta["dev_ids"] if qid not in known]
 
@@ -177,22 +185,40 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 0
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI, separated from `main` so the wiring itself can be tested."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--golden", type=Path, default=GOLDEN_DIR)
-    parser.add_argument("--split", type=Path, default=SPLIT_PATH)
+    # On the subparsers rather than on the top-level parser: argparse only
+    # accepts a parent-level option *before* the subcommand name, which reads
+    # backwards for everyone. Defining them once here and inheriting keeps
+    # `draw --golden ...` working, which is the order people actually type.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--golden", type=Path, default=GOLDEN_DIR)
+    common.add_argument("--split", type=Path, default=SPLIT_PATH)
+    common.add_argument(
+        "--questions",
+        action="append",
+        default=[],
+        help=(
+            "file name(s) under --golden to split, instead of the golden set. "
+            "Used for E-007's 10/32 draw over its own audit pool."
+        ),
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    drawer = sub.add_parser("draw", help="freeze the development subset")
+    drawer = sub.add_parser("draw", parents=[common], help="freeze the development subset")
     drawer.add_argument("--n", type=int, default=DEFAULT_N)
     drawer.add_argument("--seed", type=int, default=DEFAULT_SEED)
     drawer.add_argument("--force", action="store_true")
     drawer.set_defaults(func=cmd_draw)
 
-    checker = sub.add_parser("check", help="report the split and validate it")
+    checker = sub.add_parser("check", parents=[common], help="report the split and validate it")
     checker.set_defaults(func=cmd_check)
+    return parser
 
-    args = parser.parse_args()
+
+def main() -> int:
+    args = build_parser().parse_args()
     return int(args.func(args))
 
 

@@ -95,6 +95,14 @@ class Lexicon:
     #: "Soul Shatter" on a Soul Shatter ruling, because the name resolved to a
     #: different printing's oracle_id than the one the ruling hangs on.
     name_by_oracle: dict[str, str] = field(default_factory=dict)
+    #: Lookup key -> oracle_ids indexed there because the key is a *face* of
+    #: a multi-face name rather than a whole name. Recorded, never acted on
+    #: here: the ingestion linker's behaviour was measured in E-003 and this
+    #: field adds nothing to it. The query-time linker consults it, because
+    #: at query time "what" matching a face of *Who // What // When // Where
+    #: // Why* is a defect and "Lightning Bolt" losing to a face of another
+    #: card is a worse one.
+    faces: dict[str, set[str]] = field(default_factory=dict)
 
     @classmethod
     def build(
@@ -113,6 +121,9 @@ class Lexicon:
             lex.name_by_oracle.setdefault(oracle_id, name)
             for form in {name, *split_faces(name)}:
                 lex._add(form, oracle_id)
+                if form != name:
+                    lex.faces.setdefault(normalize_name(form), set()).add(oracle_id)
+                    lex.faces.setdefault(loose_name(form), set()).add(oracle_id)
         for alias, oracle_id in aliases:
             lex.loose.setdefault(loose_name(alias), set()).add(oracle_id)
         return lex

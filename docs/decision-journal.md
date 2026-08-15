@@ -90,7 +90,715 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
-## 2026-08-09 — The close audit found a promise the code was not keeping
+## 2026-08-15 — Phase 5 closes with its DoD failed on two of three items
+
+Closing the phase rather than extending it until the checkboxes tick. The
+audit ran, the rule was applied, and the rule says no on coverage and no on
+honest refusal. Extending the phase to fix the number would be iterating
+against the measurement that judges it — the iteration budget was fixed at
+three rounds precisely so that this moment could not be negotiated.
+
+What closes: `answerer.py`, `citations.py`, the audit harness, E-007,
+E-007c, its M2 ceiling, E-008, and the Phase 5 section of
+[evaluation.md](evaluation.md). Support is met against its control; over-
+refusal is clear at zero.
+
+What does not, and is carried rather than quietly dropped:
+
+- **Citable negative answers, half delivered.** The mechanism exists —
+  `legality` is an evidence kind and the `HAS_LEGALITY` edge renders as a
+  path — but the roadmap's `as_of` does not, because Scryfall's bulk
+  `legalities` is a current-state snapshot with no ban dates. Delivering it
+  needs a B&R announcement source this project does not ingest. Scope not
+  delivered, not a bug. The path also has no end-to-end measurement: every
+  audited question came from RulesGuru, which asks about rules and not
+  formats.
+- **8 of 9 `insufficient` subgraphs answered.** No registered threshold
+  covers it, the sufficiency instrument that produced it is the least
+  reliable one measured (0.800), and both of that instrument's disagreements
+  ran toward *more* subgraphs being unanswerable. It goes to Phase 6 as its
+  own experiment: a subgraph that provably lacks the answer, where refusal
+  is the correct behaviour.
+- **A precision-side companion for E-001**, forced by E-006's re-run.
+
+Phase 6 therefore opens carrying three items, and the tag ships on a phase
+whose headline result is a failure with its causes decomposed. That is the
+version worth shipping: a phase that reports 0.369 with a void, a ceiling
+that splits its own registered rule, and eight unexplained answers is more
+useful to whoever reads this repo than one that reports a number it tuned
+until it passed.
+
+## 2026-08-15 — E-006 re-run came back identical, and the metric is why
+
+The three linking defects E-008 found landed after E-006 run 3 and after
+E-007's answers were generated and scored. Phase 6 is about to quote reach
+numbers, so I re-ran E-006 against the fixed linker rather than let Phase 4's
+table stand on a system that no longer exists. Amendment registered first:
+same design, same split, same decision rule, different system under test.
+
+Every recall figure came back identical. 1–2 hop entity recall 1.000, all 20
+resolved, `interaction_multihop` still 0.88/0.12. The predicted risk — that
+rejecting face-only single-word matches would break a lookup that used to work
+by accident — did not materialise.
+
+The decision this forced is what to *do* with an unchanged number. The
+temptation is to read it as "the defects did not matter". That reading is
+wrong, and the reason is in the metric's definition: entity recall is
+`|gold ∩ retrieved| / |gold|`, so an entity that should not be there cannot
+lower it. Every defect fixed was additive — the `what` collision put a wrong
+card into 23 of E-007's 42 subgraphs and removed nothing — so **E-006 reads
+1.000 either way.** It was structurally incapable of detecting the bugs, and
+an afternoon of E-008's evidence check found all three.
+
+So the re-run's finding is not about the linker. It is that Phase 4's headline
+measures half the question, and I only know that because a *different*
+experiment, built to check something else, tripped over the other half.
+Recorded as a Phase 6 gap: E-001 needs a precision-side companion, or the
+comparison against the vector baseline is decided on which system retrieves
+more, not which retrieves better. The companion is not designed yet, and
+designing it after seeing E-001's numbers would not count.
+
+## 2026-08-15 — The ceiling split the registered rule, and the split is what gets published
+
+The M2 re-audit came back at **0.990 [0.969, 1.000]** on the claim label and
+**0.933 [0.818, 1.000]** on support, blind, over 100 rows from 8 answers,
+with the segmentation regenerated and identical to the frozen worksheet.
+
+The registered rule says the support figure has no ceiling if the second pass
+disagrees "at a rate comparable to the support gap being reported". That
+sentence has no threshold, and I was reading it with the disagreement rate
+already on screen — the exact position in which a threshold gets chosen to
+suit. So neither reading was picked. Point estimates: disagreement 0.067
+against a gap of 0.403, the ceiling holds comfortably. Each side's worst
+bound: disagreement 0.182 against a gap of 0.161, the ceiling does not hold,
+by 0.021. **Both go into the report.** The precedent is this project's own
+handling of the ambiguous second DoD clause, where both readings happened to
+agree; here they do not, and a split that is resolved by preference is not a
+pre-registered result at all.
+
+Two things this forced me to fix in the instrument before believing it. The
+agreement rates were being computed with every row as its own cluster while
+the figure they exist to bound resamples by question — a ceiling with a
+narrower interval than its own measurement. Clustered by question the support
+interval widens from [0.833, 1.000] to [0.818, 1.000], which is what tipped
+the conservative reading. And the script never printed the registered branch
+at all; it printed two numbers and left the rule to be applied by memory.
+
+**Why the readings split is sample size, and that is a design fault, not a
+result.** Only 30 of the 100 rows carried a support judgement in both passes,
+because the re-audit was sized for label agreement and the support comparison
+is whatever falls out of it. A ceiling sized for the figure it bounds would
+sample *cited factual claims* directly. That is a change to the next
+experiment, not a rerun of this one — re-drawing a ceiling sample after
+seeing which way it fell is the same error in a different coat.
+
+**Coverage stays void.** On the shared 100 rows the two passes read 0.210 and
+0.200 exclusions against a 0.20 limit, and the temptation to read that as
+"the void was a coin flip" is real. It is also not what a ceiling sample
+measures: it measures the annotator, not the corpus. The full first pass says
+0.2019 and the registered rule voided coverage on it. What the numbers do
+license is a note for whoever sets the next threshold — 0.20 was tight enough
+that one row in a hundred straddles it.
+
+One more thing written down before it can be misquoted: the two support
+disagreements ran in opposite directions, so the support rate on the shared
+rows is **identical, 14/30, under both passes**. That is offsetting error.
+It is not evidence that the instrument is exact, and the agreement rate of
+0.933 is the honest statement of what it is.
+
+## 2026-08-10 — A second-pass judgement landed on the reported worksheet, one row from flipping the verdict
+
+`claims show --worksheet <m2>` printed a `set` command with no path in it,
+so the first M2 judgement went at the **first pass** — the file the
+reported figures were computed from. It flipped `rg-1015[0]` from
+`non_factual` to `factual`, and that single row moves the audit's exclusion
+rate from **0.2019 to 0.1995**: from void to not void, the exact threshold
+this phase spent an entry refusing to cross deliberately.
+
+**Git caught it. Nothing in the tool did.** `git status` showed the
+worksheet modified, `git diff` named the row, and `git checkout` restored
+it. That is the whole reason this is a near miss rather than a silently
+corrected verdict, and it is not a control — it is luck plus the habit of
+committing the labelled artefacts.
+
+Two fixes, because the hint alone was already tried and did not survive a
+refactor:
+
+- **The printed command carries its target file** whenever it is not the
+  default, in the claim view as in the sufficiency view.
+- **A judged row is not overwritten by surprise.** `claims set` refuses a
+  row that already carries a label unless `--relabel` says the change is
+  deliberate, and it names the wrong-worksheet case in the message because
+  that is what the mistake usually is. A batch containing one judged row is
+  refused whole rather than partly applied.
+
+The lesson I want kept: every guard in this harness protects the *ordering*
+of judgements, and none protected the *destination* of one. A tool that
+makes the right order awkward to break should make the wrong file awkward
+to write to as well.
+
+## 2026-08-10 — E-008 came back clean, and the clean result is the smaller claim
+
+12 of 12 held-out probes followed the graph. Zero leaks, zero refusals,
+zero retrieval misses, on all three constructs. The six development probes
+were 6 of 6, so no iteration round was spent.
+
+**The claim is the bound, not the absence.** Zero over 12 puts the
+per-probe leak rate at most 0.25 by rule of three. Writing "the system does
+not leak" would be claiming something 12 probes cannot support, and the
+threat registered before the run says more: a fictional card contradicts
+memory *starkly*, which is the easiest case for a grounded reader to
+notice. The deployment condition is a real card the model half-remembers,
+and that differs in exactly the dimension being measured.
+
+**Both predictions failed, and one could not be scored at all.** Leakage
+was predicted to happen, most on the contradiction construct; it did not
+happen anywhere. The second prediction — where leakage would appear — is
+conditional on leaks that never occurred, and is recorded as unscoreable
+rather than quietly dropped.
+
+**The interesting part is the tension with E-007.** E-007 found 8 of 9
+`insufficient` subgraphs answered rather than refused, and I called that
+the parametric-leak surface E-008 would test. E-008 says the model does not
+override evidence that is *present*. Both are true, and they are not the
+same question. Answering when the evidence is absent is a different
+behaviour from contradicting evidence that is there, and E-008 measured the
+second. So the 8-of-9 is still unexplained, and it needs an experiment
+built for it: subgraphs that lack the answer, where the correct behaviour
+is refusal and the failure is fluent invention.
+
+## 2026-08-10 — E-008's teardown deleted three real CR rules. Restored, and the cause fixed
+
+**Incident.** `run_e008.py load` created its fictional rules with
+`MERGE (r:Rule {number: ...}) SET r.text = ..., r.fixture = 'e008'`. Rule
+**702.184 is the real keyword *Station***. `MERGE` on an existing key does
+not create — it *adopts*, so the fiction overwrote the text of 702.184 and
+702.184a/b and stamped them as fixture nodes. `teardown` then did exactly
+what it was written to do and deleted every node carrying that tag.
+
+The arithmetic was in the output the whole time and I read past it: the
+graph held 117,435 nodes before the load and 117,432 after the teardown —
+three fewer than it started with, and eight relationships fewer.
+
+**Repair.** The CR loader is idempotent by design (ADR and CLAUDE.md both
+say so, for the quarterly-release case), and re-running `load_rules`
+restored 702.184 *Station* with its subrules. The graph's rule set now
+matches the CR file exactly in both directions: **3308 nodes, 3308 rules
+in the file, zero drift either way.**
+
+The repair also created **45 `Keyword` nodes with glossary definitions
+that did not exist before**, because `MERGE_KEYWORD_DEFINITIONS` creates
+what it cannot match. So the graph had been out of step with the parsed CR
+before any of this, and I cannot attribute that gap after the fact.
+Recorded rather than explained away — and it means the graph E-007 ran
+against is not the graph standing now.
+
+**Cause fixed, not symptom.** `load` now checks every fixture key against
+the production graph and refuses with the list of collisions, and it
+verifies that the number of nodes created equals the number the fixture
+declares — a tagged node the load did not create is a real node awaiting
+deletion. The fictional rules moved to 799.1, outside the CR's numbering.
+Tests pin both, including the integration case that a pre-existing key
+stops the load.
+
+**What this cost, honestly.** Nothing measured. E-007's retrieval ran
+before the load, E-008 had generated only its six development probes, and
+the held-out set has not run. Had the order been different this would have
+been a corrupted corpus underneath a reported number, which is the failure
+mode this entry exists to make expensive to repeat.
+
+## 2026-08-10 — E-008's evidence check found three linking defects before a token was spent
+
+`run_e008.py verify` came back 11 of 18 probes with their fiction absent —
+the entire fictional-ruling construct. The graph was correct: Lightning
+Bolt was there and the injected ruling hung off it. The linker was not.
+
+- **A face of a multi-face name outranked nothing.** `Lexicon.build`
+  indexes "Fire // Ice" under the combined name *and* each face, in the
+  same tables with equal standing, so *Lightning Bolt* came back
+  **AMBIGUOUS** against a face of "Emeritus of Conflict // Lightning Bolt".
+  A whole-name match now outranks a face match.
+- **"what" resolved *Who // What // When // Where // Why*.** Single-word
+  surfaces skip the capitalization gate, so any question containing the
+  word pulled that card in. A single word that is only ever a face no
+  longer resolves; the cost is a bare "Fire" for *Fire // Ice*, a missed
+  card rather than a wrong one.
+- **Keyword surfaces kept clause punctuation.** `Tidebind,` matched
+  nothing. The card path had this trim; the keyword path never got it.
+
+Only the query-time linker changed. The `faces` table is additive and the
+ingestion linker does not read it, because its behaviour was measured in
+E-003 and changing a measured component from underneath its result is how
+a number stops meaning what it says.
+
+**The uncomfortable part: 23 of E-007's 42 subgraphs carried the
+interrogative card.** E-007 is **not** re-run and its numbers are not
+replaced. The labels were made against those subgraphs, and the result
+describes the system as it was measured. What this becomes is a threat to
+validity with a count attached: irrelevant evidence occupied budget in
+more than half the questions, and it plausibly inflated the
+`claim_not_in_evidence` failures that dominate the support taxonomy. A
+re-measurement is a new registered experiment, not a retroactive repair.
+
+E-006 must be re-run against the fix before Phase 6 quotes its reach
+numbers — the same check the earlier linking fixes got, where it came back
+unchanged.
+
+## 2026-08-10 — E-007 read: the DoD fails on coverage, and the real problem is elsewhere
+
+The decision rule was applied as written; nothing was invented at reading
+time.
+
+**Clause 1 not met.** Coverage 0.369 = 121/328 against a threshold of 1.0,
+with the three-round iteration budget spent. The registered branch for
+that case says the audit runs anyway and the DoD is reported not met with
+the measured figure, so that is what Phase 5 reports.
+
+**Clause 2 met.** Support 0.488 [0.400, 0.583] against a shuffled-citation
+control at 0.161 [0.065, 0.274]. The registered sentence is ambiguous
+about which interval it means — the full support figure or the control's
+own real arm — and it does not matter: 0.400 and 0.435 both clear 0.274.
+Recorded rather than quietly resolved, because the next experiment should
+fix the wording.
+
+**Over-refusal zero, gate clear**, on 4 `sufficient` subgraphs, bounded at
+0.75 by rule of three exactly as the thin-sample limitation predicted
+before generation.
+
+**The finding that matters is not in the DoD.** 8 of 9 `insufficient`
+subgraphs were answered rather than refused. The registered rule puts a
+threshold only on over-refusal, deliberately, so nothing here fails — and
+a system answering 89% of the questions whose evidence its own annotator
+judged absent is the parametric-leak surface E-008 exists to test. E-008
+now has a rate to test against instead of a hypothesis.
+
+**Two of five predictions were wrong.** `wrong_leaf` was predicted to be
+the commonest support failure and came in at **zero of 62**;
+`claim_not_in_evidence` is 45. That prediction was transferred from
+E-003a's measurement of this annotator disagreeing with themself, and the
+transfer failed: the model does not pick a neighbouring subrule, it cites
+a real and topically plausible item that does not contain the sentence.
+Concepts transfer, constants do not — and apparently error *shapes* do not
+either. Refusal was also predicted to dominate on `partial` and did not:
+16 answered against 3 refused.
+
+## 2026-08-10 — Coverage voided by one row, and the row was not reclassified
+
+The audit's 411 claim rows came back **83 `non_factual`, 328 `factual`**.
+`83/411 = 0.2019` against a void at `0.20`, and `0.20 × 411 = 82.2` — the
+figure is void by **eight tenths of one row**.
+
+One reclassification clears it. That is the entire reason none was made.
+The threshold was written before any answer existed precisely for the case
+where honouring it costs something, and a rule honoured only at
+comfortable margins is not a rule. The entry written two days into this
+labelling pass — while the outcome was still open — said the annotator was
+told the running rate and told not to let it move a label. That held.
+
+**The diagnosis, offered as a diagnosis:** 47 of the 83 exclusions are
+bare list markers produced by the registered segmenter; genuine exclusions
+are 36, or 8.8% of rows. Without the artefact the rate would be nowhere
+near the void. This is what the rule says it detects — coverage measuring
+the segmentation rather than the answers — so the rule identified its own
+target. It is not converted into a corrected coverage figure, because a
+denominator recomputed after seeing the verdict is the thing being guarded
+against, whatever justification is attached.
+
+**What Phase 5 can and cannot say.** Coverage is unreadable this run, so
+the DoD's first clause has no reading; the second clause is still read
+against the shuffled-citation control, and the over-refusal gate is
+unaffected — it rests on the frozen sufficiency labels and no claim label
+touches it. E-007d is the registered path to a readable coverage number,
+and it was registered mid-labelling, before this outcome existed, with its
+reading pre-committed and an explicit statement that its number does not
+retroactively become E-007's.
+
+## 2026-08-10 — The exclusion rate may void coverage, and the segmenter is not being touched
+
+Recorded **mid-labelling, before the outcome is known**, which is the only
+time this entry is worth anything.
+
+Numbered-list answers produce worksheet rows that are a bare list marker —
+`2.` and nothing else. The registered segmenter splits on punctuation +
+whitespace + a sentence opener, and `2. Merieke activates…` matches that
+as exactly as `Ends here. Next one` does. It is the instrument behaving as
+registered, not a defect discovered late.
+
+    bare list-marker rows          49 of 411 (11.9%), 12 answers, up to 6 in one
+    labelled so far                210 rows: 150 factual, 60 non_factual
+    of those exclusions            38 are bare markers, 22 are genuine (10.5%)
+    exclusion rate so far          0.286, against a void at 0.20
+
+Where it lands is open — 11 markers remain among 201 unlabelled rows, so
+the floor is 0.173 and the realistic projection is near 0.22.
+
+**No repair.** Re-segmenting now would rebuild the worksheet after seeing
+that its exclusion rate is uncomfortable, which is the move the frozen
+hash exists to make visible. The annotator was told the number and told
+plainly not to let it move a label: a bare `2.` is `non_factual` under the
+guide's closed list, and it stays that way whether or not the consequence
+is a void figure.
+
+If the rate clears 0.20, Phase 5 reports **coverage void** and reports why:
+a decomposition into artefact exclusions and genuine ones, offered as a
+diagnosis and never as a repaired coverage figure. The void rule says the
+metric would be measuring the segmentation rather than the answers, and
+that is precisely what 38 bare markers in 60 exclusions would mean. The
+rule firing correctly is not the rule failing.
+
+## 2026-08-10 — Development-side peek: coverage 0.361, and no decision is taken here
+
+118 claim rows labelled on the 10 development answers under `p5-a3`.
+Recorded because a peek that is not written down is a peek that can be
+denied later.
+
+    coverage   0.361 = 35/97 factual claims, 9 answering clusters
+    exclusions 21/118 = 0.178 (void above 0.20)
+    support    0.429 [0.265, 0.595], 9 clusters, 35 cited claims
+    failures   claim_not_in_evidence 15, right_evidence_wrong_reading 4,
+               unrelated_evidence 1, wrong_leaf 0, evidence_absent 0
+    refusals   over-refusal 0, unsupported answering 0, correct refusal 2
+
+**No decision is taken here.** This is the split the prompt was written
+against; it carries no threshold, and the DoD is read on the audit side
+only. Three things are worth writing down anyway:
+
+- **The three registered prompt rounds are spent.** Coverage at 0.361
+  against a threshold of 1.0 means the first DoD clause is very likely to
+  fail on the audit. A fourth round chosen *now*, after seeing that number,
+  would be the registry's whole purpose defeated — the budget was three,
+  and the audit runs on `p5-a3`.
+- **The prediction about where support fails looks wrong.** E-007 predicted
+  `wrong_leaf` — right rule family, wrong subrule — would dominate. On dev
+  it is **zero of 20**, and `claim_not_in_evidence` is 15: the model cites a
+  real, relevant-looking item that simply does not contain the sentence.
+  Not scored here; predictions are scored on the audit.
+- **Exclusions came in at 0.178 against a void at 0.20.** Some of that is
+  segmentation artefact — answers written as numbered lists produce rows
+  like `3.` — and the guide forbids re-splitting them. If the audit clears
+  0.20 the coverage figure is void by a rule written before any of this
+  existed, and that outcome is reported, not repaired.
+
+One limitation is now visible and is going into the write-up rather than
+into a fix: the claim unit is a **sentence**, and this model cites at the
+end of a numbered bullet covering three or four sentences. Sentence-level
+coverage counts those as uncited, which is what the unit was registered to
+do. Whether a bullet-level unit measures the same thing is a question for a
+successor experiment, not a redefinition of this one.
+
+## 2026-08-10 — A card with no rulings was never in the subgraph; 32 labels reopened
+
+*Guardian of the Guildpact* is linked correctly, exists in the graph, and
+reached no subgraph at all. Every card traversal arrived at the node
+through a relationship — rulings, keywords, legality — so a card with
+none of those contributed nothing to a question that named it, **not even
+its oracle text**, which is the evidence a rules question about that card
+most needs. `card_core` now runs unconditionally for every resolved card
+and is the only template emitting the card node; the duplicate emits on
+`card_rulings`, `card_legality` and `card_interaction` were removed rather
+than left to print the card twice. Cards reaching a subgraph across
+E-007's pool: **164 → 195**. The residual gap is one card mentioned
+several times in one question (264 traversals planned, 195 distinct
+cards).
+
+Evidence changed on **42 of 42** questions, so the sufficiency labels no
+longer described the subgraphs they were frozen against. The decision:
+reopen the **audit** side only — 32 labels — and keep the 10 development
+labels as they are, marked `stale_labels`. Re-judging a question whose
+generated answer the annotator has already read is precisely the
+contamination E-007's ordering exists to prevent; for the development side
+re-labelling would not merely be expensive, it would be invalid. So the
+development labels stay, flagged, and the stronger evidence they now sit
+on is a limitation carried into the write-up rather than a correction
+applied after the fact. `sufficiency reopen` demands a written reason and
+records it with the previous hash, because a frozen label that moves
+without a reason in the file was never frozen.
+
+**The re-label did not go the way I predicted.** I expected oracle text to
+turn `partial` into `sufficient` on many questions. Over the 32:
+
+| | `sufficient` | `partial` | `insufficient` |
+|---|---|---|---|
+| before the fix | 5 | 20 | 7 |
+| after the fix | 4 | 19 | 9 |
+
+21 of 32 unchanged; of the 11 that moved, 7 moved *away* from sufficiency.
+So the evidence these questions are missing is rules and rulings, not card
+text — the fix repaired a real hole without making the sample easier. Two
+things are confounded here and I cannot separate them: the evidence
+genuinely changed, and the annotator judged the same 32 questions twice.
+An 11-of-32 disagreement is **not** an agreement measurement and is not
+reported as one; E-007c still has to measure the ceiling on unchanged
+evidence.
+
+## 2026-08-10 — The contingency held, and I did not move it
+
+Sufficiency labelled on all 42 before any answer existed. Audit side: **5
+`sufficient`, 20 `partial`, 7 `insufficient`.**
+
+The registered contingency does not fire — `sufficient` + `partial` is 25
+against a floor of 12 — so generation proceeds. But the composition is worse
+than the headline suggests, and the honest thing is to say so rather than
+quietly re-cut the criterion:
+
+**The only DoD-blocking gate now rests on 5 questions.** Over-refusal is
+defined on `sufficient` alone, and zero over-refusals over 5 bounds the rate
+at 3/5 = 0.60 by rule of three. Passing that gate will prove very little,
+and the write-up has to say so instead of reporting "the system does not
+over-refuse".
+
+I wanted to change the criterion — to require some number of `sufficient`
+specifically, now that I can see there are five. That is precisely the move
+pre-registration exists to prevent: the floor was chosen before the labels
+existed, it was met, and disliking the composition afterwards is not a
+reason to re-cut it. The limitation goes in the record; the gate stays.
+
+What *is* legitimate is measuring the instrument, and the project's own
+default says to: `partial` absorbed 25 of 42 subgraphs, and a category that
+takes the majority of a sample is the one most likely to be absorbing
+uncertainty rather than describing it. **E-007c** is registered — a blind
+re-label of 10 subgraphs, scored both exactly and collapsed to
+answerable / not, since the collapsed version is what the refusal gates use.
+It carries no decision rule and changes no frozen label. E-003a already
+measured this annotator at 0.815 against themself; a label with no ceiling
+is a label reported against a 1.0 that does not exist.
+
+## 2026-08-10 — Three linking defects, found by prose the golden set never had
+
+Reading the first sufficiency case turned up something wrong before a single
+label was written. `rg-4825` came back `resolved` with 11 evidence items and
+**one** card — yet the router had planned four card traversals. Across the 42
+questions: **245 card entities planned, 51 reaching the subgraph**, and every
+one of the 42 missing at least one card.
+
+Three separate defects, each found by pulling the previous one apart:
+
+1. **The router derived the query parameter from the surface text.** The
+   tokenizer deliberately keeps commas and periods, because card names
+   contain them (*Omnath, Locus of Creation*), so a mention written
+   mid-sentence arrives as `New Way Forward,` and normalizes to
+   `new way forward,` — a string matching no node. The linker had already
+   resolved it correctly through the loose table; the router threw that
+   resolution away and re-derived the name. `EntityRef` now carries the
+   resolved card's own `normalized_name`, and the router uses it.
+2. **A single-word name with clause punctuation did not resolve at all.**
+   `humility,` is in no lookup table: not `exact`, not `loose` (multi-word
+   only), not `single_word`. Multi-word names survived through `loose`;
+   single-word names — Humility, Opalescence, Opt — simply failed, which
+   from outside looks exactly like a card the corpus does not hold. The
+   surface as written is now tried first, then once more with edge
+   punctuation trimmed.
+3. **"What" resolves to a card** — *Who // What // When // Where // Why*
+   exists, and the capitalization gate cannot help because the capital is
+   sentence-initial. Costs an empty traversal rather than wrong evidence,
+   and goes to E-005 rather than being patched here.
+
+Effect on E-007's pool, re-run before anything was frozen: outcomes went from
+32 resolved / **10 no_match** to **42 resolved / 0 no_match**; cards in the
+subgraph 51 -> 164; rulings 196 -> 657; median evidence 11.5 -> 30 items.
+Every one of the ten "the graph has nothing for this" verdicts was the
+punctuation bug.
+
+**E-006 was re-run and does not move.** The corrected table is identical to
+the published one — `interaction_multihop` 0.88 entity / 0.12 rule, 1–2 hop
+entity recall 1.000, p95 0.40 s — so the Phase 4 figures stand as reported
+and the tagged release needs no amendment. The reachability and
+`eval_rule_search` measurements never touched the linker, so the phase's
+"`interaction_multihop` is out of reach" conclusion is untouched too.
+
+The lesson is about the sample, not the bug. **The defect could not be seen
+from the golden set**, whose development questions are generated or authored
+and name cards cleanly. It took RulesGuru prose — real sentences, with real
+commas — to expose it. A measurement can be correct and still be blind, and
+what made this visible was reading one case by hand before labelling it,
+which is the only reason the E-007 dump is not now frozen around ten false
+`no_match` verdicts.
+
+## 2026-08-10 — The audit pool's hardest stratum was already spent
+
+The first dry run of E-007's draw returned 23 new questions and **zero
+`interaction_multihop`**. The registered filter — `complexity: Complicated`,
+judge levels 0–2 — matched three questions, and the golden set already holds
+all three. Counting properly: of the 30 RulesGuru questions in the golden
+set, **22 are `interaction_multihop`**. The bucket is exhausted, not unlucky.
+
+This is not a logistics problem, and the fix is not to sample around it.
+`interaction_multihop` is where Phase 4 measured rule recall 0.12 — the only
+stratum that will produce `insufficient` subgraphs, correct refusals, and any
+chance of over-refusal. An audit without it measures citation behaviour on
+the easy half and reports nothing about the half where grounding is actually
+at risk. It is exactly the "an unstratified draw silently determines the
+result" hole the red-team flagged, arriving as fact rather than risk.
+
+The golden set left the answer in its own documentation: `golden-set.md`
+records that the complexity-seeded stratum was **wrong** and left two strata
+empty, so its 22 interaction questions came from human reclassification, not
+from the `Complicated` filter. `STRATUM_PLAN` says the same in a comment —
+complexity is a hint, the human confirms.
+
+Decision: widen the filter on judge level and complexity, and assign the
+stratum by hand from the question text — which E-007 already required.
+`build_golden_pool.py` takes `--stratum`, `--complexity` and `--level`
+rather than carrying them as constants, and prints the filter used with the
+draw, because widening changes what the sample represents and that belongs
+in the record instead of in an edited constant. Registered as an amendment
+to E-007 before the draw is frozen and before a single answer exists.
+
+Which axis to widen was measured, not assumed. Judge level is not it:
+`Complicated` at levels 0–3 returned the same three questions and zero new.
+Complexity is: `Intermediate` + `Complicated` at levels 0–2 returned 14 new
+of 20.
+
+The probes also corrected something I had wrong. The three `STRATUM_PLAN`
+entries are **source filters, not strata** — `ids_v0.jsonl` holds no
+`rulings_2hop` question at all, because the complexity-seeded stratum was
+reclassified by hand during annotation. So the pool's stratum mix cannot be
+known until the manual pass, and gets reported as achieved rather than
+planned.
+
+And a limitation worth writing down before it can be discovered
+conveniently: `definition_1hop` and `legality_1hop` were generated from
+Scryfall, not drawn from RulesGuru, so no filter here can produce them.
+That is 35 of the golden set's 77 questions on which E-007 will say
+nothing. It runs in the conservative direction — those are the easiest
+questions, where coverage would be highest — so the figure is a floor, and
+the write-up names the strata it covers instead of implying all of them.
+
+If the widened draw cannot reach 40, the registered n changes and the
+rule-of-three bound is recomputed from it. 3/30 = 0.10 is a property of the
+sample size; reporting it after drawing 23 would be arithmetic theatre.
+
+**Drawn the same day: 42.** Two passes — the default filters, then the
+widened interaction source — giving 10 development and **32** audit
+questions, so the bound is **3/32 = 0.094** and not the 0.10 the entry first
+named. Nine of the 42 touch a card name the golden set also uses; recorded
+with the sample, not dropped, because a second question about Blood Moon is
+not the same question.
+
+One ordering consequence I had wrong when I wrote the command list: the
+hand reclassification has to happen **before** the 10/32 split, not after.
+The split draws proportionally by stratum, so splitting on seeded labels
+would be stratified in name only — and if the true `interaction_multihop`
+questions landed mostly on the development side, the audit would lose the
+stratum this pool was redrawn to recover. The first worksheet row makes the
+point on its own: `rg-4825` came seeded as `keyword_rule_2hop` and is a
+chain of two *New Way Forward* redirecting a *Ral's Outburst*.
+
+The pass is cheap by design — **one field**, the stratum. E-007 measures
+citation coverage and support, not retrieval recall, so it needs no
+`gold_path`, no `gold_cr_rules`, no `vector_should`. The worksheet carries
+question text and therefore lives under `data/interim/` (gitignored); only
+`id -> stratum` goes back to the committed pool.
+
+**Classified the same day, and the result is itself a finding.**
+`interaction_multihop` 26, `negative_temporal` 15, `keyword_rule_2hop` 1,
+`rulings_2hop` 0 — with **31 of the 42 labels changed** from the seeded
+value. RulesGuru `complexity` is not a weak signal for traversal depth; it
+is noise, demonstrated independently for the second time after Phase 1.
+
+`rulings_2hop` came back empty again, exactly as in the golden set. Two
+independent annotation passes now agree that judge questions are not
+answered by "a card's official ruling citing a rule" — the same conclusion
+ADR-006 reached from the corpus side when it cut `CITES_RULE` back to
+explicit citations. Worth naming as a replication: the decision was made on
+corpus evidence, and question-side evidence arrived later and agreed.
+
+The uncomfortable consequence, faced before generating rather than after:
+41 of the 42 questions sit in the two strata where Phase 4 measured
+retrieval weakest. Most subgraphs will be labelled `insufficient`, which is
+what this pool was redrawn to produce — but it also means coverage and
+support will rest on however few questions can actually be answered, with a
+real risk of fewer than 10 clusters. So the contingency is registered now,
+with a number attached: if `sufficient` + `partial` lands below 12 on the 32
+audit questions, the pool is topped up before any answer is generated.
+Discovering that after generating would leave only bad options, and picking
+the threshold after seeing the count is how a contingency becomes a
+rationalisation.
+
+## 2026-08-10 — Phase 5 opened; the audit sample comes from outside the golden set
+
+Phase 4 closed with every deliverable present and no carry-over. The one
+deferral — fuzzy and embedding linking — is recorded below with its trigger,
+not left implicit.
+
+Phase 5's DoD asks for "a sample of **30 answers** audited against the
+RulesGuru answer key", and that collides with the split Phase 4 froze. The
+golden set holds 77 questions, 30 of them from RulesGuru, split 20
+development / 57 evaluation. Those 30 straddle both sides, so auditing 30
+answers against the RulesGuru key necessarily spends evaluation questions
+that E-001 has not run on yet — and the development split is both too small
+(20) and already seen by Phase 4's iteration.
+
+Decision: **draw a fresh pool of 30 RulesGuru questions that never entered
+the golden set**, disjoint from both splits. `build_golden_pool.py` already
+pulls and appends unseen ids under the licence posture the golden set uses
+(ids versioned, text cached and gitignored). This keeps the DoD literal —
+30 answers, RulesGuru key — at the cost of one fetch, and it is the cheaper
+option by a wide margin: the alternative spends a split that exists exactly
+once.
+
+Registered before any code: **E-007** (citation coverage and support) and
+**E-008** (parametric leakage, measured with fictional cards in a disposable
+namespace).
+
+E-007 carries one scoring rule that had to be settled before the first
+answer is generated, because getting it wrong would corrupt the whole
+phase: **a refusal counts as correct when the subgraph lacks the
+evidence.** Phase 4 measured `interaction_multihop` rule recall at 0.12, so
+for those questions there is nothing to answer from. An audit that scored
+refusals as failures would push the prompt toward answering from parametric
+knowledge — rewarding precisely the failure E-008 exists to detect.
+
+**Both entries were red-teamed the same day, before any generation, and
+both were rewritten.** The first versions would have passed while measuring
+very little:
+
+- **The audit had a degenerate route to a pass.** A refusal contains no
+  factual claims, so 30 refusals give coverage 100% (0/0) and a DoD marked
+  met. The refusal rule was right; the guard that has to accompany it was
+  never written. Fixed by labelling subgraph **sufficiency before any answer
+  is read** — the same ordering E-003a enforces in code — and by making
+  non-zero *over-refusal* on a sufficient subgraph block the DoD regardless
+  of coverage.
+- **"Factual claim" was undefined**, and the person who segments is the
+  person who writes the prompt. The denominator of the phase's only
+  threshold was being chosen by the interested party. Fixed by mechanical
+  segmentation frozen with a hash before any citation is re-attached, an
+  exclusion rate reported beside coverage that voids it above 20%, and
+  [claim-annotation-guide.md](claim-annotation-guide.md) putting connective
+  and inferential sentences explicitly **inside** the denominator — which is
+  exactly where the entry predicts round 1 will fail.
+- **The roadmap DoD has two clauses and I had quoted one.** "citações
+  sustentam a frase" was dropped on the grounds that no threshold for
+  support was pre-registered. The reasoning about not inventing thresholds
+  post hoc was right; the premise was false, since the clause *was*
+  pre-registered in the same sentence. Fixed with a pre-committed *reading*
+  rather than an invented number: support's interval must clear a
+  shuffled-citation control, which is the only thing separating "the
+  citations support the sentences" from "any citation looked plausible to
+  this judge".
+- **No iteration budget and no held-out split**, on the sample whose only
+  job is to produce a verdict. Phase 3 had this discipline (3 documented
+  rounds on a frozen subset) and Phase 5 dropped it. Now 40 drawn, 10 for
+  prompt development, 30 touched exactly once.
+- **No ceiling on a brand-new hand-made gold**, in a project whose own
+  written default is score → ceiling → decomposition. E-003a measured this
+  annotator at 0.815 against themself, on the same wrong-leaf axis E-007
+  predicts as its commonest failure. A blind re-audit of 8 of the 30 is now
+  registered.
+
+Two more that would have cost real work: nothing pinned the model,
+temperature or prompt version — the exact omission that already retired
+three Phase 3 iterations — and E-008 never verified that the fictional
+evidence actually reached the model, so a *retrieval* miss would have been
+scored as a leak and answered with prompt changes.
+
+The generalizable part: **the red-team pass is worth most before the sample
+is drawn, not before the run.** Four of the fixes changed what gets drawn
+and what gets labelled first, and none of them would have been available
+once the answers existed.
+
+## 2026-08-10 — The close audit found a promise the code was not keeping
 
 Walking the Phase 4 deliverable checklist to close the phase turned up a
 gap that no test could have found, because nothing was ever asserted about
@@ -121,7 +829,7 @@ a test the test suite cannot run.** A promise made in an ADR and not kept in
 code produces no failing assertion — only a reader comparing the two finds
 it, and only if the close ritual forces the comparison.
 
-## 2026-08-09 — Fuzzy and embedding linking deferred: nothing is failing
+## 2026-08-10 — Fuzzy and embedding linking deferred: nothing is failing
 
 The Phase 4 deliverable specified query-time linking as *exact → fuzzy →
 embedding*, covering nicknames like "Bolt". What shipped is exact +

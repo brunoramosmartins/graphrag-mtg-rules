@@ -56,6 +56,7 @@ CLEANUP = [
 ]
 
 CASES = [
+    ("card_core", {"normalized_name": f"{NS}alpha"}, "card", f"{NS}Alpha"),
     ("keyword_definition", {"keyword": f"{NS}flying"}, "rule", f"{NS}702.9"),
     ("card_legality", {"normalized_name": f"{NS}alpha", "format": f"{NS}modern"},
      "legality", f"{NS}modern"),
@@ -63,10 +64,23 @@ CASES = [
      "legality", f"{NS}Alpha"),
     ("card_keyword_rules", {"normalized_name": f"{NS}alpha"}, "rule", f"{NS}702.9"),
     ("card_rulings", {"normalized_name": f"{NS}alpha"}, "ruling", f"{NS}rl1"),
-    ("card_interaction", {"left": f"{NS}alpha", "right": f"{NS}beta"}, "card", f"{NS}Alpha"),
+    # Since `card_core` became the only emitter of the card node, what this
+    # traversal contributes is the relationship between the two cards, not
+    # the cards themselves — so that is what the case now checks.
+    ("card_interaction", {"left": f"{NS}alpha", "right": f"{NS}beta"}, "ruling", f"{NS}rl1"),
     ("rule_subtree", {"rule_number": f"{NS}702.9"}, "rule", f"{NS}702.9a"),
     ("rule_neighbourhood", {"rule_number": f"{NS}702.9"}, "rule", f"{NS}509.1"),
 ]
+
+
+def test_every_template_has_a_case() -> None:
+    """`card_core` shipped with no case here; nothing made this list keep up.
+
+    Unmarked on purpose — it needs no server, and a template with no
+    integration case is exactly what would otherwise go unnoticed until CI
+    is green on a query nobody ever ran.
+    """
+    assert {case[0] for case in CASES} == set(BY_NAME)
 
 
 @pytest.fixture

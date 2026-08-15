@@ -137,6 +137,22 @@ RETURN k.display_name AS keyword,
 LIMIT $limit
 """)
 
+#: The card the question named, unconditionally.
+#:
+#: Every other card traversal reaches the node through a relationship, so a
+#: card with no rulings and no keywords produced no rows and vanished —
+#: taking its oracle text, the single most important evidence for a rules
+#: question about it, with it. Measured on E-007's pool: 264 card traversals
+#: planned, 164 cards reaching a subgraph. A question naming a card gets the
+#: card, and whether anything hangs off it is a separate question.
+CARD_CORE = """
+MATCH (c:Card {normalized_name: $normalized_name})
+RETURN c.name AS card,
+       c.oracle_text AS card_text,
+       c.type_line AS type_line
+LIMIT $limit
+"""
+
 CARD_LEGALITY = """
 MATCH (c:Card {normalized_name: $normalized_name})-[e:HAS_LEGALITY]->(f:Format)
 WHERE $format IS NULL OR f.name = $format
@@ -239,6 +255,18 @@ LIMIT $limit
 
 TEMPLATES: tuple[Template, ...] = (
     Template(
+        name="card_core",
+        cypher=CARD_CORE,
+        params=("normalized_name",),
+        strata=("legality_1hop", "keyword_rule_2hop", "interaction_multihop"),
+        description=(
+            "The named card itself, with its oracle text. Runs for every card a "
+            "question resolves, so a card with no rulings and no keywords is still "
+            "evidence rather than silence."
+        ),
+        emits=(Emit("card", "card", "card_text", "(:Card {{{card}}})"),),
+    ),
+    Template(
         name="keyword_definition",
         cypher=KEYWORD_DEFINITION,
         params=("keyword",),
@@ -260,7 +288,7 @@ TEMPLATES: tuple[Template, ...] = (
         strata=("legality_1hop",),
         description="A card's legality status per format; $format may be null for all of them.",
         emits=(
-            Emit("card", "card", "card_text", "(:Card {{{card}}})"),
+            # The card node itself comes from `card_core`, which always runs.
             Emit("legality", "format", "status",
                  "(:Card {{{card}}})-[:HAS_LEGALITY {{{status}}}]->(:Format {{{format}}})"),
         ),
@@ -308,7 +336,7 @@ TEMPLATES: tuple[Template, ...] = (
             "Since ADR-006 the citation is present only when the ruling states a number."
         ),
         emits=(
-            Emit("card", "card", "card_text", "(:Card {{{card}}})"),
+            # The card node itself comes from `card_core`, which always runs.
             Emit("ruling", "ruling_id", "ruling_text",
                  "(:Card {{{card}}})-[:HAS_RULING]->(:Ruling)", distance=1),
             Emit("rule", "number", "text",
@@ -325,8 +353,7 @@ TEMPLATES: tuple[Template, ...] = (
             "either direction, and keywords they share with the rules defining them."
         ),
         emits=(
-            Emit("card", "left_card", "left_text", "(:Card {{{left_card}}})"),
-            Emit("card", "right_card", "right_text", "(:Card {{{right_card}}})"),
+            # Both card nodes come from `card_core`, which always runs.
             Emit("ruling", "ruling_id", "text",
                  "(:Card {{{left_card}}})-[:HAS_RULING]->(:Ruling)-[:MENTIONS]->(:Card {{{right_card}}})",
                  collection="left_rulings", distance=1),

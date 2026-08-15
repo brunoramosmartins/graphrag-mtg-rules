@@ -183,17 +183,13 @@ class LlmClient:
             msg = f"unknown LLM_PROVIDER {self.provider!r} (expected 'anthropic' or 'openai')"
             raise RuntimeError(msg)
 
-    def complete_json(self, prompt: str, *, system: str = "") -> Any:
-        """Send one prompt and parse the response as JSON.
+    def complete_text(self, prompt: str, *, system: str = "") -> str:
+        """Send one prompt and return the response text, unparsed.
 
-        The extraction prompts all demand a bare JSON object/array; models
-        occasionally wrap it in prose, so the first JSON-looking block is
-        parsed. A response with no parseable JSON raises ``ValueError`` —
-        callers count it as a failed extraction rather than retrying
-        forever (prompt iteration happens against the fixed dev sample).
-
-        Raises:
-            ValueError: if the response contains no valid JSON.
+        Phase 5 needs prose, not JSON: a grounded answer is written for a
+        reader, and wrapping it in a JSON envelope would add a parse
+        failure mode to a measurement about citations. Extraction keeps
+        using :meth:`complete_json`, which now layers on top of this.
         """
         if self.provider == "anthropic":
             message = self._anthropic.messages.create(
@@ -218,4 +214,18 @@ class LlmClient:
             )
             response.raise_for_status()
             text = response.json()["choices"][0]["message"]["content"] or ""
-        return _parse_json(text)
+        return text
+
+    def complete_json(self, prompt: str, *, system: str = "") -> Any:
+        """Send one prompt and parse the response as JSON.
+
+        The extraction prompts all demand a bare JSON object/array; models
+        occasionally wrap it in prose, so the first JSON-looking block is
+        parsed. A response with no parseable JSON raises ``ValueError`` —
+        callers count it as a failed extraction rather than retrying
+        forever (prompt iteration happens against the fixed dev sample).
+
+        Raises:
+            ValueError: if the response contains no valid JSON.
+        """
+        return _parse_json(self.complete_text(prompt, system=system))
