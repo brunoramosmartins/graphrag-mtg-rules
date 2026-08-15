@@ -329,11 +329,130 @@ multiple-comparison correction when strata are tested jointly.
 
 ## E-002 — MetaQA calibration
 
-- **Registered:** _not yet — to be registered with full configuration
-  before the first calibration run (Phase 6)._
-- **Objective (declared intent only):** run the same machinery on an
-  academic multi-hop benchmark with an answer key, to separate "the
-  pipeline works" from "the domain is hard" before any claim on MTG.
+- **Objective (as first declared, 2026-07-19, intent only):** run the same
+  machinery on an academic multi-hop benchmark with an answer key, to
+  separate "the pipeline works" from "the domain is hard" before any claim
+  on MTG. The entry carried no configuration until the registration below.
+
+- **Registered:** 2026-08-15, before the adapter exists and before a single
+  MetaQA question has been run. The phase gives this a **4-day timebox**;
+  registering after the timebox starts is registering after the fact.
+
+- **Objective, stated narrowly because the roadmap's phrasing overclaims.**
+  The roadmap says calibration proves "a maquinaria funciona". It cannot,
+  and pretending otherwise would be the first thing a reader catches. What
+  ships is heavily MTG-specific: `QueryLinker` resolves card names against a
+  Scryfall lexicon, `router.plan` branches on whether an entity *seeds the
+  rule graph*, and all **9 templates** in `retrieval/templates.py` are
+  written in `Card` / `Keyword` / `Rule` / `Ruling` / `Format`. None of that
+  transfers to a movie KG.
+
+  What **does** transfer, and is therefore what this entry actually
+  measures: the generic spine — typed traversal from a seeded entity, the
+  `Subgraph` budget and `kind_cap` machinery, evidence serialization with
+  citable handles, and grounded generation that answers only from what it
+  was given. Registered claim: **"the traversal-and-grounding spine
+  reproduces published behaviour on a benchmark with an answer key"** — not
+  "the pipeline works". Any component not exercised is listed in the result
+  block, so the reader knows what the number does not cover.
+
+- **Configuration.** MetaQA vanilla KB (movie KG, ~43k triples) and its
+  1-hop / 2-hop / 3-hop question sets. **A sampled subset of 500 questions
+  per hop**, drawn at seed `20260815` from the test split and frozen to
+  `data/golden/metaqa_subset.json` before the adapter runs; the seed and the
+  file are recorded here and `split_golden.py`-style refusal to redraw
+  applies. Metric: **Hits@1**, per hop, reported with cluster-free binomial
+  intervals (each question is its own unit here — unlike the MTG audit,
+  there is no question-level clustering to respect).
+
+- **Isolation, and this is not optional — it is the E-008 incident's
+  lesson.** E-008 loaded 9 fictional nodes with `MERGE` on keys that
+  existed, adopted a real CR keyword, and teardown then deleted three real
+  rules. MetaQA loads **~43k triples**, four orders of magnitude more, into
+  a graph holding the production corpus. Therefore:
+
+  - MetaQA goes into a **separate Neo4j database**, not a namespace inside
+    the Magic one. If the deployment cannot supply one, the load is refused
+    rather than tagged.
+  - Labels and relationship types are prefixed (`MQ_Movie`, `MQ_DIRECTED`)
+    so that even a misconfigured connection cannot match a Magic pattern.
+  - The loader asserts **created == declared** and refuses on any
+    pre-existing key, the check written after the incident.
+  - Teardown is verified by a count returning to its pre-load value, and by
+    a `verify-clean` pass, before any Magic experiment runs again.
+
+- **Decision rule, and the phrase that needed a number.** The roadmap's DoD
+  says "números dentro de faixas plausíveis da literatura OU divergência
+  analisada por escrito". *"Plausible ranges"* is the same undecidable
+  wording that broke the M2 ceiling and appeared three times more in the
+  entries written yesterday. Fixed as a **procedure completed before the
+  first run**, not as a judgement made after it:
+
+  1. **The comparison band is extracted first.** Before the adapter runs,
+     the reported Hits@1 per hop is taken from **named, cited KGQA papers
+     that evaluate on MetaQA**, transcribed into this entry with citation
+     and reported figure, and the band per hop is `[min, max]` across them.
+     No number is written from memory, and the band is fixed before any of
+     ours exists — per the house rule that concepts transfer and constants
+     do not, these are *their* numbers recorded as theirs, never adopted as
+     targets to hit.
+  2. **A floor that does not depend on the literature.** MetaQA 1-hop is a
+     single typed edge lookup — "what movies did X direct" — against a KB
+     with no ambiguity and no rules text. A traversal spine that cannot
+     reach **Hits@1 ≥ 0.90 on 1-hop** is broken, and that is a statement
+     about our machinery, not about the benchmark. Below it, the divergence
+     is chased as a defect before anything is written up, exactly as E-006's
+     registered prediction told us to suspect the harness first — and that
+     instruction is the only reason E-006's 0.067 was chased rather than
+     believed.
+  3. **The verdict is one of three**, per hop: *inside band*, *below band
+     with a written analysis of where and why*, *above band* — which is
+     itself suspicious at this scale and triggers a leakage check before it
+     is reported as a success.
+
+- **Timebox cut rule, registered before the clock starts.** If the adapter
+  is not loading and querying by the end of day 4, calibration is cut to
+  **1-hop and 2-hop** and the cut is documented as a scope decision in
+  `docs/decision-journal.md` with the day it was taken. If day 4 ends with
+  no working load at all, MetaQA is **dropped from Phase 6** and reported as
+  an unmet deliverable — the roadmap's cut list already permits reducing
+  calibration and forbids only cutting the domain evaluation. Deciding this
+  now is what stops a 4-day timebox from becoming a 9-day one.
+
+- **Predictions, recorded before the run.**
+  - **1-hop lands inside the band; 3-hop lands below it.** The published
+    systems on MetaQA are trained or tuned on it; ours is a zero-shot
+    traversal spine with a generic template, and depth is where that gap
+    shows.
+  - **The dominant 3-hop failure is budget, not traversal.** A 3-hop ball in
+    a 43k-triple KB is large, `enforce_budget` and `kind_cap` will trim it,
+    and the answer will be dropped before the model sees it. Scoreable: the
+    `dropped` / `capped` counters are recorded per question, and this
+    prediction is confirmed only if failures correlate with non-empty
+    counters.
+  - **Grounded generation is not the bottleneck at any hop.** Where the
+    answer entity is present in the subgraph, it is selected. If this is
+    wrong, the finding is about generation and it transfers directly back to
+    the MTG side, which is the main reason this calibration is worth its
+    four days.
+
+- **Threats to validity, recorded before the run.**
+  - **The calibration exercises the spine, not the system.** Stated above,
+    and it bounds every sentence the write-up may build on this number.
+  - **MetaQA questions are templated.** Their surface forms come from a
+    small set of patterns, so entity linking there is far easier than
+    resolving *"Who // What // When // Where // Why"* against a Scryfall
+    lexicon. A good MetaQA number is **not** evidence that this project's
+    linking works — E-003 and E-005 measure that, and E-008 already found
+    three linking defects the reach metrics could not see.
+  - **A one-shot benchmark on a sampled subset.** 500 per hop at one seed;
+    the subset is frozen and the run is not repeated with a better draw.
+  - **Answer-set questions.** Some MetaQA questions have multiple correct
+    answers; Hits@1 is defined against the full answer set, and the scoring
+    rule is fixed in the adapter and tested before the run rather than
+    settled while looking at failures.
+
+- **Actual result:** _pending._
 
 ## E-003 — Linking and extraction quality against manual annotations
 

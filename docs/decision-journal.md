@@ -90,6 +90,63 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-15 — The golden set audits clean, and E-002 is registered against a claim it can actually support
+
+Two things closed today before any Phase 6 code was written.
+
+**The golden set needed no work.** Annotation coverage across all 77
+questions is complete on `gold_entities`, `gold_path`, `hops`,
+`vector_should` and `verified`; the only zero is `gold_cr_rules` on
+`legality_1hop`, and yesterday's corpus-parity amendment already handles it.
+What the audit bought is the knowledge that it is the **only** gap — no
+other stratum has an undefined retrieval metric waiting to be discovered
+during the evaluation run.
+
+A scare on the way: 30 of the 77 rows carry no `answer` field. They are
+exactly the 30 RulesGuru rows, whose text lives in a gitignored cache
+because the Fan Content policy forbids committing it — the design working,
+not a hole. Verified with the project's own function: **30 of 30 cached
+questions still hash to their curated snapshot**, no upstream drift since
+curation. (My first check reported 30 mismatches because I hashed the raw
+cache file; `snapshot_sha256` is over the *resolved* content — id, question,
+answer, card names — which is the right thing to hash, since RulesGuru
+substitutes cards procedurally.) It is still an operational dependency
+nobody had registered: the answer key for 39% of the benchmark is not in the
+repo, so "reproducible from one command" includes a fetch step, and the
+cache must be verified present and hash-matched **before** the evaluation
+run rather than during it.
+
+**E-002 was registered, and its objective narrowed on the way in.** The
+roadmap says calibration proves "a maquinaria funciona". It cannot. What
+ships is MTG-specific down to the bone: the linker resolves card names
+against a Scryfall lexicon, the router branches on whether an entity seeds
+the *rule* graph, and all nine templates are written in Card / Keyword /
+Rule / Ruling / Format. Almost none of it can run on a movie KG. What
+transfers is the generic spine — typed traversal from a seeded entity, the
+subgraph budget, citable evidence serialization, grounded generation — and
+that is what the entry now claims to measure. Registering the broad version
+would have produced a number that reads as validating components MetaQA
+never touches.
+
+Two decisions inside it worth their own line. The DoD's *"faixas plausíveis
+da literatura"* is the same undecidable phrase that broke the M2 ceiling and
+showed up three more times yesterday, so it became a **procedure completed
+before the run**: transcribe reported Hits@1 per hop from named, cited KGQA
+papers into the entry first, take `[min, max]` as the band, and never write
+a number from memory. Beside it, a floor that does not depend on anyone's
+paper — MetaQA 1-hop is a single typed edge lookup, so below **0.90** the
+spine is broken and the divergence is chased as a defect. And the timebox
+cut rule is fixed now, before the clock starts: day 4 without a working
+adapter cuts calibration to 1- and 2-hop; day 4 without a working load at
+all drops MetaQA and reports it as an unmet deliverable.
+
+The isolation clause is the E-008 incident paying rent. That experiment
+loaded **9** fictional nodes, adopted a real keyword through `MERGE`, and
+its teardown deleted three real CR rules. MetaQA is ~43,000 triples. It goes
+into a separate database with prefixed labels, a created-equals-declared
+assertion, and a verified teardown — not into a namespace inside the Magic
+graph.
+
 ## 2026-08-15 — Four registrations red-teamed the day they were written, and eleven objections landed
 
 The four Phase 6 entries — the E-001 configuration, E-009, E-010, E-011 —
