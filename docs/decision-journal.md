@@ -90,6 +90,43 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-15 — Phase 6 opens carrying three items, and one registered threshold I do not believe
+
+Gate check on Phase 5 passed on code and failed on outcome, which was the
+point of closing it that way. Carried into Phase 6 as explicit tasks rather
+than as hopes: the experiment for the 8-of-9 answering on `insufficient`
+subgraphs, a precision-side companion for E-001, and E-007d. The `as_of`
+half of citable negative answers is **dropped**, not carried — Scryfall's
+bulk carries no ban dates and ingesting B&R announcements is a new data
+source, which is a scope decision and not a bug to fix.
+
+The thing worth writing down on the day the phase opens is a problem with
+its own DoD, found by reading it against what Phase 5 just measured.
+
+**"LLM-judge vs. human agreement ≥ 85%" is a threshold with no ceiling
+under it.** Phase 5 measured this annotator against themself: 0.990 on the
+claim label, 0.933 on support, **0.800 on subgraph sufficiency**, 0.815 on
+ruling citation in Phase 3. A judge asked to reproduce a sufficiency-like
+judgement cannot agree with the human more often than the human agrees with
+themself, so on that kind of label 85% is above the instrument. On the claim
+label, by contrast, 85% is far *below* the ceiling and a judge scraping past
+it would be a bad judge passing an easy bar. One number cannot serve both.
+
+I am not editing the threshold today, because a threshold rewritten while
+staring at the ceiling that embarrasses it is worth nothing. What I am doing
+is registering the problem before the judge exists, and committing to the
+form of the fix: **agreement is reported per label type, each beside the
+human ceiling for that same label**, and the pass/fail reading is fixed in
+the registry before the judge is run. Whether 85% survives as the number is
+a decision for that entry, taken before any judge output is seen.
+
+**The 57 evaluation questions are touched once.** E-006's first run read
+0.067 because of two harness bugs, and it was allowed to be re-run because
+it was the development split. There is no second draw here. So Phase 6 gets
+a dress rehearsal: the whole pipeline, both arms, the judge and the report
+run end to end on the 20 development questions first, and the evaluation set
+is only opened when that produces a report with no defect left to chase.
+
 ## 2026-08-15 — Phase 5 closes with its DoD failed on two of three items
 
 Closing the phase rather than extending it until the checkboxes tick. The
