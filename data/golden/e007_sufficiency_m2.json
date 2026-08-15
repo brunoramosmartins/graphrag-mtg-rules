@@ -1,0 +1,39 @@
+{
+  "frozen": false,
+  "pass": "m2",
+  "source": "data\\golden\\e007_sufficiency.json",
+  "source_hash": "534547ed84547aac1bb6fd2074f2de01d190da4cdd8138a8f58645d9fd40f5d0",
+  "seed": 20260810,
+  "labels": {
+    "rg-1015": {
+      "label": "insufficient"
+    },
+    "rg-1186": {
+      "label": "insufficient"
+    },
+    "rg-1411": {
+      "label": "partial"
+    },
+    "rg-32": {
+      "label": "insufficient"
+    },
+    "rg-361": {
+      "label": "insufficient"
+    },
+    "rg-4747": {
+      "label": "insufficient"
+    },
+    "rg-5257": {
+      "label": "sufficient"
+    },
+    "rg-6586": {
+      "label": "sufficient"
+    },
+    "rg-6817": {
+      "label": "insufficient"
+    },
+    "rg-7500": {
+      "label": "sufficient"
+    }
+  }
+}

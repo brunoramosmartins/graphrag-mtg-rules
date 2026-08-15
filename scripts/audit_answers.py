@@ -1180,6 +1180,16 @@ def reaudit_score(args: argparse.Namespace) -> int:
     interval = cluster_proportion_ci([[hit] for hit in agreed])
     print(f"exact agreement {sum(agreed)}/{len(agreed)} = {interval.point:.3f} "
           f"[{interval.low:.3f}, {interval.high:.3f}]")
+
+    # Registered beside exact agreement, because the refusal gates do not use
+    # the three-way label — they use answerable against not.
+    def answerable(label: str) -> bool:
+        return label in (Sufficiency.SUFFICIENT.value, Sufficiency.PARTIAL.value)
+
+    collapsed = [answerable(a) == answerable(b) for a, b in pairs]
+    rolled = cluster_proportion_ci([[hit] for hit in collapsed])
+    print(f"collapsed (answerable vs not) {sum(collapsed)}/{len(collapsed)} = "
+          f"{rolled.point:.3f} [{rolled.low:.3f}, {rolled.high:.3f}]")
     disagreements = [(q, a, b) for (q, (a, b)) in zip(second["labels"], pairs, strict=True) if a != b]
     if disagreements:
         print("\ndisagreements (pass 1 -> pass 2):")

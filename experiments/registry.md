@@ -864,7 +864,32 @@ second annotator would fix it and this project has one.
   `partial` boundary rather than on `insufficient` — deciding whether the
   missing rule mattered is the judgement, and deciding whether anything was
   retrieved is not.
-- **Actual result:** _(to be filled after the run)_
+- **Actual result (2026-08-10, 10 of 42, seed `20260810`, blind):**
+
+      exact agreement                 8/10 = 0.800 [0.500, 1.000]
+      collapsed (answerable vs not)   8/10 = 0.800 [0.500, 1.000]
+      disagreements   rg-1186  partial -> insufficient
+                      rg-4747  partial -> insufficient
+
+  **The prediction was wrong twice over.** Collapsed agreement was expected
+  to be the stronger of the two and is **identical**, and the disagreement
+  was expected to sit on the `sufficient`/`partial` boundary and sits
+  entirely on `insufficient` — the boundary the prediction called the easy
+  one. Deciding whether anything useful was retrieved turns out to be
+  exactly the judgement that moves.
+
+  **Consequence for the refusal figures, which is why this is measured.**
+  Both drifts run the same way, `partial` → `insufficient`, so a second pass
+  would have called *more* subgraphs unanswerable. The unsupported-answering
+  count of 8 of 9 is read against an instrument that, re-run, tends to
+  enlarge its own denominator. The figure stands as reported — no frozen
+  label moves, per the decision rule registered here — and it carries the
+  0.800 ceiling beside it.
+
+  **Ten items is a small sample and the interval says so:** [0.500, 1.000].
+  It is consistent with E-003a's 0.815 on a different task, which is worth
+  noting and not worth pooling: two ceilings measured on different labels
+  are not one measurement.
 
 ### Decision rules
 
