@@ -369,6 +369,60 @@ historical document.
   filtering at the retrieval call site, **not** inside `Lexicon.build`,
   because that constructor is what E-003 measured.
 
+- **Fourth run — amendment registered 2026-08-15, before it is run.** The
+  design, the split, the metrics and the decision rule are unchanged; what
+  changed is the system under test. E-008's evidence check found three
+  defects in production linking *after* E-006 run 3 and after E-007 had
+  generated and scored its answers: whole names losing to split-card faces,
+  a single-word face bypassing the capitalization gate (`what` matching
+  *Who // What // When // Where // Why*, present in 23 of E-007's 42
+  subgraphs), and keyword matching defeated by clause punctuation. Phase 6
+  is about to quote reach numbers measured on the linker as it was, so they
+  are re-measured on the linker as it is. Run 3 stands as reported and is
+  not overwritten.
+
+  **Predictions, recorded before the run.** The 1–2 hop strata are already
+  at 1.000 and cannot improve, so the scoreable question is the opposite
+  one: **did the fix break a match that used to work by accident?** The
+  face rejection is the risk — refusing face-only single-word matches could
+  lose a legitimate lookup of a split card by one of its face names. Any
+  regression below 0.9 on the 1–2 hop strata is a fix defect, not a finding
+  about retrieval, and is chased in the linker before anything is written
+  down. `interaction_multihop` entity recall is expected to move slightly
+  (the `what` collision was adding a wrong card, not a missing one, so
+  removing it changes subgraph composition without necessarily changing
+  recall), and its rule recall is expected to stay at the 0.06–0.12 the
+  three independent methods already agree on. The keyword punctuation fix
+  is the one change that could *raise* a number, on `keyword_rule_2hop` —
+  which has n=1 and therefore cannot support a claim either way.
+
+  **Actual result (2026-08-15).** Every recall figure is **identical to run
+  3**: `definition_1hop` 1.00/1.00, `legality_1hop` 1.00/n/a,
+  `keyword_rule_2hop` 1.00/1.00, `negative_temporal` 1.00/0.25,
+  `interaction_multihop` 0.88/0.12. 1–2 hop entity recall **1.000 — PASS**.
+  All 20 questions resolved, none ambiguous, no named failures. Latency
+  median 0.13 s, p95 **1.21 s** against 0.53 s in run 3 — under the 2 s
+  criterion, but p95 over 20 questions is one observation and is reported as
+  a number seen, not as a change measured.
+
+  **No regression: the prediction's risk did not materialise.** Rejecting
+  face-only single-word matches broke nothing on this split.
+
+  **The finding is what did *not* move, and why it could not have.** Entity
+  recall is `|gold ∩ retrieved| / |gold|`. Adding a spurious entity cannot
+  lower it. All three defects were of that shape — the `what` collision put
+  *Who // What // When // Where // Why* into 23 of E-007's 42 subgraphs
+  without removing anything a question needed — so **E-006 would have read
+  1.000 with the defects and reads 1.000 without them.** This experiment was
+  structurally incapable of detecting the bugs that E-008's evidence check
+  found in an afternoon.
+
+  That is a limitation of the metric, not of this run, and it transfers
+  directly to Phase 6: a recall figure certifies that what was needed
+  arrived, and says nothing about what else arrived with it. E-001 needs a
+  precision-side companion, or its subgraphs get graded on half the
+  question. Registered here as the gap; the experiment is not designed yet.
+
 - **Hypothesis for E-005, generated here and not acted on:** the Phase 3
   ingestion linker used the *unfiltered* lexicon, so those same 2,196
   collisions would have pushed real multi-word card names into the pending

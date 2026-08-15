@@ -460,3 +460,36 @@ as accuracy.
 Coverage stays void. On the shared rows the passes read 0.210 and 0.200
 against a 0.20 limit, but a ceiling sample measures the annotator, not the
 corpus, and cannot re-decide a verdict the registered rule already returned.
+
+### 2026-08-15 — E-006 run 4: nothing moved, and that is the finding
+
+Re-run against the three linking defects E-008 found after run 3, so Phase 6
+does not quote reach numbers measured on a linker that no longer exists.
+Amendment registered before the run; design, split, metrics and decision rule
+unchanged.
+
+    definition_1hop        1.00 / 1.00   n=4
+    interaction_multihop   0.88 / 0.12   n=8
+    keyword_rule_2hop      1.00 / 1.00   n=1
+    legality_1hop          1.00 / n/a    n=5
+    negative_temporal      1.00 / 0.25   n=2
+
+    1-2 hop entity recall 1.000 over 10 -> PASS
+    outcomes {'resolved': 20}, no named failures
+    latency median 0.13s, p95 1.21s (run 3: 0.53s) against the 2s criterion
+
+Every recall figure is identical to run 3. The predicted risk — the face
+rejection breaking a lookup that used to work by accident — did not happen.
+
+The p95 moved and is reported as a number seen, not a change measured: over
+20 questions the p95 is a single observation.
+
+**Entity recall could not have detected these defects.** It is
+`|gold ∩ retrieved| / |gold|`, and every defect fixed was additive — the
+`what` collision put a wrong card into 23 of E-007's 42 subgraphs without
+removing anything a question needed. E-006 reads 1.000 with the bugs and
+1.000 without them.
+
+Carried to Phase 6: a recall figure certifies that what was needed arrived
+and says nothing about what else came with it. E-001 needs a precision-side
+companion or it grades subgraphs on half the question.

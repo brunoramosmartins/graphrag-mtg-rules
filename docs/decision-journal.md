@@ -90,6 +90,36 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-15 — E-006 re-run came back identical, and the metric is why
+
+The three linking defects E-008 found landed after E-006 run 3 and after
+E-007's answers were generated and scored. Phase 6 is about to quote reach
+numbers, so I re-ran E-006 against the fixed linker rather than let Phase 4's
+table stand on a system that no longer exists. Amendment registered first:
+same design, same split, same decision rule, different system under test.
+
+Every recall figure came back identical. 1–2 hop entity recall 1.000, all 20
+resolved, `interaction_multihop` still 0.88/0.12. The predicted risk — that
+rejecting face-only single-word matches would break a lookup that used to work
+by accident — did not materialise.
+
+The decision this forced is what to *do* with an unchanged number. The
+temptation is to read it as "the defects did not matter". That reading is
+wrong, and the reason is in the metric's definition: entity recall is
+`|gold ∩ retrieved| / |gold|`, so an entity that should not be there cannot
+lower it. Every defect fixed was additive — the `what` collision put a wrong
+card into 23 of E-007's 42 subgraphs and removed nothing — so **E-006 reads
+1.000 either way.** It was structurally incapable of detecting the bugs, and
+an afternoon of E-008's evidence check found all three.
+
+So the re-run's finding is not about the linker. It is that Phase 4's headline
+measures half the question, and I only know that because a *different*
+experiment, built to check something else, tripped over the other half.
+Recorded as a Phase 6 gap: E-001 needs a precision-side companion, or the
+comparison against the vector baseline is decided on which system retrieves
+more, not which retrieves better. The companion is not designed yet, and
+designing it after seeing E-001's numbers would not count.
+
 ## 2026-08-15 — The ceiling split the registered rule, and the split is what gets published
 
 The M2 re-audit came back at **0.990 [0.969, 1.000]** on the claim label and

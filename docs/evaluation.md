@@ -288,6 +288,21 @@ of 8 dev questions; E-006 end to end reads 0.12. Neither half of ADR-007's
 hybrid covers the stratum that carries the central hypothesis, and that
 convergence is the Phase 4 finding rather than a defect still to fix.
 
+**Re-measured 2026-08-15 against the fixed linker, and every figure is
+identical.** Three production linking defects were found by E-008 *after* this
+table was produced, so it was re-run rather than left standing on a linker that
+no longer exists. Nothing moved: 1–2 hop entity recall 1.000, all 20 resolved,
+`interaction_multihop` still 0.88/0.12.
+
+That is not reassurance, it is a limitation coming into view. Entity recall is
+`|gold ∩ retrieved| / |gold|`, so a spurious entity cannot lower it — and all
+three defects were additive, the worst of them putting *Who // What // When //
+Where // Why* into 23 of E-007's 42 subgraphs while removing nothing. **This
+measurement reads 1.000 with the bugs and 1.000 without them.** A recall figure
+certifies that what was needed arrived and says nothing about what else arrived
+with it; E-001 needs a precision-side companion in Phase 6 or it grades
+subgraphs on half the question.
+
 **Two harness defects preceded the passing number, and both are on record.**
 The first run returned entity recall **0.067** — the router passed
 `Keyword.display_name` where the graph keys on the normalized `name`, and
@@ -458,8 +473,10 @@ not.
   defeated by clause punctuation. E-007 was **not** re-run — the answers were
   generated, judged and reported against the subgraphs as they were. Every
   figure in this section therefore describes a retrieval layer that has since
-  improved, which biases the reported grounding **downward**, and E-006's reach
-  numbers are owed a re-run before Phase 6 quotes them.
+  improved, which biases the reported grounding **downward**. E-006 was re-run
+  against the fix on 2026-08-15 and every recall figure came back identical —
+  which bounds nothing about Phase 5, because entity recall cannot see a
+  spurious entity and all three defects were additive.
 - **Single judge throughout.** The author wrote the prompt, labelled
   sufficiency, segmented the answers and judged support. Not fixable by a
   larger sample. What bounds it is the ordering, the shuffled-citation control
