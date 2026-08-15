@@ -90,6 +90,37 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — A second-pass judgement landed on the reported worksheet, one row from flipping the verdict
+
+`claims show --worksheet <m2>` printed a `set` command with no path in it,
+so the first M2 judgement went at the **first pass** — the file the
+reported figures were computed from. It flipped `rg-1015[0]` from
+`non_factual` to `factual`, and that single row moves the audit's exclusion
+rate from **0.2019 to 0.1995**: from void to not void, the exact threshold
+this phase spent an entry refusing to cross deliberately.
+
+**Git caught it. Nothing in the tool did.** `git status` showed the
+worksheet modified, `git diff` named the row, and `git checkout` restored
+it. That is the whole reason this is a near miss rather than a silently
+corrected verdict, and it is not a control — it is luck plus the habit of
+committing the labelled artefacts.
+
+Two fixes, because the hint alone was already tried and did not survive a
+refactor:
+
+- **The printed command carries its target file** whenever it is not the
+  default, in the claim view as in the sufficiency view.
+- **A judged row is not overwritten by surprise.** `claims set` refuses a
+  row that already carries a label unless `--relabel` says the change is
+  deliberate, and it names the wrong-worksheet case in the message because
+  that is what the mistake usually is. A batch containing one judged row is
+  refused whole rather than partly applied.
+
+The lesson I want kept: every guard in this harness protects the *ordering*
+of judgements, and none protected the *destination* of one. A tool that
+makes the right order awkward to break should make the wrong file awkward
+to write to as well.
+
 ## 2026-08-10 — E-008 came back clean, and the clean result is the smaller claim
 
 12 of 12 held-out probes followed the graph. Zero leaks, zero refusals,

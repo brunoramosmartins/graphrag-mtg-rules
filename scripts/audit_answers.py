@@ -656,6 +656,15 @@ def claims_show(args: argparse.Namespace) -> int:
                 marks[row.question_id].get(row.index, []),
                 tables[row.question_id],
                 position=f"[{i} of {len(chosen)} shown; {done}/{len(rows)} done]",
+                # The path goes in the hint because a blind second pass has
+                # its own worksheet, and a hint without it aims the judgement
+                # at the first pass — which is the file the reported numbers
+                # were computed from.
+                command=(
+                    f"  -> python scripts/audit_answers.py claims set {row.question_id} "
+                    f"{row.index} <factual|non_factual> [--support ... --failure ...]"
+                    + ("" if args.worksheet == WORKSHEET_PATH else f" --worksheet {args.worksheet}")
+                ),
             )
         )
     print(RULE)
@@ -723,6 +732,20 @@ def claims_set(args: argparse.Namespace) -> int:
             f"{args.question_id}[{indices[0]}] carries no citation marker, so there is "
             "nothing to judge for support. A factual row with no citation is a coverage "
             "miss, which the report counts on its own."
+        )
+
+    # An already-judged row is a finished pass, and overwriting one silently
+    # is how a reported figure changes without anybody deciding to change it.
+    # rg-1015[0] was flipped from `non_factual` to `factual` this way, which
+    # moved the audit's exclusion rate from 0.2019 to 0.1995 — across the
+    # void threshold. Git caught it; nothing in this tool did.
+    settled = [i for i in indices if by_index[i].label is not Label.UNLABELLED]
+    if settled and not args.relabel:
+        already = ", ".join(f"{args.question_id}[{i}]={by_index[i].label.value}" for i in settled[:5])
+        raise SystemExit(
+            f"{len(settled)} row(s) already judged: {already}. Pass --relabel to change a "
+            "judgement on purpose. If you meant a different worksheet, name it with "
+            "--worksheet — a blind second pass writes to its own file."
         )
 
     for i in indices:
@@ -1338,6 +1361,7 @@ def main() -> int:
     claim_set.add_argument("--support", choices=[Support.SUPPORTED.value, Support.UNSUPPORTED.value])
     claim_set.add_argument("--failure", choices=[f.value for f in Failure])
     claim_set.add_argument("--comment", default="", help="where a bad split is noted, not fixed")
+    claim_set.add_argument("--relabel", action="store_true", help="change a judgement already made")
     claim_set.add_argument("--worksheet", type=Path, default=WORKSHEET_PATH)
     claim_set.add_argument("--sufficiency", type=Path, default=SUFFICIENCY_PATH)
     claim_set.set_defaults(func=claims_set)

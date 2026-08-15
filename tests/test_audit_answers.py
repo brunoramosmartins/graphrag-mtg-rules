@@ -542,3 +542,61 @@ class TestBlindReaudit:
                     out=tmp_path / "m2.jsonl", n=2, seed=3, force=False,
                 )
             )
+
+
+class TestAJudgedRowIsNotOverwrittenBySurprise:
+    """The near miss: a second-pass judgement landed on the first pass.
+
+    `claims show --worksheet <m2>` printed a set command with no path, so
+    the judgement went at the reported worksheet and flipped rg-1015[0]
+    from `non_factual` to `factual` — moving the audit's exclusion rate
+    from 0.2019 to 0.1995, across the void threshold. Git caught it. The
+    tool did not.
+    """
+
+    def prepared(self, tmp_path: Path) -> tuple[Path, Path]:
+        sufficiency = init_sufficiency(tmp_path)
+        label(sufficiency, {"rg-1": "sufficient", "rg-2": "insufficient"})
+        audit_answers.sufficiency_freeze(argparse.Namespace(out=sufficiency))
+        worksheet = tmp_path / "claims.jsonl"
+        audit_answers.segment(
+            argparse.Namespace(
+                answers=answers_run(tmp_path), out=worksheet,
+                sufficiency=sufficiency, force=False,
+            )
+        )
+        return worksheet, sufficiency
+
+    def call(self, worksheet: Path, sufficiency: Path, **kwargs) -> None:
+        defaults = {
+            "question_id": "rg-1", "index": "0", "label": "factual", "support": None,
+            "failure": None, "comment": "", "relabel": False,
+            "worksheet": worksheet, "sufficiency": sufficiency,
+        }
+        audit_answers.claims_set(argparse.Namespace(**{**defaults, **kwargs}))
+
+    def test_a_second_judgement_on_the_same_row_is_refused(self, tmp_path: Path) -> None:
+        worksheet, sufficiency = self.prepared(tmp_path)
+        self.call(worksheet, sufficiency, label="non_factual")
+        with pytest.raises(SystemExit, match="already judged"):
+            self.call(worksheet, sufficiency, label="factual")
+
+    def test_the_refusal_names_the_worksheet_as_the_likely_mistake(self, tmp_path: Path) -> None:
+        worksheet, sufficiency = self.prepared(tmp_path)
+        self.call(worksheet, sufficiency, label="non_factual")
+        with pytest.raises(SystemExit, match="--worksheet"):
+            self.call(worksheet, sufficiency, label="factual")
+
+    def test_relabel_makes_the_change_deliberate(self, tmp_path: Path) -> None:
+        worksheet, sufficiency = self.prepared(tmp_path)
+        self.call(worksheet, sufficiency, label="non_factual")
+        self.call(worksheet, sufficiency, label="factual", relabel=True)
+        rows = audit_answers.load_rows(worksheet)
+        assert rows[0].label is audit_answers.Label.FACTUAL
+
+    def test_a_batch_is_refused_whole_if_any_row_is_judged(self, tmp_path: Path) -> None:
+        worksheet, sufficiency = self.prepared(tmp_path)
+        self.call(worksheet, sufficiency, index="0", label="non_factual")
+        with pytest.raises(SystemExit, match="already judged"):
+            self.call(worksheet, sufficiency, index="0,1", label="factual")
+        assert audit_answers.load_rows(worksheet)[1].label is audit_answers.Label.UNLABELLED
