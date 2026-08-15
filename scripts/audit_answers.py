@@ -180,6 +180,7 @@ def render_sufficiency(
     *,
     context_lines: int,
     position: str = "",
+    out: Path = SUFFICIENCY_PATH,
 ) -> str:
     """One question, its judge-curated answer, and what retrieval actually got."""
     cites = [str(r) for r in payload.get("citedRules", [])]
@@ -211,7 +212,11 @@ def render_sufficiency(
         SUFFICIENCY_CRIB,
         "",
         f"  decided: {row.get('label') or '—'}",
-        f"  -> python scripts/audit_answers.py sufficiency set {question_id} <label>",
+        # The path is carried into the hint because it is not always the
+        # default: a blind second pass writes to its own file, and a hint
+        # that omits it sends the judgement at the frozen first pass.
+        f"  -> python scripts/audit_answers.py sufficiency set {question_id} <label>"
+        + ("" if out == SUFFICIENCY_PATH else f" --out {out}"),
     ]
     return "\n".join(lines)
 
@@ -290,6 +295,7 @@ def sufficiency_show(args: argparse.Namespace) -> int:
                 records[question_id],
                 context_lines=10_000 if args.full else args.context_lines,
                 position=f"[{i} of {len(chosen)} shown; {done}/{len(labels)} done]",
+                out=args.out,
             )
         )
     print(RULE)
