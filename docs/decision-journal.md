@@ -90,6 +90,54 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-15 — The ceiling split the registered rule, and the split is what gets published
+
+The M2 re-audit came back at **0.990 [0.969, 1.000]** on the claim label and
+**0.933 [0.818, 1.000]** on support, blind, over 100 rows from 8 answers,
+with the segmentation regenerated and identical to the frozen worksheet.
+
+The registered rule says the support figure has no ceiling if the second pass
+disagrees "at a rate comparable to the support gap being reported". That
+sentence has no threshold, and I was reading it with the disagreement rate
+already on screen — the exact position in which a threshold gets chosen to
+suit. So neither reading was picked. Point estimates: disagreement 0.067
+against a gap of 0.403, the ceiling holds comfortably. Each side's worst
+bound: disagreement 0.182 against a gap of 0.161, the ceiling does not hold,
+by 0.021. **Both go into the report.** The precedent is this project's own
+handling of the ambiguous second DoD clause, where both readings happened to
+agree; here they do not, and a split that is resolved by preference is not a
+pre-registered result at all.
+
+Two things this forced me to fix in the instrument before believing it. The
+agreement rates were being computed with every row as its own cluster while
+the figure they exist to bound resamples by question — a ceiling with a
+narrower interval than its own measurement. Clustered by question the support
+interval widens from [0.833, 1.000] to [0.818, 1.000], which is what tipped
+the conservative reading. And the script never printed the registered branch
+at all; it printed two numbers and left the rule to be applied by memory.
+
+**Why the readings split is sample size, and that is a design fault, not a
+result.** Only 30 of the 100 rows carried a support judgement in both passes,
+because the re-audit was sized for label agreement and the support comparison
+is whatever falls out of it. A ceiling sized for the figure it bounds would
+sample *cited factual claims* directly. That is a change to the next
+experiment, not a rerun of this one — re-drawing a ceiling sample after
+seeing which way it fell is the same error in a different coat.
+
+**Coverage stays void.** On the shared 100 rows the two passes read 0.210 and
+0.200 exclusions against a 0.20 limit, and the temptation to read that as
+"the void was a coin flip" is real. It is also not what a ceiling sample
+measures: it measures the annotator, not the corpus. The full first pass says
+0.2019 and the registered rule voided coverage on it. What the numbers do
+license is a note for whoever sets the next threshold — 0.20 was tight enough
+that one row in a hundred straddles it.
+
+One more thing written down before it can be misquoted: the two support
+disagreements ran in opposite directions, so the support rate on the shared
+rows is **identical, 14/30, under both passes**. That is offsetting error.
+It is not evidence that the instrument is exact, and the agreement rate of
+0.933 is the honest statement of what it is.
+
 ## 2026-08-10 — A second-pass judgement landed on the reported worksheet, one row from flipping the verdict
 
 `claims show --worksheet <m2>` printed a `set` command with no path in it,

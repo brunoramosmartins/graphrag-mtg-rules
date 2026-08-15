@@ -999,6 +999,62 @@ support disagreement is inspected**. If the second pass disagrees with the
 first at a rate comparable to the support gap being reported, the support
 figure has no ceiling and must say so.
 
+**Actual result (2026-08-15, 100 rows over 8 of the 42 answers, blind,
+segmentation regenerated and identical to the frozen worksheet):**
+
+    label agreement   99/100 = 0.990 [0.969, 1.000]   8 cluster(s)
+    support agreement 28/30 = 0.933 [0.818, 1.000]    8 cluster(s)
+
+    disagreements
+      rg-47[0]     non_factual -> factual     (the "to determine whether X,
+                   we need to analyse the rules" opener)
+      rg-47[2]     supported -> unsupported
+      rg-6687[7]   unsupported -> supported
+
+**The claim label is a far more reliable instrument than the sufficiency
+label.** 0.990 [0.969, 1.000] here against E-007c's 0.800 [0.500, 1.000] on
+the same 42 answers by the same annotator days apart. That is the expected
+direction — deciding whether a sentence asserts a fact is nearly mechanical,
+deciding whether a subgraph *sufficed* is an interpretation — but the size of
+the difference was not predicted and it re-ranks what this phase may claim.
+The support figure rests on the reliable instrument; the 8-of-9 headline on
+`insufficient` subgraphs rests on the unreliable one.
+
+**Applying the registered rule, whose wording does not decide this run.**
+"Comparable to the support gap" was registered without a threshold, so both
+readings are printed rather than one being chosen with the disagreement rate
+already on screen — the same treatment the ambiguous second DoD clause got:
+
+| reading | disagreement | gap | ceiling holds? |
+|---|---|---|---|
+| point | 0.067 | 0.403 | yes, comfortably |
+| conservative (each side's worst bound) | 0.182 | 0.161 | **no, by 0.021** |
+
+**The readings split, and the split is reported as a split.** The support
+figure is published with both statements beside it and is not upgraded by
+preferring the point reading. What actually separates them is sample size:
+only 30 of the 100 rows were judged for support in both passes, over 8
+clusters, because the re-audit was sized for the *label* agreement and the
+support comparison is whatever falls out of it. A ceiling sized for the
+figure it bounds is a design change, not a rerun of this one.
+
+**The two support disagreements ran in opposite directions** (one
+`supported` → `unsupported`, one the reverse), so the support rate on the
+shared rows is **identical at 14/30 = 0.467 under both passes**. That is
+offsetting error, not precision, and it is recorded here so nobody later
+quotes the identical rate as evidence the instrument is exact.
+
+**What the re-audit does not do is reopen the void.** On the shared 100 rows
+the first pass excluded 21 and the second 20 — 0.210 and 0.200 against a
+registered limit of 0.20. The full first pass reads 83/411 = 0.2019 and
+coverage is void. A 100-row ceiling sample is a measurement of the annotator,
+not a re-measurement of the corpus, and using it to un-void a figure that the
+registered rule already voided is exactly the post-hoc reach the ordering
+exists to prevent. **Coverage stays void.** What the numbers do show is that
+the exclusion rate sits on the threshold and that a one-row difference
+straddles it — which is a fact about how tight that limit was chosen, and
+belongs in the threats to validity for whoever sets the next one.
+
 ### Predictions, recorded before the run
 
 - **Round 1 coverage is below 1.0**, failing on *connective* sentences — the

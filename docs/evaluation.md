@@ -297,6 +297,184 @@ reason it was chased rather than believed. A third run reached 1.000 after the
 query lexicon stopped admitting `art_series` prints and tokens, which had made
 6% of card names resolve to more than one `oracle_id`.
 
+---
+
+# Results — Phase 5, grounded generation (E-007 / E-007c / E-008, 2026-08-10 → 15)
+
+Measured on the **32 audit questions** answered from their retrieved subgraphs,
+with the 10 development questions used for the prompt iterations and never
+scored here. Every judgement below is one annotator's, and every figure carries
+the ceiling measured for the instrument that produced it.
+
+The ordering was fixed before any answer was read, because each step would
+otherwise be free to move the one before it: subgraph sufficiency labelled and
+**frozen** first; answers generated; the claim worksheet segmented and hashed;
+then and only then, claims judged.
+
+## The DoD, clause by clause
+
+**Clause 1 — every factual claim carries a citation: NOT MET.**
+
+    coverage 0.369 = 121/328 claims over 32 answers
+    excluded 83/411 (20.2%) — VOID
+
+Two separate statements, and the second is the stronger one. Coverage reads
+0.369 against a registered target of 1.0, with the three-round iteration budget
+spent. It is also **void**: the registered rule voids coverage when more than
+20% of segmented rows are excluded as non-factual, and exclusions came in at
+**0.2019** — over the line by 0.8 of a row. 47 of the 83 exclusions are
+segmentation artefacts (list numbering, headers, fragments), which is precisely
+the failure the void rule was written to catch: at that exclusion rate the
+figure describes the segmenter, not the answers.
+
+Voiding costs the *right to publish the number as a measurement of the answers*.
+It does not rescue the verdict. A perfect segmenter that reclassified every
+artefact would still leave 121 cited claims out of 328, and the clause would
+still fail. Both facts are reported; neither is used to soften the other.
+
+**Clause 2 — cited claims are actually supported by their citations: MET.**
+
+| arm | support | 95% CI |
+|---|---|---|
+| real pairing | 0.565 | [0.435, 0.694] |
+| shuffled citations | 0.161 | [0.065, 0.274] |
+
+The real arm's lower bound clears the control's upper bound, which is the
+reading registered before any answer existed. Over the full worksheet the
+support rate is **0.488 [0.400, 0.583]** over 31 question clusters and 121
+cited claims. Intervals are cluster bootstraps that resample *questions*, not
+claims: claims within an answer are not independent, and resampling them would
+report an interval narrower than the evidence supports.
+
+The control is a **derangement** — no citation keeps its own sentence — because
+a shuffle with a fixed point scores a real pairing as random and biases the
+comparison toward passing.
+
+Where support fails, it fails in one place:
+
+    claim_not_in_evidence          45
+    right_evidence_wrong_reading    9
+    evidence_absent                 4
+    unrelated_evidence              4
+
+**Over-refusal on `sufficient` subgraphs: 0.** The registered blocker is clear.
+
+## The finding that carries no threshold, and matters most
+
+    unsupported answering 8 | correct refusal 1
+
+**Eight of the nine subgraphs labelled `insufficient` were answered rather than
+refused.** No registered criterion covers this — by design, since the label did
+not exist when the DoD was written — so it is reported as a finding and not as
+a pass or a fail. It is the largest open risk in the phase and it has its own
+experiment owed: one where the subgraph provably lacks the answer and the
+correct behaviour is refusal.
+
+E-008 does **not** explain it. Overriding fiction that is present and answering
+when evidence is absent are different behaviours, and E-008 measured the first.
+
+## E-008 — does the model answer from the graph or from memory?
+
+Nine fictional nodes loaded into the production graph across three constructs
+(a card whose oracle text contradicts the real card, a fictional keyword with
+its own CR subtree, a fictional ruling on a real card), 12 held-out probes
+authored with their `graph_says` / `memory_says` discriminators written before
+any answer existed.
+
+    evidence verified   12/12   (0 retrieval misses)
+    followed_graph 12 | leak 0 | refused 0 | intra_context_conflict 0
+
+Both registered conditions hold. The claim this licenses is a bound, not an
+absence: **a per-probe leak rate of at most 0.25** (95%, rule of three over 12
+probes). It is not "no parametric leakage", and it says nothing about real
+cards the model half-remembers — the deployment condition differs in exactly
+the dimension being measured.
+
+The probe names carry no marker of their fictionality, because a model that
+spots a fake and refuses would be coded as a grounding failure and the detector
+would end up measuring itself.
+
+## The ceilings — what these numbers may be read against
+
+Every figure above is one person's judgement, so each instrument was re-run
+blind against itself, days later, with the originals hidden.
+
+| instrument | agreement | 95% CI | n |
+|---|---|---|---|
+| claim label (factual / non-factual) | 0.990 | [0.969, 1.000] | 100 rows, 8 answers |
+| claim support | 0.933 | [0.818, 1.000] | 30 rows, 8 answers |
+| subgraph sufficiency | 0.800 | [0.500, 1.000] | 10 of 42 |
+| ruling citation (E-003a, prior phase) | 0.815 | [0.679, 0.938] | 20 rulings |
+
+**The two claim instruments are far more reliable than the sufficiency one**,
+and that re-ranks what this phase may assert. Deciding whether a sentence
+asserts a fact is nearly mechanical; deciding whether a subgraph *sufficed* is
+an interpretation. So the support result rests on a 0.990/0.933 instrument,
+while the 8-of-9 headline rests on a 0.800 one — and both of that instrument's
+disagreements ran the same way, `partial` → `insufficient`, meaning a second
+pass would have called *more* subgraphs unanswerable. The 8-of-9 is read
+against an instrument that tends to enlarge its own denominator.
+
+**The registered ceiling rule does not decide this run, and that is published
+rather than resolved.** The rule voids the support figure's ceiling if the
+second pass disagrees "at a rate comparable to the support gap". *Comparable*
+was registered without a threshold, so both readings are stated: on point
+estimates, disagreement 0.067 against a gap of 0.403 — the ceiling holds
+comfortably; on each side's worst bound, disagreement 0.182 against a gap of
+0.161 — it does not, by 0.021. Choosing between them with the disagreement rate
+already on screen is the thing pre-registration exists to prevent, so neither
+is chosen. The cause of the split is sample size: only 30 of the 100 re-audited
+rows carried a support judgement in both passes, because the re-audit was sized
+for label agreement. A ceiling sized for the figure it bounds is a change to
+the next experiment, not a re-draw of this one.
+
+One coincidence recorded so it is never misquoted: the two support
+disagreements ran in opposite directions, so the support rate on the shared
+rows is **identical, 14/30, under both passes**. That is offsetting error, not
+precision.
+
+## Predictions, scored
+
+| prediction | outcome |
+|---|---|
+| coverage below 1.0, failing on connective sentences | **partly right** — coverage failed; 44% of uncited claims open with a connective |
+| the commonest support failure is `wrong_leaf` | **wrong** — 0 of 62 |
+| refusal is the dominant failure on `partial` subgraphs | **wrong** — 16 answered against 3 refused |
+| E-008: leakage happens, most on the contradiction construct | **wrong** — zero leaks anywhere |
+| E-008: leakage appears more in uncited connectives than in cited claims | **unscoreable** — conditional on leaks that did not occur |
+| E-007c: collapsed agreement exceeds exact agreement | **wrong** — identical, 0.800 |
+| E-007c: disagreement sits on the `sufficient`/`partial` boundary | **wrong** — entirely on `insufficient` |
+
+`wrong_leaf` transferred from E-003a, where it was 3 of 6 disagreements, and
+came in at zero here. Concepts transfer between experiments; error *shapes* do
+not.
+
+## Threats to validity specific to Phase 5
+
+- **Three production linking defects were found after E-007 ran**, by E-008's
+  evidence check: whole names losing to split-card faces, a single-word face
+  bypassing the capitalization gate (`what` matching *Who // What // When //
+  Where // Why*, in **23 of E-007's 42 subgraphs**), and keyword matching
+  defeated by clause punctuation. E-007 was **not** re-run — the answers were
+  generated, judged and reported against the subgraphs as they were. Every
+  figure in this section therefore describes a retrieval layer that has since
+  improved, which biases the reported grounding **downward**, and E-006's reach
+  numbers are owed a re-run before Phase 6 quotes them.
+- **Single judge throughout.** The author wrote the prompt, labelled
+  sufficiency, segmented the answers and judged support. Not fixable by a
+  larger sample. What bounds it is the ordering, the shuffled-citation control
+  and the ceilings above — not the earlier claim that coverage is "nearly
+  mechanical", which is false: coverage is mechanical only *given* a
+  segmentation, and the segmentation is the judgement-laden step.
+- **The exclusion threshold is tight enough that one row in a hundred straddles
+  it.** On the 100 re-audited rows the two passes read 0.210 and 0.200 against
+  a 0.20 limit. This does not reopen the void — a ceiling sample measures the
+  annotator, not the corpus — but whoever sets the next threshold should know
+  how little separates its two sides.
+- **The audit sample carries no hop annotations**, so strata were assigned by
+  the author from the question text rather than inherited from a verified
+  golden set.
+
 ## Limitations, stated because they bound every number above
 
 - **The ceiling is measured, and it does not explain the result (E-003a).** A

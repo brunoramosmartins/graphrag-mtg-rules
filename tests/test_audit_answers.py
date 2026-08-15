@@ -602,6 +602,102 @@ class TestAJudgedRowIsNotOverwrittenBySurprise:
         assert audit_answers.load_rows(worksheet)[1].label is audit_answers.Label.UNLABELLED
 
 
+class TestTheCeilingIsScoredAgainstItsRegisteredRule:
+    """M2 asks whether the support figure has a ceiling at all.
+
+    The registered sentence — disagreement "comparable to the support gap" —
+    carries no threshold, so the script prints both readings rather than
+    letting one be picked with the disagreement rate already on screen.
+    """
+
+    def worksheets(self, tmp_path: Path, second: list[tuple[str, str]]) -> tuple[Path, Path]:
+        """Six cited rows over two questions; `second` gives the M2 supports."""
+        first, m2 = [], []
+        for i, (question_id, support) in enumerate(second):
+            row = {
+                "question_id": question_id, "index": i % 3, "sentence": f"s{i} [rule:1.1]",
+                "cited": True, "label": "factual", "failure": None, "comment": "",
+            }
+            first.append({**row, "support": "supported"})
+            m2.append({**row, "support": support})
+        return write(tmp_path / "first.jsonl", first), write(tmp_path / "m2.jsonl", m2)
+
+    def control(self, tmp_path: Path, real: list[bool], shuffled: list[bool]) -> Path:
+        rows = []
+        for arm, supports in (("real", real), ("shuffled", shuffled)):
+            for i, ok in enumerate(supports):
+                rows.append({
+                    "question_id": f"rg-{i}", "index": 0, "arm": arm,
+                    "support": "supported" if ok else "unsupported",
+                })
+        return write(tmp_path / "control.jsonl", rows)
+
+    def score(self, source: Path, out: Path, control: Path) -> None:
+        audit_answers.reaudit_claims_score(
+            argparse.Namespace(source=source, out=out, control=control)
+        )
+
+    def test_rows_cluster_by_question_not_by_row(self, tmp_path: Path, capsys) -> None:
+        """Singleton clusters would hand the ceiling a narrower interval than
+        the figure it bounds, which resamples questions."""
+        source, out = self.worksheets(
+            tmp_path, [("rg-1", "supported")] * 3 + [("rg-2", "supported")] * 3
+        )
+        self.score(source, out, tmp_path / "absent.jsonl")
+        assert "2 cluster(s)" in capsys.readouterr().out
+
+    def test_an_unjudged_control_leaves_the_rule_unapplied(self, tmp_path: Path, capsys) -> None:
+        """No gap exists yet, and inventing one to fill the branch is the failure."""
+        source, out = self.worksheets(tmp_path, [("rg-1", "supported")] * 3)
+        blank = write(
+            tmp_path / "control.jsonl",
+            [{"question_id": "rg-1", "index": 0, "arm": "real", "support": ""}],
+        )
+        self.score(source, out, blank)
+        assert "NOT APPLIED" in capsys.readouterr().out
+
+    def test_a_wide_gap_and_perfect_agreement_keep_the_ceiling(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        source, out = self.worksheets(
+            tmp_path, [("rg-1", "supported")] * 3 + [("rg-2", "supported")] * 3
+        )
+        control = self.control(tmp_path, real=[True] * 12, shuffled=[False] * 12)
+        self.score(source, out, control)
+        out_text = capsys.readouterr().out
+        assert "Both readings agree: the gap is the larger quantity" in out_text
+
+    def test_a_disagreement_as_large_as_the_gap_removes_the_ceiling(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        """The branch that must exist, or the rule only ever returns good news."""
+        source, out = self.worksheets(
+            tmp_path,
+            [("rg-1", "unsupported"), ("rg-1", "unsupported"), ("rg-1", "supported"),
+             ("rg-2", "unsupported"), ("rg-2", "unsupported"), ("rg-2", "supported")],
+        )
+        control = self.control(
+            tmp_path, real=[True] * 6 + [False] * 6, shuffled=[True] * 5 + [False] * 7
+        )
+        self.score(source, out, control)
+        assert "HAS NO CEILING" in capsys.readouterr().out
+
+    def test_a_split_is_reported_as_a_split(self, tmp_path: Path, capsys) -> None:
+        """What the real run did: point reading holds, conservative does not."""
+        source, out = self.worksheets(
+            tmp_path,
+            [("rg-1", "supported"), ("rg-1", "supported"), ("rg-1", "unsupported"),
+             ("rg-2", "supported"), ("rg-2", "supported"), ("rg-2", "supported")],
+        )
+        control = self.control(
+            tmp_path, real=[True] * 8 + [False] * 4, shuffled=[True] * 3 + [False] * 9
+        )
+        self.score(source, out, control)
+        text = capsys.readouterr().out
+        assert "SPLIT" in text
+        assert "point reading" in text and "conservative reading" in text
+
+
 class TestAPathThatLostItsSeparators:
     """`data\\golden\\x.jsonl` pasted into Git Bash arrives as one bare name.
 

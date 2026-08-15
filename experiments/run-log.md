@@ -428,3 +428,35 @@ Carried forward: E-007's 8-of-9 answering on `insufficient` subgraphs is
 **not** explained by this. Overriding evidence that is present and
 answering when evidence is absent are different behaviours; E-008 measured
 the first.
+
+### 2026-08-15 — E-007 ceiling (M2): the claim label holds, the rule's wording does not
+
+    label agreement   99/100 = 0.990 [0.969, 1.000]   8 cluster(s)
+    support agreement 28/30 = 0.933 [0.818, 1.000]    8 cluster(s)
+
+Blind, segmentation regenerated from the citation-stripped text and
+identical to the frozen worksheet — so the first pass is reproducible, which
+had to be true before any agreement number meant anything.
+
+The claim label is a much better instrument than the sufficiency label:
+0.990 against E-007c's 0.800, same annotator, same 42 answers, days apart.
+Deciding whether a sentence asserts a fact is nearly mechanical; deciding
+whether a subgraph sufficed is not. So the support figure rests on the
+reliable instrument and the 8-of-9 headline rests on the unreliable one.
+
+The registered rule — "if the second pass disagrees at a rate comparable to
+the support gap, the support figure has no ceiling" — has no threshold for
+*comparable*, so both readings are printed and neither is chosen: point
+0.067 vs gap 0.403 (ceiling holds), conservative 0.182 vs gap 0.161 (it does
+not, by 0.021). The split is published as a split. The cause is sample size:
+30 of the 100 rows carried a support judgement in both passes, because the
+re-audit was sized for the label agreement.
+
+The two support disagreements ran opposite ways, so the support rate on the
+shared rows is identical at 14/30 under both passes. That is offsetting
+error, not precision, and is written down so the coincidence is never quoted
+as accuracy.
+
+Coverage stays void. On the shared rows the passes read 0.210 and 0.200
+against a 0.20 limit, but a ceiling sample measures the annotator, not the
+corpus, and cannot re-decide a verdict the registered rule already returned.

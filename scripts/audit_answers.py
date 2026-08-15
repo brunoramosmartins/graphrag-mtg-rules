@@ -1174,33 +1174,104 @@ def reaudit_claims(args: argparse.Namespace) -> int:
     return 0
 
 
+def support_gap(control: Path) -> tuple[float, float] | None:
+    """The reported gap the registered ceiling rule compares against.
+
+    Returns the point gap and the conservative one (real's lower bound less
+    the control's upper bound). Read from the control file rather than passed
+    in, so the number the rule is applied to cannot be chosen after the
+    disagreement rate is on screen.
+    """
+    if not control.exists():
+        return None
+    entries = load_control(control)
+    if any(not entry["support"] for entry in entries):
+        return None
+    arms = {}
+    for arm in ("real", "shuffled"):
+        clusters: dict[str, list[bool]] = {}
+        for entry in entries:
+            if entry["arm"] == arm:
+                clusters.setdefault(entry["question_id"], []).append(
+                    entry["support"] == Support.SUPPORTED.value
+                )
+        arms[arm] = cluster_proportion_ci(list(clusters.values()))
+    real, shuffled = arms["real"], arms["shuffled"]
+    return real.point - shuffled.point, real.low - shuffled.high
+
+
 def reaudit_claims_score(args: argparse.Namespace) -> int:
-    """Exact agreement on the claim labels, and on support where both judged."""
+    """Exact agreement on the claim labels, and on support where both judged.
+
+    Both rates cluster by question, the same unit the reported support figure
+    resamples. Scoring each row as its own cluster would hand the ceiling a
+    narrower interval than the figure it exists to bound — and a ceiling that
+    looks more certain than its own measurement is worse than none.
+    """
     second = load_rows(args.out)
     pending = [r for r in second if r.label is Label.UNLABELLED]
     if pending:
         raise SystemExit(f"{len(pending)} row(s) still unlabelled.")
     first = {(r.question_id, r.index): r for r in load_rows(args.source)}
 
-    label_hits = [first[(r.question_id, r.index)].label is r.label for r in second]
+    def by_question(pairs: list[tuple[str, bool]]) -> list[list[bool]]:
+        clusters: dict[str, list[bool]] = {}
+        for question_id, hit in pairs:
+            clusters.setdefault(question_id, []).append(hit)
+        return list(clusters.values())
+
+    label_hits = [
+        (r.question_id, first[(r.question_id, r.index)].label is r.label) for r in second
+    ]
     both_support = [
         (first[(r.question_id, r.index)], r)
         for r in second
         if r.support is not Support.NOT_APPLICABLE
         and first[(r.question_id, r.index)].support is not Support.NOT_APPLICABLE
     ]
-    labels = cluster_proportion_ci([[hit] for hit in label_hits])
-    print(f"label agreement   {sum(label_hits)}/{len(label_hits)} = {labels.point:.3f} "
-          f"[{labels.low:.3f}, {labels.high:.3f}]")
+    labels = cluster_proportion_ci(by_question(label_hits))
+    hit_count = sum(hit for _, hit in label_hits)
+    print(f"label agreement   {hit_count}/{len(label_hits)} = {labels.point:.3f} "
+          f"[{labels.low:.3f}, {labels.high:.3f}]  {labels.n_docs} cluster(s)")
+
+    support = None
     if both_support:
-        hits = [a.support is b.support for a, b in both_support]
-        support = cluster_proportion_ci([[hit] for hit in hits])
-        print(f"support agreement {sum(hits)}/{len(hits)} = {support.point:.3f} "
-              f"[{support.low:.3f}, {support.high:.3f}]")
+        hits = [(b.question_id, a.support is b.support) for a, b in both_support]
+        support = cluster_proportion_ci(by_question(hits))
+        print(f"support agreement {sum(h for _, h in hits)}/{len(hits)} = {support.point:.3f} "
+              f"[{support.low:.3f}, {support.high:.3f}]  {support.n_docs} cluster(s)")
     else:
         print("support agreement: no row was judged for support in both passes.")
+
     print("\nThe ceiling coverage and support are read against — E-003a put this")
     print("annotator at 0.815, so a figure reported against 1.0 is reported against nothing.")
+
+    print("\nRegistered rule: if the second pass disagrees at a rate comparable to the")
+    print("support gap being reported, the support figure has no ceiling and must say so.")
+    gap = support_gap(args.control)
+    if support is None or gap is None:
+        print("  NOT APPLIED: the control arm is unjudged, so the gap does not exist yet.")
+        return 0
+
+    # `comparable` was registered without a threshold. Rather than pick one now,
+    # with the disagreement rate already on screen, both readings are printed —
+    # the same treatment the second DoD clause got. Agreement between them is
+    # the finding; a split is reported as a split, never resolved by preference.
+    point_gap, conservative_gap = gap
+    disagreement, worst = 1 - support.point, 1 - support.low
+    print(f"  point reading:        disagreement {disagreement:.3f} vs gap {point_gap:.3f}")
+    print(f"  conservative reading: disagreement {worst:.3f} vs gap {conservative_gap:.3f}")
+    verdicts = (disagreement < point_gap, worst < conservative_gap)
+    if all(verdicts):
+        print("  Both readings agree: the gap is the larger quantity. The support figure")
+        print("  carries a ceiling and is reported with it beside.")
+    elif any(verdicts):
+        print("  The readings SPLIT. The registered word does not decide this run, and the")
+        print("  support figure is reported with both readings stated, not with the")
+        print("  convenient one.")
+    else:
+        print("  Both readings agree: the disagreement is comparable to the gap. Per the")
+        print("  registration, the support figure HAS NO CEILING and must say so.")
     return 0
 
 
@@ -1463,6 +1534,7 @@ def main() -> int:
     re_cscore = re_sub.add_parser("claims-score", help="agreement on labels and support")
     re_cscore.add_argument("--source", type=Path, default=WORKSHEET_PATH)
     re_cscore.add_argument("--out", type=Path, default=Path("data/golden/e007_claims_m2.jsonl"))
+    re_cscore.add_argument("--control", type=Path, default=CONTROL_PATH)
     re_cscore.set_defaults(func=reaudit_claims_score)
 
     rep = sub.add_parser("report", help="coverage, support and refusals")
