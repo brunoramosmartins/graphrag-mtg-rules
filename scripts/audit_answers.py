@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import sys
 import textwrap
@@ -437,8 +438,32 @@ def segment(args: argparse.Namespace) -> int:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def swallowed_separators(path: Path) -> Path | None:
+    """The file a backslash path became after a POSIX shell ate the escapes.
+
+    `data\\golden\\x.jsonl` typed into Git Bash arrives as `datagoldenx.jsonl`:
+    one bare name, no separators, and a `Run segment first` message that sends
+    the reader off to rebuild a worksheet that already exists.
+    """
+    if path.exists() or os.sep in str(path) or "/" in str(path):
+        return None
+    flat = str(path).lower()
+    for candidate in (*Path("data/golden").glob("*.jsonl"), *Path("runs").glob("*.jsonl")):
+        joined = "".join(candidate.parts).lower()
+        if joined == flat:
+            return candidate
+    return None
+
+
 def load_rows(path: Path) -> list[ClaimRow]:
     if not path.exists():
+        meant = swallowed_separators(path)
+        if meant is not None:
+            raise SystemExit(
+                f"No worksheet at {path}, but {meant} exists. The separators were eaten "
+                f"before the script saw them. Write the path with forward slashes: "
+                f"--worksheet {meant.as_posix()}"
+            )
         raise SystemExit(f"No worksheet at {path}. Run `segment` first.")
     rows: list[ClaimRow] = []
     for line in path.read_text(encoding="utf-8").splitlines():

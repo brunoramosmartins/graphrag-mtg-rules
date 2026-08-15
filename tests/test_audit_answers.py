@@ -600,3 +600,37 @@ class TestAJudgedRowIsNotOverwrittenBySurprise:
         with pytest.raises(SystemExit, match="already judged"):
             self.call(worksheet, sufficiency, index="0,1", label="factual")
         assert audit_answers.load_rows(worksheet)[1].label is audit_answers.Label.UNLABELLED
+
+
+class TestAPathThatLostItsSeparators:
+    """`data\\golden\\x.jsonl` pasted into Git Bash arrives as one bare name.
+
+    The honest failure is `No worksheet` — but `Run segment first` sends the
+    reader off to rebuild a worksheet that is sitting right there, and on the
+    M2 pass rebuilding it would erase judgements already made.
+    """
+
+    def test_the_existing_file_is_named(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data" / "golden").mkdir(parents=True)
+        (tmp_path / "data" / "golden" / "e007_claims_m2.jsonl").write_text("", encoding="utf-8")
+        meant = audit_answers.swallowed_separators(Path("datagoldene007_claims_m2.jsonl"))
+        assert meant is not None
+        assert meant.as_posix() == "data/golden/e007_claims_m2.jsonl"
+
+    def test_a_genuinely_missing_worksheet_still_says_segment(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data" / "golden").mkdir(parents=True)
+        assert audit_answers.swallowed_separators(Path("datagoldennothing.jsonl")) is None
+        with pytest.raises(SystemExit, match="Run `segment` first"):
+            audit_answers.load_rows(Path("datagoldennothing.jsonl"))
+
+    def test_a_path_that_kept_its_separators_is_not_second_guessed(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data" / "golden").mkdir(parents=True)
+        (tmp_path / "data" / "golden" / "e007_claims_m2.jsonl").write_text("", encoding="utf-8")
+        assert audit_answers.swallowed_separators(Path("runs/e007_claims_m2.jsonl")) is None
