@@ -126,3 +126,50 @@ class TestTheRule:
         rows = [probe(f"p{i}", "followed_graph") for i in range(11)] + [probe("p11", "")]
         with pytest.raises(SystemExit, match="uncoded"):
             run_report(coding(tmp_path, rows))
+
+
+class TestTheLoaderCannotAdoptRealNodes:
+    """The incident: MERGE on an existing key adopts instead of creating.
+
+    A fictional rule 702.184 stamped its text and the fixture tag onto the
+    real keyword *Station*, and teardown then deleted it along with
+    702.184a and 702.184b. Three real CR rules and eight relationships,
+    gone by design working exactly as written.
+    """
+
+    def test_fictional_rules_sit_outside_the_cr_numbering(self) -> None:
+        fixture = run_e008.load_fixture(Path("data/fixtures/e008_constructs.json"))
+        for rule in fixture["rules"]:
+            assert int(rule["number"].split(".")[0]) >= 799
+
+    def test_every_fictional_key_is_distinctive(self) -> None:
+        """Names a real corpus could hold are what the collision check is for."""
+        fixture = run_e008.load_fixture(Path("data/fixtures/e008_constructs.json"))
+        assert all(c["oracle_id"].startswith("e008-") for c in fixture["cards"])
+        assert all(r["ruling_id"].startswith("e008-") for r in fixture["rulings"])
+
+    @pytest.mark.integration
+    def test_a_pre_existing_key_stops_the_load(self) -> None:
+        from graphrag_mtg.graph.connection import driver_session
+
+        fixture = {
+            "cards": [], "keywords": [], "rulings": [],
+            "rules": [{"number": "pytest-e008-collide", "text": "t", "level": 2}],
+        }
+        with driver_session() as session:
+            session.run("CREATE (r:Rule {number: 'pytest-e008-collide'})")
+            try:
+                assert run_e008.collisions(session, fixture) == ["Rule pytest-e008-collide"]
+            finally:
+                session.run("MATCH (r:Rule {number: 'pytest-e008-collide'}) DETACH DELETE r")
+
+    @pytest.mark.integration
+    def test_a_free_key_passes(self) -> None:
+        from graphrag_mtg.graph.connection import driver_session
+
+        fixture = {
+            "cards": [], "keywords": [], "rulings": [],
+            "rules": [{"number": "pytest-e008-free", "text": "t", "level": 2}],
+        }
+        with driver_session() as session:
+            assert run_e008.collisions(session, fixture) == []

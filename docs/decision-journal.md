@@ -90,6 +90,46 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — E-008's teardown deleted three real CR rules. Restored, and the cause fixed
+
+**Incident.** `run_e008.py load` created its fictional rules with
+`MERGE (r:Rule {number: ...}) SET r.text = ..., r.fixture = 'e008'`. Rule
+**702.184 is the real keyword *Station***. `MERGE` on an existing key does
+not create — it *adopts*, so the fiction overwrote the text of 702.184 and
+702.184a/b and stamped them as fixture nodes. `teardown` then did exactly
+what it was written to do and deleted every node carrying that tag.
+
+The arithmetic was in the output the whole time and I read past it: the
+graph held 117,435 nodes before the load and 117,432 after the teardown —
+three fewer than it started with, and eight relationships fewer.
+
+**Repair.** The CR loader is idempotent by design (ADR and CLAUDE.md both
+say so, for the quarterly-release case), and re-running `load_rules`
+restored 702.184 *Station* with its subrules. The graph's rule set now
+matches the CR file exactly in both directions: **3308 nodes, 3308 rules
+in the file, zero drift either way.**
+
+The repair also created **45 `Keyword` nodes with glossary definitions
+that did not exist before**, because `MERGE_KEYWORD_DEFINITIONS` creates
+what it cannot match. So the graph had been out of step with the parsed CR
+before any of this, and I cannot attribute that gap after the fact.
+Recorded rather than explained away — and it means the graph E-007 ran
+against is not the graph standing now.
+
+**Cause fixed, not symptom.** `load` now checks every fixture key against
+the production graph and refuses with the list of collisions, and it
+verifies that the number of nodes created equals the number the fixture
+declares — a tagged node the load did not create is a real node awaiting
+deletion. The fictional rules moved to 799.1, outside the CR's numbering.
+Tests pin both, including the integration case that a pre-existing key
+stops the load.
+
+**What this cost, honestly.** Nothing measured. E-007's retrieval ran
+before the load, E-008 had generated only its six development probes, and
+the held-out set has not run. Had the order been different this would have
+been a corrupted corpus underneath a reported number, which is the failure
+mode this entry exists to make expensive to repeat.
+
 ## 2026-08-10 — E-008's evidence check found three linking defects before a token was spent
 
 `run_e008.py verify` came back 11 of 18 probes with their fiction absent —

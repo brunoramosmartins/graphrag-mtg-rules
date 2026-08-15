@@ -1,6 +1,6 @@
 {
   "fixture": "e008",
-  "note": "Fictional content authored for E-008. Every node and relationship carries fixture='e008' and is deleted by that property. Names are deliberately natural: a namespaced name would tell the model the card is fake, and a model that detects the fiction and refuses is scored as a grounding failure, so the detector would be measuring itself.",
+  "note": "Fictional content authored for E-008. Every node and relationship carries fixture='e008' and is deleted by that property. Names are deliberately natural: a namespaced name would tell the model the card is fake, and a model that detects the fiction and refuses is scored as a grounding failure, so the detector would be measuring itself. Rule numbers sit outside the CR's range on purpose: a fictional 702.184 once adopted the real keyword Station, and teardown deleted it.",
   "cards": [
     {
       "name": "Giant Growth of Thorns",
@@ -32,7 +32,9 @@
       "oracle_id": "e008-tws",
       "oracle_text": "Tidebind",
       "type_line": "Creature — Serpent",
-      "keywords": ["Tidebind"],
+      "keywords": [
+        "Tidebind"
+      ],
       "construct": "keyword"
     }
   ],
@@ -40,26 +42,26 @@
     {
       "name": "tidebind",
       "display_name": "Tidebind",
-      "glossary_text": "A triggered ability that functions on the battlefield. See rule 702.184, \"Tidebind.\"",
-      "rule_number": "702.184"
+      "glossary_text": "A triggered ability that functions on the battlefield. See rule 799.1, \"Tidebind.\"",
+      "rule_number": "799.1"
     }
   ],
   "rules": [
     {
-      "number": "702.184",
+      "number": "799.1",
       "level": 2,
       "text": "Tidebind is a triggered ability."
     },
     {
-      "number": "702.184a",
+      "number": "799.1a",
       "level": 3,
-      "parent": "702.184",
+      "parent": "799.1",
       "text": "\"Tidebind\" means \"Whenever this creature becomes untapped, return target land you control to its owner's hand.\""
     },
     {
-      "number": "702.184b",
+      "number": "799.1b",
       "level": 3,
-      "parent": "702.184",
+      "parent": "799.1",
       "text": "Tidebind triggers only when the permanent becomes untapped. Tapping a permanent with tidebind causes no ability to trigger."
     }
   ],
@@ -78,7 +80,9 @@
       "construct": "contradiction",
       "split": "held_out",
       "question": "Priya casts Giant Growth of Thorns targeting her 4/4 creature. What are that creature's power and toughness until end of turn?",
-      "needs": ["card:Giant Growth of Thorns"],
+      "needs": [
+        "card:Giant Growth of Thorns"
+      ],
       "graph_says": "1/1 — the card gives -3/-3.",
       "memory_says": "7/7 — the real Giant Growth gives +3/+3."
     },
@@ -87,7 +91,9 @@
       "construct": "contradiction",
       "split": "held_out",
       "question": "Sam casts Dark Ritual of Ash. What mana does it add?",
-      "needs": ["card:Dark Ritual of Ash"],
+      "needs": [
+        "card:Dark Ritual of Ash"
+      ],
       "graph_says": "{W}{W}{W}.",
       "memory_says": "{B}{B}{B} — the real Dark Ritual adds black mana."
     },
@@ -96,7 +102,9 @@
       "construct": "contradiction",
       "split": "held_out",
       "question": "Healing Salve of Embers is cast targeting a 2/2 creature with no other effects in play. What happens to that creature?",
-      "needs": ["card:Healing Salve of Embers"],
+      "needs": [
+        "card:Healing Salve of Embers"
+      ],
       "graph_says": "It is dealt 3 damage and dies.",
       "memory_says": "Damage is prevented or life is gained — the real Healing Salve prevents 3 damage."
     },
@@ -105,7 +113,9 @@
       "construct": "contradiction",
       "split": "held_out",
       "question": "Does Giant Growth of Thorns raise or lower the power of the creature it targets?",
-      "needs": ["card:Giant Growth of Thorns"],
+      "needs": [
+        "card:Giant Growth of Thorns"
+      ],
       "graph_says": "Lowers it, by 3.",
       "memory_says": "Raises it by 3."
     },
@@ -114,7 +124,9 @@
       "construct": "contradiction",
       "split": "dev",
       "question": "A 5/5 creature is targeted by Giant Growth of Thorns. What is it until end of turn?",
-      "needs": ["card:Giant Growth of Thorns"],
+      "needs": [
+        "card:Giant Growth of Thorns"
+      ],
       "graph_says": "2/2.",
       "memory_says": "8/8."
     },
@@ -123,7 +135,9 @@
       "construct": "contradiction",
       "split": "dev",
       "question": "What colour of mana does Dark Ritual of Ash produce?",
-      "needs": ["card:Dark Ritual of Ash"],
+      "needs": [
+        "card:Dark Ritual of Ash"
+      ],
       "graph_says": "White.",
       "memory_says": "Black."
     },
@@ -132,7 +146,10 @@
       "construct": "keyword",
       "split": "held_out",
       "question": "What does Tidebind do?",
-      "needs": ["keyword:Tidebind", "rule:702.184a"],
+      "needs": [
+        "keyword:Tidebind",
+        "rule:799.1a"
+      ],
       "graph_says": "Triggers when the creature becomes untapped; return target land you control to its owner's hand.",
       "memory_says": "Nothing — there is no such keyword, so an ungrounded answer must invent one or refuse."
     },
@@ -141,7 +158,10 @@
       "construct": "keyword",
       "split": "held_out",
       "question": "Tidewrack Serpent becomes untapped during its controller's untap step. Does anything trigger?",
-      "needs": ["card:Tidewrack Serpent", "rule:702.184a"],
+      "needs": [
+        "card:Tidewrack Serpent",
+        "rule:799.1a"
+      ],
       "graph_says": "Yes — tidebind triggers and returns target land its controller controls to its owner's hand.",
       "memory_says": "No such ability exists."
     },
@@ -150,7 +170,9 @@
       "construct": "keyword",
       "split": "held_out",
       "question": "A creature with Tidebind becomes tapped when it attacks. Does Tidebind trigger?",
-      "needs": ["rule:702.184b"],
+      "needs": [
+        "rule:799.1b"
+      ],
       "graph_says": "No — tidebind triggers only on becoming untapped.",
       "memory_says": "No such ability exists."
     },
@@ -159,7 +181,9 @@
       "construct": "keyword",
       "split": "held_out",
       "question": "Is Tidebind a static ability or a triggered ability?",
-      "needs": ["rule:702.184"],
+      "needs": [
+        "rule:799.1"
+      ],
       "graph_says": "Triggered.",
       "memory_says": "No such ability exists."
     },
@@ -168,8 +192,11 @@
       "construct": "keyword",
       "split": "dev",
       "question": "Which rule governs Tidebind, and what does it say?",
-      "needs": ["keyword:Tidebind", "rule:702.184"],
-      "graph_says": "702.184, that tidebind is a triggered ability.",
+      "needs": [
+        "keyword:Tidebind",
+        "rule:799.1"
+      ],
+      "graph_says": "799.1, that tidebind is a triggered ability.",
       "memory_says": "No such rule exists."
     },
     {
@@ -177,7 +204,9 @@
       "construct": "keyword",
       "split": "dev",
       "question": "What kind of permanent does Tidebind return, and to where?",
-      "needs": ["rule:702.184a"],
+      "needs": [
+        "rule:799.1a"
+      ],
       "graph_says": "A land you control, to its owner's hand.",
       "memory_says": "No such ability exists."
     },
@@ -186,7 +215,10 @@
       "construct": "fictional_ruling",
       "split": "held_out",
       "question": "Ana casts Lightning Bolt targeting a 2/2 creature with flying. Who or what is dealt the damage?",
-      "needs": ["card:Lightning Bolt", "ruling:e008-bolt-1"],
+      "needs": [
+        "card:Lightning Bolt",
+        "ruling:e008-bolt-1"
+      ],
       "graph_says": "That creature's controller, per the ruling.",
       "memory_says": "The creature itself, which dies."
     },
@@ -195,7 +227,10 @@
       "construct": "fictional_ruling",
       "split": "held_out",
       "question": "Ana casts Lightning Bolt targeting a 2/2 creature without flying. What happens?",
-      "needs": ["card:Lightning Bolt", "ruling:e008-bolt-1"],
+      "needs": [
+        "card:Lightning Bolt",
+        "ruling:e008-bolt-1"
+      ],
       "graph_says": "3 damage to the creature; the ruling changes nothing here.",
       "memory_says": "The same — this probe checks the fiction is not over-applied."
     },
@@ -204,7 +239,10 @@
       "construct": "fictional_ruling",
       "split": "held_out",
       "question": "A 4/4 flying creature is targeted by Lightning Bolt. Does that creature die?",
-      "needs": ["card:Lightning Bolt", "ruling:e008-bolt-1"],
+      "needs": [
+        "card:Lightning Bolt",
+        "ruling:e008-bolt-1"
+      ],
       "graph_says": "No — the damage goes to its controller.",
       "memory_says": "It survives at 4/4 anyway, so a right answer for the wrong reason is possible; the reasoning decides the code."
     },
@@ -213,7 +251,10 @@
       "construct": "fictional_ruling",
       "split": "held_out",
       "question": "According to the rulings on Lightning Bolt, is there any case where its damage is not dealt to the target it was aimed at?",
-      "needs": ["card:Lightning Bolt", "ruling:e008-bolt-1"],
+      "needs": [
+        "card:Lightning Bolt",
+        "ruling:e008-bolt-1"
+      ],
       "graph_says": "Yes — when the target has flying.",
       "memory_says": "No such case."
     },
@@ -222,7 +263,10 @@
       "construct": "fictional_ruling",
       "split": "dev",
       "question": "Lightning Bolt targets a flying creature whose controller is at 3 life. What is that player's life total afterwards?",
-      "needs": ["card:Lightning Bolt", "ruling:e008-bolt-1"],
+      "needs": [
+        "card:Lightning Bolt",
+        "ruling:e008-bolt-1"
+      ],
       "graph_says": "0 — the damage is redirected to them.",
       "memory_says": "3 — the creature takes it."
     },
@@ -231,7 +275,10 @@
       "construct": "fictional_ruling",
       "split": "dev",
       "question": "Does flying change how Lightning Bolt resolves?",
-      "needs": ["card:Lightning Bolt", "ruling:e008-bolt-1"],
+      "needs": [
+        "card:Lightning Bolt",
+        "ruling:e008-bolt-1"
+      ],
       "graph_says": "Yes, per the ruling.",
       "memory_says": "No."
     }

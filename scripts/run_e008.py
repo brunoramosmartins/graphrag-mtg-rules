@@ -123,6 +123,41 @@ def counts(session) -> dict[str, int]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def collisions(session, fixture: dict) -> list[str]:
+    """Fixture keys that already name a node in the production graph.
+
+    The check that was missing, and its absence destroyed real data. `MERGE`
+    on an existing key does not create — it *adopts*, stamping the fictional
+    text and the fixture tag onto a real node, which teardown then deletes
+    by that tag. Rule 702.184 is the real keyword *Station*; loading a
+    fictional 702.184 overwrote it and tearing down removed it, along with
+    702.184a and 702.184b.
+    """
+    found: list[str] = []
+    for card in fixture["cards"]:
+        if session.run(
+            "MATCH (c:Card {normalized_name: $n}) RETURN count(c) AS n",
+            n=card["normalized_name"],
+        ).single()["n"]:
+            found.append(f"Card {card['name']}")
+    for keyword in fixture["keywords"]:
+        if session.run(
+            "MATCH (k:Keyword {name: $n}) RETURN count(k) AS n", n=keyword["name"]
+        ).single()["n"]:
+            found.append(f"Keyword {keyword['display_name']}")
+    for rule in fixture["rules"]:
+        if session.run(
+            "MATCH (r:Rule {number: $n}) RETURN count(r) AS n", n=rule["number"]
+        ).single()["n"]:
+            found.append(f"Rule {rule['number']}")
+    for ruling in fixture["rulings"]:
+        if session.run(
+            "MATCH (r:Ruling {ruling_id: $n}) RETURN count(r) AS n", n=ruling["ruling_id"]
+        ).single()["n"]:
+            found.append(f"Ruling {ruling['ruling_id']}")
+    return found
+
+
 def load(args: argparse.Namespace) -> int:
     """Create the fictional constructs, and refuse if the graph is dirty."""
     fixture = load_fixture(args.fixture)
@@ -132,6 +167,16 @@ def load(args: argparse.Namespace) -> int:
             raise SystemExit(
                 f"{before['fixture_nodes']} fixture node(s) already present. Run "
                 "`teardown` first — loading twice leaves a graph nobody can describe."
+            )
+        clashes = collisions(session, fixture)
+        if clashes:
+            raise SystemExit(
+                "These fixture keys already exist in the production graph:\n  "
+                + "\n  ".join(clashes)
+                + "\n\nLoading would adopt those nodes rather than create new ones, and "
+                "teardown would then delete real data. Choose keys the corpus does not "
+                "hold. This check exists because that already happened once: a fictional "
+                "702.184 overwrote the real keyword Station and teardown removed it."
             )
 
         for card in fixture["cards"]:
@@ -201,9 +246,18 @@ def load(args: argparse.Namespace) -> int:
             )
         after = counts(session)
 
+    expected = len(fixture["cards"]) + len(fixture["keywords"]) + len(fixture["rules"])
+    expected += len(fixture["rulings"])
+    created = after["nodes"] - before["nodes"]
     print(f"before   nodes {before['nodes']}  rels {before['rels']}")
     print(f"after    nodes {after['nodes']}  rels {after['rels']}")
-    print(f"fixture nodes now {after['fixture_nodes']}")
+    print(f"fixture nodes now {after['fixture_nodes']}   created {created}, expected {expected}")
+    if created != expected or after["fixture_nodes"] != expected:
+        raise SystemExit(
+            f"Expected to create {expected} node(s); the graph grew by {created} and carries "
+            f"{after['fixture_nodes']} tagged. A tagged node this load did not create is a "
+            "real node about to be deleted by teardown."
+        )
     if missing:
         raise SystemExit(
             f"Real card(s) not in the graph: {', '.join(missing)}. The fictional-ruling "

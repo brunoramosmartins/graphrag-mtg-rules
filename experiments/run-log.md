@@ -386,3 +386,25 @@ keyword surfaces kept clause punctuation, so `Tidebind,` matched nothing.
 re-run and its figures stand as a description of the system as measured;
 this is recorded as a threat to validity with a count. E-006 is owed a
 re-run against the fix before Phase 6 quotes its reach numbers.
+
+### 2026-08-10 — INCIDENT: E-008 teardown deleted three real CR rules
+
+    before load       nodes 117435   rels 894982
+    after teardown    nodes 117432   rels 894974      <- three nodes short
+
+`MERGE (r:Rule {number: '702.184'})` adopted the real keyword **Station**
+instead of creating a node, stamping it `fixture: 'e008'`; teardown then
+deleted it with 702.184a and 702.184b. Restored by re-running the
+idempotent CR load — the rule set now matches the CR file exactly, 3308
+against 3308 with zero drift in either direction. The same load created 45
+`Keyword` nodes with glossary text that did not exist before, so the graph
+had been out of step with the parsed CR beforehand; recorded, not
+explained.
+
+Nothing measured was lost: E-007's retrieval predates the load, E-008 had
+run only its six development probes, and the held-out set had not started.
+`load` now refuses on any pre-existing fixture key and verifies that nodes
+created equals nodes declared; the fictional rules moved to 799.1.
+
+The dev probes must be regenerated — they ran against a graph where the
+fiction sat on top of real CR rules.
