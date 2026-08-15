@@ -90,6 +90,36 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-08-10 — E-008 came back clean, and the clean result is the smaller claim
+
+12 of 12 held-out probes followed the graph. Zero leaks, zero refusals,
+zero retrieval misses, on all three constructs. The six development probes
+were 6 of 6, so no iteration round was spent.
+
+**The claim is the bound, not the absence.** Zero over 12 puts the
+per-probe leak rate at most 0.25 by rule of three. Writing "the system does
+not leak" would be claiming something 12 probes cannot support, and the
+threat registered before the run says more: a fictional card contradicts
+memory *starkly*, which is the easiest case for a grounded reader to
+notice. The deployment condition is a real card the model half-remembers,
+and that differs in exactly the dimension being measured.
+
+**Both predictions failed, and one could not be scored at all.** Leakage
+was predicted to happen, most on the contradiction construct; it did not
+happen anywhere. The second prediction — where leakage would appear — is
+conditional on leaks that never occurred, and is recorded as unscoreable
+rather than quietly dropped.
+
+**The interesting part is the tension with E-007.** E-007 found 8 of 9
+`insufficient` subgraphs answered rather than refused, and I called that
+the parametric-leak surface E-008 would test. E-008 says the model does not
+override evidence that is *present*. Both are true, and they are not the
+same question. Answering when the evidence is absent is a different
+behaviour from contradicting evidence that is there, and E-008 measured the
+second. So the 8-of-9 is still unexplained, and it needs an experiment
+built for it: subgraphs that lack the answer, where the correct behaviour
+is refusal and the failure is fluent invention.
+
 ## 2026-08-10 — E-008's teardown deleted three real CR rules. Restored, and the cause fixed
 
 **Incident.** `run_e008.py load` created its fictional rules with

@@ -1180,4 +1180,41 @@ bound and does **not** state "no parametric leakage".
   dimension being measured, and the write-up says so rather than
   extrapolating.
 
-- **Actual result:** _(to be filled after the run)_
+- **Actual result (2026-08-10, 12 held-out probes, `p5-a3`, one run):**
+
+      held-out probes 12   evidence verified 12   retrieval misses 0
+      followed_graph 12    leak 0    refused 0    intra_context_conflict 0
+      followed_graph 1.000 against a floor of 0.80
+
+  **Both registered conditions hold.** Zero leaks and the floor cleared, on
+  all three constructs: the model gave -3/-3 to a card named *Giant Growth
+  of Thorns*, produced white mana from a *Dark Ritual*, explained a keyword
+  that does not exist by reading rule 799.1a, and redirected Lightning
+  Bolt's damage on the strength of a ruling nobody ever wrote. The six
+  development probes were also 6 of 6, so **no iteration round was spent**
+  and E-007's prompt budget is untouched.
+
+  **What this licenses, and nothing more.** Zero leaks over 12 verified
+  probes bounds the per-probe leak rate at **0.25 (95%, rule of three)**.
+  The claim is that bound. It is **not** "no parametric leakage", and by the
+  threat registered before the run it is not a claim about real cards
+  either: a fictional card contradicts memory *starkly*, which is the
+  easiest case to notice, and the deployment condition — a real card the
+  model half-remembers — differs in exactly the dimension being measured.
+
+  **Predictions, scored:**
+
+  | prediction | outcome |
+  |---|---|
+  | leakage happens, most on the contradiction construct | **wrong** — zero leaks anywhere |
+  | leakage appears more in uncited connective sentences than in cited claims | **unscoreable** — conditional on leaks that did not occur, and recorded as unscoreable rather than quietly dropped |
+
+  **The tension with E-007 is the finding worth carrying forward.** E-007
+  measured 8 of 9 `insufficient` subgraphs answered rather than refused, and
+  this entry called that the parametric-leak surface. E-008 now says the
+  model does **not** override evidence that is present. Those are compatible
+  and they are not the same question: overriding present fiction is not what
+  happens when evidence is *absent*. E-008 tests the first and says nothing
+  about the second, so the 8-of-9 stands unexplained and needs an experiment
+  of its own — one where the subgraph lacks the answer and the correct
+  behaviour is refusal.

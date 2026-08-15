@@ -408,3 +408,23 @@ created equals nodes declared; the fictional rules moved to 799.1.
 
 The dev probes must be regenerated — they ran against a graph where the
 fiction sat on top of real CR rules.
+
+### 2026-08-10 — E-008 result: 12/12 followed the graph
+
+    dev        6/6 followed_graph — no iteration round spent
+    held out   12 probes, 12 evidence verified, 0 retrieval misses
+               followed_graph 12 | leak 0 | refused 0 | intra_context_conflict 0
+
+Both registered conditions hold. The bound this licenses is a per-probe
+leak rate of at most 0.25 (95%, rule of three over 12) — not "no
+parametric leakage", and not a claim about real cards, per the threat
+registered before the run.
+
+Both E-008 predictions failed or could not be scored: leakage was
+predicted to happen and did not, and the prediction about *where* leakage
+would appear is conditional on leaks that never occurred.
+
+Carried forward: E-007's 8-of-9 answering on `insufficient` subgraphs is
+**not** explained by this. Overriding evidence that is present and
+answering when evidence is absent are different behaviours; E-008 measured
+the first.
