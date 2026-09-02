@@ -189,7 +189,7 @@ class TestTheLoaderRefusesANonEmptyDatabase:
 
     def test_the_message_names_the_incident_and_the_fix(self) -> None:
         with pytest.raises(
-            SystemExit, match="E-008.*empty MetaQA database or instance"
+            SystemExit, match=r"E-008.*empty MetaQA database or instance"
         ):
             metaqa.assert_database_is_empty(self.FakeSession(1))
 
