@@ -65,7 +65,7 @@ def metaqa_target() -> Target:
     Raises:
         SystemExit: If it resolves to the same URI as the corpus. The
             check is here rather than in the caller because there is no
-            situation in which loading 43k foreign triples into the Magic
+            situation in which loading 135k foreign triples into the Magic
             graph is the intent, and a misconfigured ``.env`` is the most
             likely way it would happen.
     """

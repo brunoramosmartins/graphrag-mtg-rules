@@ -33,7 +33,7 @@ services:
   # Magic graph — is what E-008's teardown used when it deleted three real CR
   # rules. Different port, different password, different process.
   #
-  # Deliberately volume-less. The ~43k MetaQA triples live in the container's
+  # Deliberately volume-less. The 135k MetaQA triples live in the container's
   # writable layer, so teardown is destroying the container and there is no
   # DELETE query anywhere near the corpus:
   #

@@ -170,8 +170,8 @@ class CountResult:
 class TestTheLoaderRefusesANonEmptyDatabase:
     """E-008 loaded 9 nodes into production and its teardown deleted real rules.
 
-    MetaQA is ~43,000 triples. The registration says separate database; this
-    is the check that makes the registration true at runtime.
+    MetaQA is 135,000 triples over 43,000 entities. The registration says a
+    separate target; this is the check that makes it true at runtime.
     """
 
     class FakeSession:
