@@ -90,6 +90,50 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-02 — The MetaQA band is extracted, and it turns out it cannot decide anything
+
+E-002's decision rule opens with a step to be done before the adapter runs:
+extract the published Hits@1 per hop from named KGQA papers, and let the
+band be `[min, max]` across them. Done today, into the registry, with eight
+systems, the table each figure was read from, and the full-KB setting
+isolated so our complete-KB run is not compared against somebody's ablation.
+
+Two things came out of it that were not the number.
+
+**Chasing the primary source paid for itself on the first try.** A first
+reading had PullNet's 2-hop at 92.4. The primary table shows 92.4 is the
+`50% KB + Text` column — the full-KB figure is 99.9. That single wrong cell
+would have opened the 2-hop band eight points too low, for a reason that has
+nothing to do with the benchmark. The house rule that says chase the primary
+for any number the project leans on has now caught something the first time
+it was applied.
+
+**The band, defined as registered, is not falsifiable.** Three-hop comes out
+`[48.9, 100]` — a 2016 memory network at the floor, saturation at the
+ceiling. Anything we measure is "inside the band", so the registered
+prediction that 3-hop lands *below* it cannot fail, and the three-way
+verdict degenerates with it. The cause is not sloppy sourcing: every system
+in the table is trained on MetaQA, and Saxena et al. describe the complete-KG
+setting as "the easiest setting for QA" because the data is built so the
+answer always exists in the KG with no missing link on the path. A zero-shot
+traversal spine and a trained system are not the same kind of thing, and a
+band across the trained ones cannot referee the untrained one.
+
+I am not choosing the replacement rule while looking at a band I already
+know embarrasses the design — the same reason the 85% judge threshold was
+left alone on 2026-08-15. What is recorded today is the band, its
+provenance, and the defect. What the band is allowed to decide is fixed
+next, before any adapter runs, and the leading candidate is to let the
+literature be context and let the decision rest on the floor that does not
+depend on it: Hits@1 ≥ 0.90 on 1-hop, already registered, and a statement
+about our machinery rather than about the benchmark.
+
+Also corrected today, in the open: the registration called MetaQA "~43k
+triples". That is the entity count — the KG is 135k triples over 43k
+entities and nine relations. The figure had been used to size the isolation
+risk, so the correction is recorded rather than edited in place, and the
+argument it supported gets stronger, not weaker.
+
 ## 2026-09-02 — E-002's isolation was unbuildable as registered; it becomes a second instance
 
 The E-002 entry requires MetaQA to load into a separate Neo4j database and

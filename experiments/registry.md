@@ -469,7 +469,7 @@ relaxation, and the three differences are the point:
 
 1. **There is no teardown query.** E-008's incident was not the load — it
    was a teardown `DELETE` that matched three real CR rules. Teardown here
-   is `docker compose --profile metaqa rm -sf`, and with no volume the ~43k
+   is `docker compose --profile metaqa rm -sf`, and with no volume the 135k
    triples go with the container. No Cypher runs near the corpus at any
    point in E-002.
 2. **`verify-clean` changes shape.** The registration verifies teardown by a
@@ -493,6 +493,82 @@ development licence, which would have satisfied the original wording
 literally. It was rejected because it puts a licence acceptance in front of
 `docker compose up` in a public portfolio repository, which costs more in
 reproducibility than the wording is worth.
+
+### Correction — the KB is 135k triples over 43k entities (2026-09-02)
+
+The registration above says MetaQA loads "~43k triples". That is the
+**entity** count. MetaQA's own description, as restated by Saxena et al.
+(ACL 2020, §5.1), is a KG with **135k triples, 43k entities and nine
+relations**. Corrected here rather than silently in place, because the
+figure was used to argue the size of the isolation risk. The argument
+survives and grows: against E-008's nine nodes, this is roughly four orders
+of magnitude on nodes and more than four on edges.
+
+### The comparison band, extracted before the adapter runs (2026-09-02)
+
+Step 1 of the decision rule, executed before the loader has been pointed at
+anything and before one MetaQA question has run. Every figure below was read
+out of the table named in its row. **These are their numbers, recorded as
+theirs. Nothing here is a target.**
+
+The comparable setting is the **full KB** — the vanilla release, complete,
+which is what this project loads. Papers that also report a 50%-KB or a
+KB+text setting have those columns excluded; mixing them would compare our
+full-KB run against somebody's ablation.
+
+| system | 1-hop | 2-hop | 3-hop | read from | provenance |
+|---|---:|---:|---:|---|---|
+| KV-Mem (Miller et al. 2016) | 96.2 | 82.7 | 48.9 | PullNet Tab. 2, `KB`; same figures in EmbedKGQA Tab. 2 | secondary |
+| VRN (Zhang et al. 2018) | 97.5 | 89.9 | 62.5 | EmbedKGQA Tab. 2, `MetaQA KG-Full` | secondary |
+| GraftNet (Sun et al. 2018) | 97.0 | 94.8 | 77.7 | PullNet Tab. 2, `KB` | secondary |
+| PullNet (Sun, Bedrax-Weiss & Cohen 2019) | 97.0 | 99.9 | 91.4 | arXiv:1904.09537 Tab. 2, `KB` | **primary** |
+| EmbedKGQA (Saxena, Tripathi & Talukdar, ACL 2020) | 97.5 | 98.8 | 94.8 | 2020.acl-main.412 Tab. 2, `MetaQA KG-Full` | **primary** |
+| NSM (He et al., WSDM 2021) | 97.1 | 99.9 | 98.9 | arXiv:2101.03737, "Performance comparison … (Hits@1 in percent)" | **primary** |
+| TransferNet (Shi et al. 2021) | 97.5 | 100 | 100 | arXiv:2104.07302, "Hits@1 results of the label-formed datasets" | **primary** |
+| UniKGQA (Jiang et al., ICLR 2023) | 97.5 | 99.0 | 99.1 | arXiv:2212.00959 Tab. 3 | **primary** |
+
+Every table names the metric **Hits@1**, which is the metric this experiment
+registered. Rows marked secondary are figures a later paper re-reports for
+an earlier system; each was cross-checked against a second re-report, and
+the primary was read wherever the project leans on the number.
+
+**Chasing the primary caught one error, which is the argument for the
+rule.** A first reading transcribed PullNet's 2-hop as 92.4. The primary
+table shows 92.4 is its `50% KB + Text` column; the full-KB figure is 99.9.
+Had that stood, the 2-hop band would have opened at 82.7 for the wrong
+reason and a mis-sourced number would have sat under a decision rule.
+
+**Band as the registration defines it** — `[min, max]` across the systems
+above, full-KB setting:
+
+| hop | band |
+|---|---|
+| 1-hop | [96.2, 97.5] |
+| 2-hop | [82.7, 100] |
+| 3-hop | [48.9, 100] |
+
+**And the band, so defined, cannot carry the decision rule.** Three-hop runs
+`[48.9, 100]`: the floor is a 2016 memory network and the ceiling is
+saturation, so any result this project produces lands "inside the band", and
+the registered prediction that 3-hop falls *below* it cannot fail. A rule
+that cannot fail is not a rule. The three-way verdict — inside / below with
+analysis / above and suspicious — degenerates with it.
+
+Two facts about the benchmark explain the saturation, and both were read
+today rather than assumed:
+
+- Every system in the table is **trained on MetaQA**. This project's spine
+  is zero-shot with a generic template. They are not the same kind of
+  system, and the comparison cannot pretend otherwise.
+- Saxena et al. describe the complete-KG setting as "the easiest setting for
+  QA", because the data is built so that the answer always exists in the KG
+  with no missing link along the path — and UniKGQA attributes the same
+  saturation to the benchmark's handful of question templates and nine
+  relation types.
+
+**The decision rule is therefore open, and is fixed before the run, not
+after.** Recorded today so the choice is visible: the band is real and
+extracted, and what it is allowed to decide is the pending question.
 
 - **Actual result:** _pending._
 
