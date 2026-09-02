@@ -15,6 +15,7 @@ from graphrag_mtg.evaluation.metrics import (
     micro_prf,
     rule_family,
     rule_of_three_upper,
+    wilson_interval,
 )
 
 
@@ -185,3 +186,37 @@ class TestMcNemar:
     def test_unpaired_lengths_are_a_programming_error(self) -> None:
         with pytest.raises(ValueError, match="unpaired"):
             mcnemar([True, False], [True])
+
+
+class TestWilsonIntervalForIndependentTrials:
+    """E-002 has no clusters to respect: one MetaQA question, one trial."""
+
+    def test_the_point_estimate_is_the_plain_proportion(self) -> None:
+        interval = wilson_interval(485, 500)
+        assert interval.point == pytest.approx(0.97)
+        assert interval.n_docs == 500
+
+    def test_the_interval_brackets_the_estimate(self) -> None:
+        interval = wilson_interval(485, 500)
+        assert interval.low < interval.point < interval.high
+
+    def test_a_perfect_score_does_not_report_certainty(self) -> None:
+        """The reason Wilson and not Wald: at p = 1 the normal interval is [1, 1]."""
+        interval = wilson_interval(500, 500)
+        assert interval.point == 1.0
+        assert interval.low < 1.0
+        assert interval.high == 1.0
+
+    def test_zero_successes_stays_inside_the_unit_interval(self) -> None:
+        interval = wilson_interval(0, 40)
+        assert interval.low == 0.0
+        assert 0.0 < interval.high < 1.0
+
+    def test_more_trials_narrow_the_interval(self) -> None:
+        narrow = wilson_interval(970, 1000)
+        wide = wilson_interval(97, 100)
+        assert (narrow.high - narrow.low) < (wide.high - wide.low)
+
+    def test_no_trials_is_zeroed_rather_than_a_division_error(self) -> None:
+        interval = wilson_interval(0, 0)
+        assert (interval.point, interval.low, interval.high, interval.n_docs) == (0.0, 0.0, 0.0, 0)

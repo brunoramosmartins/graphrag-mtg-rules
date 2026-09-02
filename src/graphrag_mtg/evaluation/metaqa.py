@@ -27,13 +27,20 @@ from __future__ import annotations
 
 import json
 import random
+import re
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from graphrag_mtg.generation.answerer import REFUSAL
+from graphrag_mtg.retrieval.subgraph import Evidence
+
 if TYPE_CHECKING:
     from neo4j import Session
+
+#: Citation markers, stripped before an answer line becomes a prediction.
+_CITATION = re.compile(r"\[[^\]]*\]")
 
 #: Prefix carried by every MetaQA label and relationship type. A foreign KB
 #: of this size shares a server with the production graph; the prefix is the
@@ -196,10 +203,19 @@ def sample(
 
 
 def freeze(questions: Sequence[Question], path: Path, *, seed: int) -> None:
-    """Write the drawn subset, refusing to overwrite one that exists.
+    """Write the drawn subset **as ids**, refusing to overwrite one that exists.
+
+    Two disciplines meet in this function.
 
     A redraw after a number exists is the failure `split_golden.py` was
-    written to prevent, and E-002 registers the same discipline.
+    written to prevent, and E-002 registers the same rule: the file is
+    written once and never rewritten.
+
+    And only the ids are written. MetaQA is somebody else's dataset under
+    somebody else's licence, so the same posture the golden set takes with
+    RulesGuru applies here — version the identifiers, materialise the text
+    from the local release at run time, redistribute nothing. It also keeps
+    the committed artefact small enough to read.
     """
     if path.exists():
         raise SystemExit(
@@ -212,34 +228,151 @@ def freeze(questions: Sequence[Question], path: Path, *, seed: int) -> None:
         "n_per_hop": {
             str(h): sum(1 for q in questions if q.hops == h) for h in HOPS
         },
-        "questions": [
-            {
-                "qid": q.qid,
-                "hops": q.hops,
-                "text": q.text,
-                "seed_entity": q.seed,
-                "answers": list(q.answers),
-            }
-            for q in questions
-        ],
+        "note": (
+            "Question ids only. Text and answers are read from the local "
+            "MetaQA release at run time; this project redistributes neither."
+        ),
+        "ids": [q.qid for q in questions],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def load_frozen(path: Path) -> list[Question]:
-    """Read back a frozen subset."""
+def load_frozen(path: Path, root: Path, *, split: str = "test") -> list[Question]:
+    """Re-materialise a frozen subset from the local release.
+
+    Args:
+        path: The frozen id list.
+        root: The MetaQA release directory the ids are read against.
+        split: Which question split the ids were drawn from.
+
+    Returns:
+        The questions, in the frozen order.
+
+    Raises:
+        MetaQAFormatError: If an id in the subset is not in the release —
+            which means the release on disk is not the one the subset was
+            drawn from, and every number computed against it would be
+            against a different sample.
+    """
     raw = json.loads(path.read_text(encoding="utf-8"))
-    return [
-        Question(
-            qid=row["qid"],
-            hops=row["hops"],
-            text=row["text"],
-            seed=row["seed_entity"],
-            answers=tuple(row["answers"]),
+    ids: list[str] = list(raw["ids"])
+    wanted_hops = sorted({int(qid.split("-")[1]) for qid in ids})
+
+    available: dict[str, Question] = {}
+    for hops in wanted_hops:
+        for question in read_questions(question_path(root, hops, split), hops):
+            available[question.qid] = question
+
+    missing = [qid for qid in ids if qid not in available]
+    if missing:
+        raise MetaQAFormatError(
+            f"{len(missing)} frozen id(s) are not in the release at {root} "
+            f"(first: {missing[0]}). The subset was drawn from a different "
+            "release; scoring against this one would score a different sample."
         )
-        for row in raw["questions"]
+    return [available[qid] for qid in ids]
+
+
+#: Version of the E-002 generation prompt, recorded on every answer.
+PROMPT_VERSION = "e002-a1"
+
+#: The grounding contract, carried over from `generation/answerer.py` with
+#: everything domain-specific removed. What E-002 calibrates is this shape —
+#: answer only from the evidence, cite the handle, refuse when it is not
+#: there — not the Magic instructions the shipped prompt wraps it in. The
+#: single-line answer format exists because Hits@1 scores one entity: asking
+#: for prose and then guessing which noun was the answer would measure the
+#: parser, not the spine.
+SYSTEM = f"""You answer questions from retrieved graph evidence.
+
+THE EVIDENCE IS YOUR ONLY SOURCE.
+The context lists facts as `head | relation | tail`. If a fact is not in the
+context, you do not know it — even if you are certain. An answer built on
+what you remember is a wrong answer in this system, however correct it
+happens to be.
+
+ANSWER FORMAT.
+First line: the answer entity, exactly as it is spelled in the context, and
+nothing else — no sentence, no label, no punctuation around it. If several
+entities answer the question, write the single best one.
+Second line: the citation markers for the facts that support it, copied from
+the context in square brackets, e.g. `[triple:4; triple:9]`.
+
+WHEN THE EVIDENCE IS NOT ENOUGH.
+Reply exactly `{REFUSAL}` on the first line, followed by one sentence naming
+what is missing. This is a correct answer, not a failure. Do not fill a gap
+with a plausible entity.
+"""
+
+#: Uniqueness constraint, applied before the load. Without it `MERGE` scans
+#: the label for every one of 43k entities and the load never finishes.
+CONSTRAINT_ENTITY_NAME = (
+    f"CREATE CONSTRAINT mq_entity_name IF NOT EXISTS "
+    f"FOR (e:{ENTITY_LABEL}) REQUIRE e.name IS UNIQUE"
+)
+
+#: One hop out from a frontier. Traversal is undirected: MetaQA's relations
+#: are directed but its questions are not — "what movies did X direct" walks
+#: `directed_by` backwards — and a directed expansion answers none of them.
+EXPAND_FRONTIER = f"""
+UNWIND $names AS name
+MATCH (a:{ENTITY_LABEL} {{name: name}})-[r]-(b:{ENTITY_LABEL})
+RETURN DISTINCT startNode(r).name AS head, type(r) AS relation, endNode(r).name AS tail
+"""
+
+
+def triple_evidence(triples: Sequence[Triple], distance: int, start: int) -> list[Evidence]:
+    """Turn KB triples into citable evidence for the shared subgraph budget.
+
+    Args:
+        triples: The edges collected at this distance from the seed.
+        distance: Hops from the seed entity, which is what
+            :func:`~graphrag_mtg.retrieval.subgraph.enforce_budget` trims by
+            when the context does not fit.
+        start: Ordinal of the first handle, so numbering is continuous
+            across levels.
+
+    Returns:
+        One :class:`Evidence` per triple, keyed by ordinal. The handle is an
+        ordinal rather than the triple's text for the reason rulings are:
+        a model asked to copy a long string into a citation gets it wrong,
+        and that would fill the measurement of grounding with typing noise.
+    """
+    return [
+        Evidence(
+            kind="triple",
+            key=str(start + offset),
+            text=f"{t.head} | {t.relation} | {t.tail}",
+            template=f"metaqa_expand_{distance}",
+            path=f"(:{ENTITY_LABEL} {{{t.head}}})-[:{t.rel_type}]->(:{ENTITY_LABEL} {{{t.tail}}})",
+            distance=distance,
+        )
+        for offset, t in enumerate(triples)
     ]
+
+
+def parse_prediction(text: str) -> str | None:
+    """The entity a generated answer asserts, or ``None`` if it refused.
+
+    The rule is fixed here, and tested, before any answer has been read —
+    the same discipline :func:`hits_at_1` follows. Deciding later how
+    generously to read the model's output is deciding the score.
+
+    Args:
+        text: The raw completion.
+
+    Returns:
+        The first line, with citation markers and surrounding punctuation
+        removed, or ``None`` when the answer is a refusal or is empty.
+    """
+    if not text or REFUSAL.lower() in text.lower():
+        return None
+    for line in text.splitlines():
+        stripped = _CITATION.sub("", line).strip().strip('".,;:')
+        if stripped:
+            return stripped
+    return None
 
 
 def hits_at_1(predicted: str | None, question: Question) -> bool:
@@ -285,6 +418,18 @@ MATCH (h:{ENTITY_LABEL} {{name: row.head}})
 MATCH (t:{ENTITY_LABEL} {{name: row.tail}})
 MERGE (h)-[:{rel_type}]->(t)
 """
+
+
+def display_relation(rel_type: str) -> str:
+    """Recover the KB's relation name from the prefixed Cypher type.
+
+    ``MQ_DIRECTED_BY`` -> ``directed_by``. The inverse of
+    :attr:`Triple.rel_type`, and lossy in the same place: a relation whose
+    name held punctuation comes back with underscores. MetaQA's nine
+    relations are all plain snake_case, so nothing is lost on this KB.
+    """
+    stripped = rel_type[len(PREFIX):] if rel_type.startswith(PREFIX) else rel_type
+    return stripped.lower()
 
 
 def entity_names(triples: Sequence[Triple]) -> list[str]:

@@ -34,6 +34,16 @@ def qa_file(tmp_path: Path, text: str = QA) -> Path:
     return path
 
 
+def release(tmp_path: Path, hops: int = 1, text: str = QA) -> Path:
+    """A minimal MetaQA release on disk, in the layout the adapter expects."""
+    root = tmp_path / "metaqa"
+    vanilla = root / f"{hops}-hop" / "vanilla"
+    vanilla.mkdir(parents=True, exist_ok=True)
+    (vanilla / "qa_test.txt").write_text(text, encoding="utf-8")
+    (root / "kb.txt").write_text(KB, encoding="utf-8")
+    return root
+
+
 class TestAMalformedReleaseFailsLoudly:
     """A silently shorter benchmark is a wrong number nobody can see."""
 
@@ -126,11 +136,33 @@ class TestTheSubsetIsDrawnOnceAndFrozen:
         with pytest.raises(SystemExit, match="frozen"):
             metaqa.freeze(self.population(3), out, seed=20260815)
 
-    def test_a_frozen_subset_round_trips(self, tmp_path: Path) -> None:
+    def test_a_frozen_subset_round_trips_through_the_release(self, tmp_path: Path) -> None:
+        root = release(tmp_path)
+        drawn = metaqa.read_questions(metaqa.question_path(root, 1), hops=1)
         out = tmp_path / "subset.json"
-        drawn = self.population(3)
         metaqa.freeze(drawn, out, seed=20260815)
-        assert metaqa.load_frozen(out) == drawn
+        assert metaqa.load_frozen(out, root) == drawn
+
+    def test_the_frozen_file_holds_ids_and_no_benchmark_text(self, tmp_path: Path) -> None:
+        """Somebody else's dataset under somebody else's licence: version ids."""
+        root = release(tmp_path)
+        out = tmp_path / "subset.json"
+        metaqa.freeze(metaqa.read_questions(metaqa.question_path(root, 1), hops=1), out, seed=1)
+        written = out.read_text(encoding="utf-8")
+        assert "mq-1-1" in written
+        assert "what movies" not in written
+        assert "Ronald Colman" not in written
+
+    def test_an_id_the_release_does_not_hold_is_refused(self, tmp_path: Path) -> None:
+        """A release that is not the one drawn from would score a different sample."""
+        root = release(tmp_path)
+        out = tmp_path / "subset.json"
+        metaqa.freeze(metaqa.read_questions(metaqa.question_path(root, 1), hops=1), out, seed=1)
+        metaqa.question_path(root, 1).write_text(
+            "who acted in [Kismet]\tRonald Colman\n", encoding="utf-8"
+        )
+        with pytest.raises(metaqa.MetaQAFormatError, match="different release"):
+            metaqa.load_frozen(out, root)
 
 
 class TestNothingUnvettedReachesCypher:
@@ -155,6 +187,46 @@ class TestNothingUnvettedReachesCypher:
         cypher = metaqa.edge_statement("MQ_DIRECTED_BY")
         assert ":MQ_DIRECTED_BY]" in cypher
         assert metaqa.ENTITY_LABEL in cypher
+
+
+class TestThePredictionRuleWasFixedBeforeAnyAnswerWasRead:
+    """Deciding later how generously to read the output is deciding the score."""
+
+    def test_the_first_line_is_the_prediction(self) -> None:
+        assert metaqa.parse_prediction("Kismet\n[triple:4]") == "Kismet"
+
+    def test_citation_markers_never_reach_the_prediction(self) -> None:
+        assert metaqa.parse_prediction("Kismet [triple:4; triple:9]") == "Kismet"
+
+    def test_leading_blank_lines_are_skipped(self) -> None:
+        assert metaqa.parse_prediction("\n\nSecond Chorus\n[triple:1]") == "Second Chorus"
+
+    def test_surrounding_punctuation_is_not_part_of_the_name(self) -> None:
+        assert metaqa.parse_prediction('"Kismet".') == "Kismet"
+
+    def test_a_refusal_is_not_a_prediction(self) -> None:
+        assert metaqa.parse_prediction("CANNOT ANSWER — no director edge") is None
+
+    def test_empty_output_is_not_a_prediction(self) -> None:
+        assert metaqa.parse_prediction("") is None
+        assert metaqa.parse_prediction("\n \n") is None
+
+
+class TestEvidenceIsCitableAndOrdered:
+    def test_the_handle_is_an_ordinal_that_continues_across_levels(self) -> None:
+        first = metaqa.triple_evidence([metaqa.Triple("A", "directed_by", "B")], 1, start=1)
+        second = metaqa.triple_evidence([metaqa.Triple("B", "written_by", "C")], 2, start=2)
+        assert first[0].cite() == "triple:1"
+        assert second[0].cite() == "triple:2"
+
+    def test_the_distance_is_the_hop_the_budget_trims_by(self) -> None:
+        items = metaqa.triple_evidence([metaqa.Triple("A", "directed_by", "B")], 3, start=1)
+        assert items[0].distance == 3
+        assert items[0].text == "A | directed_by | B"
+
+    def test_the_relation_survives_the_round_trip_through_cypher(self) -> None:
+        triple = metaqa.Triple("A", "written_by", "B")
+        assert metaqa.display_relation(triple.rel_type) == "written_by"
 
 
 class CountResult:
