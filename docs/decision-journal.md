@@ -90,6 +90,38 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-02 — The E-002 harness, and the frontier cap nobody would have counted
+
+Writing the runner forced four choices the registration had not named, and
+they are in the registry now rather than in the code alone. One of them is
+worth the entry on its own.
+
+**A 3-hop ball in a 135k-triple movie KG does not fit anywhere.** The
+traversal has to bound its frontier, and I capped it at 400 entities per
+level. That makes **three** ways this experiment can lose evidence —
+`dropped` by the token budget, `capped` by the per-kind cap, and now
+`truncated` by the frontier — and only the first two were instrumented. The
+registered 3-hop prediction says the dominant failure is budget rather than
+traversal, confirmable only against those counters. A truncation the counters
+cannot see would have let that prediction be confirmed or refuted by
+something nobody was measuring. So it is counted per question and reported
+beside the other two.
+
+Also decided, and only obvious in hindsight: the frozen subset holds
+**question ids only**. MetaQA is somebody else's data under somebody else's
+licence, and the project already refuses to redistribute RulesGuru's text
+for the same reason. The text and answers are read from the local release at
+run time, and loading refuses a release that does not hold every frozen id —
+a subset drawn from a different release would score a different sample while
+looking identical.
+
+The last piece is a prompt. `metaqa.SYSTEM` is the shipped grounding
+contract with every Magic sentence removed: evidence only, cite the handle,
+refuse when it is not there. Keeping the shape and dropping the domain is
+exactly what makes this a calibration of the spine rather than of the
+pipeline — and it is the difference the registered claim already promised
+to respect.
+
 ## 2026-09-02 — The band becomes context; the floor is the whole pass/fail
 
 Decided the same day the defect was found, and still before the adapter has

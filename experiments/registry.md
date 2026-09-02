@@ -633,6 +633,46 @@ but the effect is real and is stated here so the confirmation is read with
 it in view. The prediction was never load-bearing: the floor decides, and
 the floor is at 1-hop.
 
+### Configuration pinned by the harness, before the first run (2026-09-02)
+
+`scripts/run_e002.py` forced four choices the registration did not name.
+Recorded here rather than left in code, because each one can move the number.
+
+1. **Traversal is undirected, level by level, to the question's own depth.**
+   MetaQA's relations are directed and its questions are not — *"what movies
+   did X direct"* walks `directed_by` backwards — so a directed expansion
+   answers none of them. Expansion runs from Python one hop at a time
+   instead of as a single variable-length Cypher pattern, so the frontier
+   can be bounded and the bounding counted.
+2. **A frontier cap of 400 entities per level, counted as `truncated`.** An
+   unbounded 3-hop ball in a 135k-triple KB is a query that does not return.
+   This is a **third** way to lose evidence beside `dropped` and `capped`,
+   and it is recorded per question and reported, because the registered
+   3-hop prediction is about exactly this and would be untestable if one of
+   the three losses were invisible.
+3. **The prediction-extraction rule, fixed and tested before any answer was
+   read.** The first non-empty line, citation markers and surrounding
+   punctuation stripped; a refusal is not a prediction. `metaqa.SYSTEM`
+   (prompt `e002-a1`) asks for the entity on its own line for this reason —
+   scoring Hits@1 out of prose would measure a parser.
+4. **`metaqa.SYSTEM` is the grounding contract with the Magic removed.**
+   Evidence-only, cite the handle, refuse when it is not there. The shipped
+   `answerer.SYSTEM` names cards, rules and rulings and would be scored on a
+   movie KG; keeping its *shape* and dropping its domain is what makes this
+   a calibration of the spine.
+
+**IP posture, matching the golden set's.** MetaQA is somebody else's dataset
+under somebody else's licence, so `data/golden/metaqa_subset.json` holds
+**question ids only**; text and answers are materialised from the local
+release at run time and `load_frozen` refuses a release that does not hold
+every frozen id. The same rule the project already applies to RulesGuru.
+
+**A reach ceiling is measured before any token is spent.** `verify`
+traverses every question and records whether the answer entity is in the
+subgraph at all. Hits@1 cannot exceed it, and a gap between the two is
+retrieval rather than reasoning — the split E-006 and E-007 each had to be
+re-run to obtain.
+
 - **Actual result:** _pending._
 
 ## E-003 — Linking and extraction quality against manual annotations
