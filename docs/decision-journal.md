@@ -90,6 +90,47 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-02 — E-002's isolation was unbuildable as registered; it becomes a second instance
+
+The E-002 entry requires MetaQA to load into a separate Neo4j database and
+instructs the loader to refuse if the deployment cannot supply one. The
+deployment cannot: `docker-compose.yml` runs `neo4j:5-community`, and
+Community serves exactly one user database. `CREATE DATABASE` is Enterprise.
+The registration was written against what the incident report demanded, not
+against what the compose file could do, and nobody checked the two against
+each other until today.
+
+Found before the timebox started, which is the only reason this is a
+decision and not an incident. Day 1 of a four-day timebox spent discovering
+that the isolation clause is unimplementable is how a four-day timebox
+becomes a nine-day one.
+
+**The fix is a second instance, and it is stronger than what was
+registered.** A `metaqa` compose profile brings up a second Neo4j on port
+7688 with its own password and no volume. What matters is not the extra
+isolation on the write path — it is that **the teardown stops being a
+query**. E-008 did not go wrong on the load; it went wrong when a cleanup
+`DELETE` matched three real CR rules. Here, teardown is destroying a
+volume-less container, so no Cypher runs near the corpus at any point in the
+experiment. The failure mode that produced the incident stops existing
+rather than acquiring another guard. `verify-clean` changes with it: instead
+of a count returning to its pre-load value, it reads as the container being
+absent and the port refusing connections.
+
+One guard is still worth having in code, because the cheapest way back into
+the corpus is now a typo in `.env`: `metaqa_target()` refuses when the two
+URIs resolve to the same server, compared case-insensitively and without a
+trailing slash. A guard that only caught byte-identical strings would look
+responsible and stop nothing.
+
+Enterprise under its development licence was the other option, and it would
+have satisfied the original wording literally. Rejected: it puts a licence
+acceptance in front of `docker compose up` in a public portfolio repo, and
+the wording is not worth that. The registry carries the amendment, dated
+today, stating what changed and — more importantly — the list of what did
+not, so the reader can see the scope of the edit rather than trusting that
+it was small.
+
 ## 2026-08-15 — The golden set audits clean, and E-002 is registered against a claim it can actually support
 
 Two things closed today before any Phase 6 code was written.

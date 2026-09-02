@@ -452,6 +452,48 @@ multiple-comparison correction when strata are tested jointly.
     rule is fixed in the adapter and tested before the run rather than
     settled while looking at failures.
 
+### Amendment — the isolation is a separate instance, not a separate database (2026-09-02)
+
+The registration above requires a separate Neo4j **database** and says the
+load is refused if the deployment cannot supply one. It cannot supply one.
+`docker-compose.yml` runs `neo4j:5-community`, and Community serves exactly
+one user database — `CREATE DATABASE` is an Enterprise feature. This was
+found on 2026-09-02, before the timebox clock started and before a single
+MetaQA question had been run, by reading the registration against the
+compose file rather than against the intention.
+
+The requirement is met by a **separate instance**: a `neo4j-metaqa` service
+under a `metaqa` compose profile, on its own port (7688), with its own
+password, its own process, and **no volume**. This is a strengthening, not a
+relaxation, and the three differences are the point:
+
+1. **There is no teardown query.** E-008's incident was not the load — it
+   was a teardown `DELETE` that matched three real CR rules. Teardown here
+   is `docker compose --profile metaqa rm -sf`, and with no volume the ~43k
+   triples go with the container. No Cypher runs near the corpus at any
+   point in E-002.
+2. **`verify-clean` changes shape.** The registration verifies teardown by a
+   count returning to its pre-load value. That check now reads: the
+   container is absent and `bolt://localhost:7688` refuses connections. A
+   count against a server that no longer exists is not a weaker check.
+3. **The mismatch is caught in code, not in a runbook.**
+   `graph/connection.py::metaqa_target()` refuses when the MetaQA URI
+   resolves to the corpus URI, compared case-insensitively and without a
+   trailing slash, and refuses before a driver is constructed.
+
+Unchanged by this amendment, and restated so the change is bounded: the
+`MQ_` label and relationship-type prefixes, the created == declared
+assertion, the refusal to load into a target holding any node, the subset
+size and seed `20260815`, the comparison-band procedure, the floor of
+Hits@1 ≥ 0.90 on 1-hop, the timebox cut rule, and every prediction and
+threat recorded above.
+
+The alternative considered and rejected was Neo4j Enterprise under its
+development licence, which would have satisfied the original wording
+literally. It was rejected because it puts a licence acceptance in front of
+`docker compose up` in a public portfolio repository, which costs more in
+reproducibility than the wording is worth.
+
 - **Actual result:** _pending._
 
 ## E-003 — Linking and extraction quality against manual annotations
