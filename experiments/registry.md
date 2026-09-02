@@ -570,6 +570,69 @@ today rather than assumed:
 after.** Recorded today so the choice is visible: the band is real and
 extracted, and what it is allowed to decide is the pending question.
 
+### Amendment — the floor decides, the band is context (2026-09-02)
+
+Written after the band was extracted and before the adapter has been pointed
+at anything. It replaces clauses 1 and 3 of the decision rule; clause 2, the
+floor, is carried over unchanged from the original registration and is now
+the whole of the pass/fail reading.
+
+**The band is computed over primary-sourced figures only.** A system enters
+the band when its figure was read from the paper that proposes it. Systems
+whose figures exist here only as a later paper's re-report stay in the table
+as context and do not enter the band. The criterion is **provenance, not
+performance** — it is the same rule the project already applies to every
+number it leans on, and it is stated before our own figure exists.
+
+| hop | band (primary-sourced, full KB) | systems |
+|---|---|---|
+| 1-hop | [97.0, 97.5] | PullNet, EmbedKGQA, NSM, TransferNet, UniKGQA |
+| 2-hop | [98.8, 100] | idem |
+| 3-hop | [91.4, 100] | idem |
+
+**Clause 1 (replaced) — what the band is for.** The band is *reported*, not
+decisive. For each hop, this project's Hits@1 is printed beside the band
+with the gap stated in the same line. No pass/fail hangs on it, because a
+zero-shot traversal spine and five systems trained on the benchmark are not
+the same kind of system, and no interval across the second can adjudicate
+the first.
+
+**Clause 2 (unchanged) — the floor, and it is the only pass/fail.**
+`Hits@1 ≥ 0.90 on 1-hop`. MetaQA 1-hop is a single typed edge lookup against
+a KB with no ambiguity and no rules text. A spine that cannot reach it is
+broken, and that is a statement about our machinery, not about the
+benchmark. Below the floor, the divergence is chased as a defect before
+anything is written up — the E-006 discipline, which is the only reason its
+0.067 was chased rather than believed.
+
+**Clause 3 (replaced) — the two readings that remain rules.**
+
+1. *Above the band at any hop* triggers a **leakage check** before the
+   number is reported as anything. Beating a saturated band of trained
+   systems, zero-shot, is far more likely to be a leak than a result. This
+   survives from the original registration and keeps its force.
+2. *Below the band on 2-hop or 3-hop* requires the written analysis the
+   original rule demanded — where the loss happens and why — and the
+   registered prediction stands: the dominant 3-hop failure is budget, not
+   traversal, confirmed only if failures correlate with non-empty
+   `dropped` / `capped` counters.
+
+**What may be claimed, bounded before the number exists.** If the floor is
+met: *the traversal-and-grounding spine reproduces published behaviour on a
+benchmark with an answer key at 1-hop, and degrades with depth by this much
+against a literature that is trained on the benchmark and saturated on it.*
+Nothing about the pipeline, nothing about linking, nothing about MTG. The
+components not exercised are listed in the result block.
+
+**Threat introduced by this amendment, recorded rather than left for a
+reader to find.** Restricting the band to primary-sourced figures narrows
+3-hop from `[48.9, 100]` to `[91.4, 100]`, which makes the registered
+prediction that 3-hop lands *below* the band easier to confirm. The
+criterion was chosen for provenance and applied before our figure existed,
+but the effect is real and is stated here so the confirmation is read with
+it in view. The prediction was never load-bearing: the floor decides, and
+the floor is at 1-hop.
+
 - **Actual result:** _pending._
 
 ## E-003 — Linking and extraction quality against manual annotations

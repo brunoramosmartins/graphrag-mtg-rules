@@ -90,6 +90,41 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-02 — The band becomes context; the floor is the whole pass/fail
+
+Decided the same day the defect was found, and still before the adapter has
+been pointed at anything, which is the part that matters: this is a rule
+written before a number exists, not a rule adjusted around one.
+
+The band stops deciding. It is reported per hop, beside our figure, with the
+gap stated — and nothing hangs on it, because five systems trained on MetaQA
+cannot adjudicate a zero-shot traversal spine. What decides is the floor
+that was already registered and never depended on the literature: Hits@1
+≥ 0.90 on 1-hop, a single typed edge lookup against a KB with no ambiguity.
+Below it, the divergence is a defect to chase before anything is written,
+which is exactly what saved E-006's 0.067 from being believed.
+
+Two readings keep their force as rules. Landing **above** the band at any
+hop triggers a leakage check before the number is called a success —
+beating a saturated band of trained systems, zero-shot, is far likelier to
+be a leak than a result. Landing **below** it at 2 or 3 hops still owes the
+written analysis, with the registered prediction intact that the dominant
+3-hop failure is budget rather than traversal, confirmable only against the
+`dropped` / `capped` counters.
+
+The band itself is now computed over primary-sourced figures only: a system
+enters it when its number was read from the paper that proposes it. The
+criterion is provenance, which is the rule this project already applies to
+every number it leans on, and it was fixed before our figure existed.
+
+It has a consequence I would rather write down than have a reader find:
+narrowing to primary sources takes 3-hop from [48.9, 100] to [91.4, 100],
+which makes the registered prediction that 3-hop falls below the band easier
+to confirm. The criterion was not chosen for that, but the effect is real,
+so it is recorded in the amendment next to the prediction it flatters. The
+prediction was never carrying weight — the floor is at 1-hop, and the floor
+is the only thing that passes or fails.
+
 ## 2026-09-02 — The MetaQA band is extracted, and it turns out it cannot decide anything
 
 E-002's decision rule opens with a step to be done before the adapter runs:
