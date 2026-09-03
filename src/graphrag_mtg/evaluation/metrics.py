@@ -227,10 +227,15 @@ def wilson_interval(successes: int, n: int, *, alpha: float = 0.05) -> Interval:
     denominator = 1 + z * z / n
     centre = (p + z * z / (2 * n)) / denominator
     half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denominator
+    # The endpoints at the extremes are exact, and floating point does not
+    # quite reach them: with no successes the algebra cancels to zero and
+    # returns 7e-18 instead. Printed it rounds away, but a reader — or a
+    # later comparison — reading `low > 0` would conclude the true rate is
+    # bounded away from zero on evidence that says no such thing.
     return Interval(
         point=p,
-        low=max(0.0, centre - half),
-        high=min(1.0, centre + half),
+        low=0.0 if successes == 0 else max(0.0, centre - half),
+        high=1.0 if successes == n else min(1.0, centre + half),
         n_docs=n,
     )
 
