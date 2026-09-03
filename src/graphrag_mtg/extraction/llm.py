@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
@@ -47,6 +48,33 @@ DEFAULT_PRICES_PER_MTOK: dict[str, tuple[float, float]] = {
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 
 OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions"
+
+#: Transport failures worth retrying: a rate limit, or a gateway between us
+#: and the model. The `anthropic` SDK retries these itself; the httpx path
+#: did not, and a 429 killed an E-002 pass 163 answers into a 500-question
+#: run — the expensive kind of missing retry, because the spend is gone and
+#: the file is a partial nobody may score.
+RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+
+#: Attempts per call, the first one included.
+MAX_ATTEMPTS = 5
+
+
+def retry_delay(response: httpx.Response, attempt: int) -> float:
+    """Seconds to wait before retrying, from the server's advice or backoff.
+
+    `Retry-After` is honoured when the provider sends one, because it knows
+    when the window reopens and exponential backoff only guesses. Capped at
+    a minute either way, and deterministic — no jitter, so a run that hits
+    the same limits twice behaves the same way twice.
+    """
+    header = response.headers.get("Retry-After", "")
+    if header.strip():
+        try:
+            return min(max(float(header), 0.0), 60.0)
+        except ValueError:
+            pass
+    return min(2.0**attempt, 60.0)
 
 _JSON_BLOCK = re.compile(r"\{.*\}|\[.*\]", re.DOTALL)
 
@@ -183,6 +211,27 @@ class LlmClient:
             msg = f"unknown LLM_PROVIDER {self.provider!r} (expected 'anthropic' or 'openai')"
             raise RuntimeError(msg)
 
+    def _post_chat(self, payload: dict[str, Any]) -> httpx.Response:
+        """POST one completion, retrying the failures that are worth retrying.
+
+        Raises:
+            httpx.HTTPStatusError: on a non-retryable status, or after
+                :data:`MAX_ATTEMPTS` attempts — a run that cannot get an
+                answer must stop and say so, not silently record a gap.
+        """
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            response = self._http.post(OPENAI_CHAT_URL, json=payload)
+            if response.status_code not in RETRY_STATUSES or attempt == MAX_ATTEMPTS:
+                response.raise_for_status()
+                return response
+            delay = retry_delay(response, attempt)
+            print(
+                f"  {response.status_code} from the provider; "
+                f"retrying in {delay:.0f}s ({attempt}/{MAX_ATTEMPTS - 1})"
+            )
+            time.sleep(delay)
+        raise AssertionError("unreachable: the loop returns or raises")
+
     def complete_text(self, prompt: str, *, system: str = "") -> str:
         """Send one prompt and return the response text, unparsed.
 
@@ -203,16 +252,14 @@ class LlmClient:
         else:
             messages = [{"role": "system", "content": system}] if system else []
             messages.append({"role": "user", "content": prompt})
-            response = self._http.post(
-                OPENAI_CHAT_URL,
-                json={
+            response = self._post_chat(
+                {
                     "model": self.model,
                     "max_completion_tokens": self.max_tokens,
                     "temperature": self.temperature,
                     "messages": messages,
-                },
+                }
             )
-            response.raise_for_status()
             text = response.json()["choices"][0]["message"]["content"] or ""
         return text
 
