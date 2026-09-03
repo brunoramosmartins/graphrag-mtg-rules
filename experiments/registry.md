@@ -2646,3 +2646,125 @@ in its input — arm A's prose — the ceiling is **re-measured on a small
 dress-rehearsal sample** before it gates anything. No sentence in
 `docs/evaluation.md` claims a judge "cannot" exceed a human's
 self-agreement.
+
+## E-012 — is long-context generation the bottleneck, and is it size or depth?
+
+- **Registered:** 2026-09-03, before any 12b question has been drawn and
+  before `enforce_budget` has been touched. E-002's data already exists and
+  the exploratory half below reads it; the confirmatory half is registered
+  first and is what any decision rests on.
+
+- **The decision this informs, stated before the design.** Two things are
+  pending on the Phase 6 critical path and both wait on this answer:
+  (1) whether `retrieval/subgraph.py::enforce_budget` keeps trimming
+  farthest-first before E-001 runs, and (2) whether the graph arm needs a
+  context-reduction step — reranking, precision filtering, fewer and better
+  triples — as part of its shipped configuration rather than as a later
+  improvement. Both are answered differently depending on whether long
+  multi-hop contexts fail because they are **large** or because they are
+  **deep**, and E-002 cannot tell those apart because its 3-hop questions
+  are both at once.
+
+- **What E-002 established, and what it left confounded.** Conditional on
+  the answer entity being present in the evidence the model received, Hits@1
+  was 0.884 at 1-hop, 0.677 at 2-hop and **0.339 at 3-hop**. The registered
+  prediction that generation would not be the bottleneck is falsified.
+  But 3-hop subgraphs are simultaneously deeper *and* far larger — a median
+  206 evidence items against 17 at 2-hop — so the drop has two candidate
+  causes and the design cannot separate them.
+
+### E-012a — exploratory, on data that already exists
+
+Correctness against context size and hop depth, among the 1,148 questions
+whose answer was shown, from the completed A3 run. **No decision hangs on
+it.** Its job is to generate the hypothesis and to choose the size buckets
+12b will use, and it is labelled exploratory wherever it is quoted. It is
+free, it is re-analysable, and it is not evidence for a claim.
+
+### E-012b — confirmatory, and the only part that decides
+
+- **Design.** Questions are run at **matched context sizes** across hops,
+  with the answer-bearing evidence guaranteed present. For each question,
+  the subgraph is reduced to *k* items by a rule fixed here — keep every
+  triple on a shortest path from the seed to the answer, then fill to *k*
+  with the nearest remaining evidence, deterministic at a recorded seed.
+  Sizes: *k* ∈ {16, 64, 256} plus the untrimmed subgraph, chosen from 12a's
+  buckets and frozen before the run.
+
+  Crossing *k* with hops is the whole point: **at matched *k*, size is held
+  constant and only depth varies.** A drop that survives matching is
+  compositional reasoning; a drop that disappears is context size.
+
+- **Splits, from the first paid call this time.** A **development** draw
+  (100 per hop, seed `20260903`) for every pilot, every prompt question and
+  every sanity check, and a **frozen confirmatory** draw (300 per hop, seed
+  `20260904`, ids only, written once) touched exactly once at the end.
+  Both are drawn from the complement of E-002's subset, so no question that
+  produced an E-002 number appears here. This is the structure E-002 should
+  have had, and its absence there is the process error that entry records.
+
+- **Configuration held fixed.** Same instance, same KB, `gpt-4o-mini` at
+  temperature 0, prompt `e002-a3` unchanged — E-012 is not a prompt
+  experiment and any prompt edit voids the comparison. `frontier_cap` 400,
+  `kind_cap` 1000. The only thing that varies is *k* and the hop.
+
+- **Metric.** Hits@1 by (hops × *k*), cluster-free binomial intervals, and
+  the primary contrast is a **paired** comparison within question across
+  *k*. Nine cells against a control: multiple comparisons get Holm
+  correction, declared here rather than chosen after the p-values.
+
+- **Decision rule, fixed before the run.**
+  1. **If accuracy at matched *k* is flat across hops** (2-hop and 3-hop
+     within each other's intervals at the same *k*), the bottleneck is
+     **size**. Consequence: `enforce_budget`'s distance-first trim is a real
+     hazard for `interaction_multihop`, a context-reduction step is added to
+     the graph arm's shipped configuration before E-001, and the change is
+     re-run against Phase 4 and Phase 5's numbers to price any regression.
+  2. **If accuracy still falls with hops at matched *k***, the bottleneck is
+     **depth**. Consequence: context reduction is not adopted, the budget
+     policy stays, and E-001's multi-hop stratum is reported with the
+     compositional limit named as a known bound on the graph arm.
+  3. **If both** — a size effect *and* a residual depth effect — the size
+     part is acted on and the depth part is published as a limitation. This
+     branch exists so that a mixed result is not read as whichever half is
+     more convenient.
+
+- **Predictions, recorded before the run.**
+  - **Size dominates.** At *k* = 16 with the answer guaranteed present, I
+    expect 3-hop within roughly 10 points of 2-hop. The 0.339 is mostly a
+    needle-in-a-haystack failure over 206 items, not an inability to chain
+    three facts.
+  - **A residual depth effect survives**, on the order of 5–15 points, so
+    branch 3 is the likely outcome. Chaining three triples is genuinely
+    harder than chaining two even on a short context.
+  - **The untrimmed arm is worst at every hop**, including 1-hop, where
+    E-002 already shows 58 misses on contexts whose answer was always
+    present.
+
+- **Threats to validity, recorded before the run.**
+  - **Conditioning on "the answer was shown" is post-selection.** The
+    reduction rule in 12b guarantees presence by construction, which fixes
+    it for the confirmatory arm but not for 12a's exploratory reading.
+  - **The reduction rule uses the gold answer.** It is an oracle filter, so
+    12b measures *the generator's ceiling given good retrieval*, not
+    end-to-end performance, and no number from it may be quoted as a system
+    score. It bounds what a perfect reranker could buy.
+  - **MetaQA questions are templated**, so the reasoning being measured is
+    easier than a judge-level Magic question, and a depth effect here is a
+    lower bound on the depth effect there.
+  - **The budget does not currently fire on the Magic corpus.** `dropped`
+    is 0 across all 42 E-007 questions and all 18 E-008 probes; MTG
+    subgraphs are small (median 8 evidence items). So branch 1's consequence
+    is a **design constraint for E-001**, not a repair of an observed Magic
+    defect, and any change to `enforce_budget` is a change made on
+    calibration evidence — which is stated wherever it is reported.
+  - **Changing shipped trimming risks Phase 4 and Phase 5 regressions.**
+    Branch 1 therefore carries the re-run as part of its cost, not as
+    follow-up work.
+
+- **Cost.** 12a is free. 12b is 4 sizes × 3 hops × (100 dev + 300
+  confirmatory) ≈ 4,800 calls at `gpt-4o-mini`, estimated under US$ 5, with
+  `--limit` and a dry-run estimate printed before any spend as the project
+  rule requires.
+
+- **Actual result:** _pending._

@@ -90,6 +90,47 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-03 — E-012 registered: the 3-hop drop has two candidate causes and E-002 cannot separate them
+
+E-002 says the generator uses a third of what retrieval hands it at three
+hops. It does not say why, and the reason matters more than the number: its
+3-hop subgraphs are simultaneously **deeper** and **far larger** — a median
+206 evidence items against 17 at two hops — so "the model cannot chain three
+facts" and "the model cannot find the fact in 206 of them" fit the data
+equally well and imply opposite fixes.
+
+E-012 separates them by holding size constant and letting depth vary: each
+question run at *k* ∈ {16, 64, 256} and untrimmed, with the answer-bearing
+evidence guaranteed present. If 3-hop catches up at small *k*, the problem
+is size and the graph arm needs a reduction step before E-001. If it does
+not, the problem is composition, context reduction buys nothing, and the
+multi-hop stratum gets its limit published instead. A third branch exists
+for both being true, written down specifically so a mixed result cannot be
+read as whichever half suits the day.
+
+Two things I did differently because of what E-002 cost.
+
+**Both splits exist before the first paid call.** Development and
+confirmatory, drawn now, from the complement of E-002's subset, so nothing
+that produced an E-002 number can be reused. That is the whole of the
+process lesson from yesterday, applied rather than promised.
+
+**The reduction rule uses the gold answer, and I registered that as a
+limit.** It guarantees the answer is present, which is what makes the
+comparison clean — and it means E-012b measures the generator's ceiling
+given perfect retrieval, not end-to-end performance. No figure from it may
+be quoted as a system score. It bounds what a perfect reranker could buy,
+and that is a genuinely useful thing to know before deciding to build one.
+
+One honest constraint on all of it: the budget never fires on the Magic
+corpus — `dropped` is 0 across every E-007 question and every E-008 probe,
+where subgraphs run around 8 evidence items. So if E-012 says "size", the
+consequence is a design constraint on E-001 taken on calibration evidence,
+not the repair of an observed defect in Magic. That distinction goes
+wherever the result goes, because a fix justified by a movie KG and applied
+to a rules corpus is exactly the kind of transfer this project keeps saying
+it does not do.
+
 ## 2026-09-03 — E-002 closes as a FAIL, and the falsified prediction is the valuable part
 
 The floor is 0.90 at 1-hop. A3 came in at **0.884** [0.853, 0.909]. The
