@@ -2681,6 +2681,44 @@ it.** Its job is to generate the hypothesis and to choose the size buckets
 12b will use, and it is labelled exploratory wherever it is quoted. It is
 free, it is re-analysable, and it is not evidence for a claim.
 
+**Result (2026-09-03, `scripts/run_e012.py explore`, exploratory).** Hits@1
+by context size and depth, restricted to questions whose answer was in the
+evidence shown:
+
+| items in context | 1-hop | 2-hop | 3-hop |
+|---|---|---|---|
+| 1–8 | 0.953 [0.925, 0.972] n=322 | 0.979 [0.926, 0.994] n=95 | — |
+| 9–32 | 0.760 [0.692, 0.817] n=175 | 0.832 [0.773, 0.878] n=196 | — |
+| 33–128 | (n=3) | 0.301 [0.208, 0.414] n=73 | (n=1) |
+| 129–512 | — | 0.123 [0.061, 0.232] n=57 | 0.341 [0.282, 0.405] n=223 |
+
+Two readings, both exploratory and neither decisive:
+
+- **Down a column, size collapses accuracy.** At 1-hop — where there is no
+  chaining at all — going from ≤8 items to 9–32 costs 19 points. At 2-hop
+  the fall is monotone and total: 0.979 → 0.832 → 0.301 → 0.123.
+- **Across a row, depth costs nothing visible.** At 1–8 items the 2-hop
+  questions score *above* the 1-hop ones; at 9–32 likewise; at 129–512 the
+  3-hop questions score *above* the 2-hop ones. Every comparison that holds
+  size roughly fixed runs against the depth hypothesis.
+
+**Why this cannot be the answer.** The buckets were observed, not assigned,
+and the selection runs the wrong way inside them. A 2-hop question landing
+in 129–512 is an unusual one — a hub seed with an enormous neighbourhood —
+while every 3-hop question lands there by default, so that cell compares a
+biased minority against a typical majority. This is precisely the confound
+12b removes by setting *k* itself.
+
+**And the fact that forces 12b to exist:** at 3-hop the smallest context
+observed anywhere in 500 questions is **43 items**, with a median of 206.
+Small 3-hop contexts do not occur naturally in this KB. No amount of
+re-analysis will produce them; only assignment will.
+
+**Bucket choice for 12b, which was 12a's registered job.** The collapse
+straddles 8–64, so *k* is amended from {16, 64, 256} to **{8, 16, 64, 256}**
+plus untrimmed. `k=8` anchors the arm where accuracy is still high and is
+where a depth effect, if one exists, has the clearest room to show.
+
 ### E-012b — confirmatory, and the only part that decides
 
 - **Design.** Questions are run at **matched context sizes** across hops,
@@ -2688,8 +2726,8 @@ free, it is re-analysable, and it is not evidence for a claim.
   the subgraph is reduced to *k* items by a rule fixed here — keep every
   triple on a shortest path from the seed to the answer, then fill to *k*
   with the nearest remaining evidence, deterministic at a recorded seed.
-  Sizes: *k* ∈ {16, 64, 256} plus the untrimmed subgraph, chosen from 12a's
-  buckets and frozen before the run.
+  Sizes: *k* ∈ {8, 16, 64, 256} plus the untrimmed subgraph — amended from
+  {16, 64, 256} by 12a, which is what 12a was registered to decide.
 
   Crossing *k* with hops is the whole point: **at matched *k*, size is held
   constant and only depth varies.** A drop that survives matching is
