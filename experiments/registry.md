@@ -673,7 +673,303 @@ subgraph at all. Hits@1 cannot exceed it, and a gap between the two is
 retrieval rather than reasoning — the split E-006 and E-007 each had to be
 re-run to obtain.
 
-- **Actual result:** _pending._
+### Amendment — `kind_cap` re-derived, and an analysis rule that could not decide (2026-09-02)
+
+Written after the free retrieval passes and **before any paid generation**.
+Nothing registered as the experiment's metric has been measured: Hits@1 does
+not exist yet.
+
+**Two defects, found by decomposing a reach number instead of reporting it.**
+
+1. *The ceiling was measured over the wrong set.* `verify` recorded whether
+   the **traversal** touched the answer entity. The model never receives the
+   traversal; it receives `subgraph.evidence`, after the per-kind cap and the
+   token budget. The first pass therefore reported a ceiling more generous
+   than the system — 1.000 at 2-hop, where what the model would actually see
+   held the answer 0.752 of the time. `verify` now reports both, and only
+   the second bounds Hits@1.
+2. *A Magic-tuned constant had been inherited unchanged.*
+   `DEFAULT_KIND_CAP = 25` is per `(template, kind)` and exists to stop a hub
+   like `flying` returning thousands of cards in a graph whose evidence has
+   five kinds. MetaQA evidence has **one** kind, so the cap was a hard
+   ceiling of 75 items and the 6000-token budget never bound at all:
+   `capped` fired on 100% of 3-hop questions and `dropped` on none. This is
+   the house rule violated in the plainest possible way — concepts transfer,
+   constants do not.
+
+**The re-derivation, and the criterion that does not look at the outcome.**
+`E002_KIND_CAP = 1000`: an order of magnitude above what the 6000-token
+budget can hold, so the cap returns to being hub protection and
+`enforce_budget` is what decides. The criterion is *which mechanism binds*,
+settled by the machinery's own design. The alternative — sweeping cap values
+and keeping the one with the best reach — was available and is refused:
+that is choosing a constant by the number it produces.
+
+**The re-derivation is not an improvement, and saying so is the point.**
+
+| shown-reach | old cap (25) | re-derived cap (1000) |
+|---|---|---|
+| 1-hop | 0.996 | 1.000 |
+| 2-hop | 0.752 | **0.842** |
+| 3-hop | 0.564 | **0.448** |
+
+It helps 2-hop and **hurts 3-hop**. The mechanism is now understood: at 25
+items per level the subgraph never exceeded 75 items, the 6000-token budget
+never trimmed, and the distance-3 layer survived *by accident*. Lifting the
+cap lets the near layers fill the budget, and `enforce_budget` trims
+farthest-first — so the frontier layer, which is where a 3-hop answer lives,
+is deleted almost in full.
+
+Measured rather than argued: **226 of the 500 3-hop questions (0.452) have
+their answer already reachable within 2 hops**, and of the 224 whose answer
+survived into the evidence, **213 (0.951) were among them**. Shown-reach at
+3-hop is 0.448 against a shallow-reachable fraction of 0.452. The system is
+answering the 3-hop questions that are not really 3-hop, and eleven others.
+
+The cap is **not** reverted, and the reason is the same rule that motivated
+changing it: 25 was never chosen for this behaviour, it produced it by
+accident, and picking the value that scores better is choosing a constant by
+its number. The configuration stays where the criterion put it, and the
+consequence is published.
+
+**What is deliberately NOT changed, and it is the headline.**
+`enforce_budget` trims farthest-first, and on a multi-hop question the
+answer is at the frontier. The two hops fail differently and both failures
+are this project's own:
+
+- *2-hop — size decides.* 79 questions walk to the answer and never show
+  it. `dropped` fires on 79/79 of them against 42/421 of those that kept
+  it, and the losers carry a median 4,434 triples in their neighbourhood
+  against 17 for the rest. A big neighbourhood overruns the budget and the
+  far layer goes first.
+- *3-hop — the layer is gone regardless.* The counters stop discriminating
+  entirely (`dropped` 258/258 against 222/224; identical median evidence of
+  206 items and identical median dropped counts), and neighbourhood size
+  *inverts* — the losers see fewer triples, not more. The budget removes the
+  distance-3 layer on essentially every question, and what survives is the
+  45% of 3-hop questions whose answer is also reachable within 2 hops.
+
+Changing the trimming order would raise both numbers and empty the
+experiment: E-002 calibrates the machinery that ships, not a variant tuned
+on the benchmark. The behaviour is a result, not a bug to fix mid-run. What
+to do about it is a Phase 6 decision taken on this evidence, after the run,
+and recorded as its own entry.
+
+**The analysis rule for the 3-hop prediction is corrected, because the
+registered one could not decide.** It read: confirmed only if failures
+correlate with non-empty `dropped` / `capped` counters. Under the inherited
+cap the counters were non-empty on ~100% of questions, hits and misses
+alike — a discriminator with no variance. It now reads:
+
+> The prediction is confirmed when the counters **discriminate**: the share
+> of losses carrying a given counter is materially higher than the share
+> among non-losses, and the median neighbourhood size of losses exceeds that
+> of non-losses. Presence alone decides nothing and is not reported as
+> though it did.
+
+**This transfers to E-001, and that is the finding.** `enforce_budget` trims
+by distance, and `interaction_multihop` — **30 of the 57 evaluation
+questions** — has its answer at depth by construction. A large Magic
+neighbourhood would lose the answer layer the same way, and the result would
+read as the central hypothesis failing when the cause is a budget. Found on
+a KG where extraction and linking cannot be blamed, before the evaluation
+set was touched, which is what the calibration was for.
+
+### Amendment — the floor failed, the defect was the prompt, and the prompt was mine (2026-09-02)
+
+The registered decision rule says that below the 1-hop floor the divergence
+is **chased as a defect before anything is written up**, and that the
+harness is the first suspect. It was chased. This entry records what the
+first run measured, what was wrong with it, and the bounded repair.
+
+**What the run under `e002-a1` measured** (frozen subset, 500 per hop,
+`gpt-4o-mini` at temperature 0; 3-hop never ran, the pass died on a 429):
+
+| hop | Hits@1 | shown-reach ceiling | refusals |
+|---|---|---|---|
+| 1-hop | 0.786 [0.748, 0.820] | 1.000 | 90/500 |
+| 2-hop | 0.074 [0.054, 0.100] | 0.842 | 452/500 |
+
+The floor **fails** at 0.786 < 0.90. Fabricated citations: **0 of 1000**.
+
+**The failure is refusal, not error.** 90 of 107 1-hop misses and 452 of 463
+2-hop misses are the model writing `CANNOT ANSWER` — on questions whose
+answer was in the context, at 1-hop, every time. Its own words name the
+cause: *"I do not have information on other films written by Randall
+Wallace"* — the first hop resolved, the second never looked for.
+
+**The defect is a section this experiment's prompt was supposed to have and
+did not.** `answerer.SYSTEM` carries four sections; `e002-a1` carried three.
+The missing one licenses multi-step reasoning over the evidence, and A1
+compounded its absence by demanding the entity "and nothing else", which
+leaves no room to compose. The registry described `metaqa.SYSTEM` as *"the
+grounding contract with the Magic removed"*. It was the contract with a
+section removed, and the description was wrong before the run was.
+
+**`e002-a2` restores it** — walk the facts one step per line, cite each
+step, then a final `ANSWER:` line that keeps the output machine-scoreable.
+This is a repair of fidelity to the instrument being calibrated, not a
+search for a better number.
+
+**Iteration is bounded and happens off the frozen subset.** Prompt rounds
+run on a development draw taken from the *complement* of the registered
+subset (`--dev N`, seed `20260902`; the splits hold 9,947 / 14,872 / 14,274
+questions against 500 drawn each). A prompt tuned until the registered set
+improves is a number reporting its own tuning. **Budget: two rounds total**,
+fixed here; A2 is round one. If A2 does not clear the floor, the number
+stands as measured and the divergence is written up.
+
+**Paired evidence for A2, on development questions only** (40 2-hop, same
+questions both arms): A1 3/40 correct with 36 refusals; A2 23/40 correct
+with 12. Exact McNemar: 21 improved, 1 regressed, **p = 0.00001**.
+
+**What is republished and what is retired.** The A1 figures above are
+reported as the diagnosis of a defective instrument — they are not the
+calibration result and no claim is built on them. The registered result is
+the A2 run over the same frozen subset, and the fact that the prompt was
+repaired once, on a dev sample, before that run, is disclosed beside it.
+
+### Round two, and the pre-commitment written before it ran (2026-09-02)
+
+**A2 over the frozen subset** (500 per hop, `gpt-4o-mini`, temperature 0):
+
+| hop | Hits@1 | shown-reach | published band | reading |
+|---|---|---|---|---|
+| 1-hop | 0.874 [0.842, 0.900] | 1.000 | [0.970, 0.975] | below |
+| 2-hop | 0.566 [0.522, 0.609] | 0.842 | [0.988, 1.000] | below |
+| 3-hop | 0.186 [0.154, 0.222] | 0.448 | [0.914, 1.000] | below |
+
+Floor: **0.874 < 0.90 — FAIL.** Fabricated citations 38/1500 (A1 had 0; A2
+asks for per-step handles and the model sometimes invents one).
+
+**The 63 one-hop misses, decomposed** — the chase the rule demands:
+
+| cause | n | whose |
+|---|---|---|
+| refusal on a question the context answered | 36 | prompt |
+| no `ANSWER:` line — output unscoreable | 11 | prompt |
+| correct by the edge, outside the gold set | 8 | **benchmark** |
+| genuinely wrong | 8 | model |
+
+The third row is a property of MetaQA, verified in its KB rather than
+asserted: same-titled films collapse onto one node. `Lolita` carries
+`directed_by` to **both** Kubrick and Lyne; `Blue Steel` carries
+`starred_actors` to both John Wayne and Clancy Brown. The gold lists one
+film's answers, so a model answering correctly from the evidence it was
+shown is scored wrong. That is a hard ceiling of roughly 1.6% at 1-hop —
+real, measured, and nowhere near enough to excuse 0.874.
+
+**Disclosure.** This decomposition read failures on the frozen subset. The
+registered rule requires chasing a sub-floor result as a defect, so the
+procedure was correct, but it means the diagnosis saw test data. The repair
+was designed and validated only on development questions.
+
+**A3, and why it is being run.** Development comparison, paired, 150
+questions per hop, outside the frozen subset:
+
+| | A2 | A3 | exact McNemar |
+|---|---|---|---|
+| 1-hop Hits@1 | 0.853 | 0.887 | +6 / −1, p = 0.125 |
+| 1-hop refusals | 11 | **3** | |
+| 2-hop Hits@1 | 0.613 | 0.627 | +9 / −7, p = 0.80 |
+
+**A3 is not established as more accurate** — no comparison reaches
+significance and 2-hop shows nothing. It is run on a criterion that does not
+look at the score: under A2, 11 of the 500 one-hop outputs carried no
+`ANSWER:` line and were unscoreable, and A3 cuts refusals 11 → 3 on dev,
+which is the mechanism it was written to fix. An instrument that obeys its
+own output format is a better instrument at any accuracy.
+
+**Pre-commitment, recorded before A3 touched the frozen subset.**
+
+1. A3 is round two of the two-round budget, and **its numbers are the
+   registered result** — whether they are better than A2's or worse.
+2. A2's table above stays published as part of the diagnostic record, so
+   the pair can be read against each other.
+3. There is no round three. Whatever A3 reports is what E-002 reports, and
+   a floor still unmet is written up as a divergence.
+
+- **Actual result (2026-09-03, frozen subset, 500 per hop at seed `20260815`,
+  `gpt-4o-mini` at temperature 0, prompt `e002-a3`, one run): the floor is
+  not met and the calibration is reported as a divergence.**
+
+| hop | Hits@1 | shown-reach ceiling | published band | reading |
+|---|---|---|---|---|
+| 1-hop | **0.884** [0.853, 0.909] | 1.000 | [0.970, 0.975] | below the band |
+| 2-hop | **0.570** [0.526, 0.613] | 0.842 | [0.988, 1.000] | below the band |
+| 3-hop | **0.156** [0.127, 0.190] | 0.448 | [0.914, 1.000] | below the band |
+
+**Verdict on the registered rule: FAIL.** 1-hop 0.884 < 0.90. Below the
+floor the divergence is chased and written up, and it was: the chase is what
+produced the five defects listed in this entry's amendments. The round
+budget is spent and there is no third round.
+
+**A3 against A2, paired on the same questions** — reported because both runs
+exist, not because either was selected after the fact:
+
+| hop | A2 | A3 | exact McNemar |
+|---|---|---|---|
+| 1-hop | 0.874 | 0.884 | +14 / −9, p = 0.405 |
+| 2-hop | 0.566 | 0.570 | +25 / −23, p = 0.885 |
+| 3-hop | 0.186 | 0.156 | +17 / −32, p = 0.044 |
+
+Three comparisons on one family: Bonferroni α = 0.0167, so **nothing here is
+significant**, including the 3-hop regression. A3 and A2 are the same
+instrument by every measure this experiment can make. A3 was run for
+compliance — the unscoreable outputs — and it delivered that (refusals
+428 → 377, fabricated citations 38 → 20) without moving accuracy.
+
+**The 58 one-hop misses, decomposed:** 15 refusals, 11 outputs with no
+`ANSWER:` line, 10 correct by the edge but outside the gold set, 22
+genuinely wrong.
+
+**A ceiling correction is computed and explicitly does not decide anything.**
+The 10 correct-by-edge cases put MetaQA's own ceiling at 0.980 for this
+sample, and crediting them would read 0.904 — above the floor. That number
+is **not** the result. It is a post-hoc adjustment computed after seeing the
+verdict, on a criterion invented after the fact, and allowing it to overturn
+a pre-registered threshold is precisely the move this registry exists to
+prevent. The floor is measured on Hits@1 as registered: 0.884, FAIL. The
+ceiling is reported as context and as a caveat on the benchmark.
+
+### Predictions, scored
+
+1. **"1-hop lands inside the band; 3-hop lands below it."** *Half wrong.*
+   3-hop is far below, as predicted. **1-hop is also below** — 0.884 against
+   [0.970, 0.975]. The spine does not reach published 1-hop behaviour even
+   on a single typed edge lookup.
+2. **"The dominant 3-hop failure is budget, not traversal."** *Not
+   confirmed, under the amended rule.* At 2-hop the counters discriminate
+   cleanly (117/215 of misses against 4/285 of hits). At 3-hop they fire on
+   421/422 misses **and** 77/78 hits — universal, therefore silent. The
+   budget is not what separates a 3-hop success from a 3-hop failure.
+3. **"Grounded generation is not the bottleneck at any hop."** *Wrong, and
+   this is the finding.* Conditional on the answer being present in the
+   evidence the model received:
+
+   | hop | correct given the answer was shown |
+   |---|---|
+   | 1-hop | 0.884 [0.853, 0.909] |
+   | 2-hop | 0.677 [0.631, 0.720] |
+   | 3-hop | **0.339** [0.280, 0.404] |
+
+   At three hops the model uses **one third** of what retrieval hands it.
+   The registration said that if this prediction failed, the finding would
+   be about generation and would transfer directly to the MTG side, and that
+   this was the main reason the calibration was worth its four days. It
+   failed, and it does.
+
+### What this number covers, and what it does not
+
+Exercised: typed traversal from a seeded entity, the `Subgraph` budget,
+`kind_cap`, evidence serialization with citable handles, and grounded
+generation over that evidence. **Not exercised:** `QueryLinker` and the
+Scryfall lexicon, `router.plan`, all nine MTG retrieval templates,
+`extraction/gate.py`, the CR parser, and the shipped Magic prompt. No claim
+about the pipeline, about linking, or about Magic rests on any figure here.
+
+Comparability to the band is bounded twice over: every system in it is
+trained on MetaQA, and this spine is zero-shot with a generic template.
 
 ## E-003 — Linking and extraction quality against manual annotations
 

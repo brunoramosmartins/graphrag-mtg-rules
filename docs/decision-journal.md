@@ -90,6 +90,177 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-03 — E-002 closes as a FAIL, and the falsified prediction is the valuable part
+
+The floor is 0.90 at 1-hop. A3 came in at **0.884** [0.853, 0.909]. The
+round budget is spent, there is no third round, and the calibration is
+reported as a divergence. Writing that down plainly matters more than
+anything else in this entry: the headline of Phase 6's first act is a
+threshold this project set for itself and did not clear.
+
+A3 is not a better prompt. Paired against A2 on the same 1500 questions:
+p = 0.405, 0.885, 0.044 across the three hops, and with a Bonferroni
+correction for the family none of them is significant — including the 3-hop
+regression that would otherwise read as A3 being worse. A3 was run for
+compliance, not for score, and that is exactly what it delivered: refusals
+428 → 377, fabricated citations 38 → 20, accuracy unchanged. The dev
+comparison predicted this, which is the first time this phase a prediction
+made *before* a paid run came true.
+
+**The number I refuse to use.** Ten of the 58 one-hop misses are the model
+answering correctly about a MetaQA node that merges two same-titled films.
+Credit them and the score reads 0.904 — over the floor. That adjustment was
+invented after seeing the verdict, and letting it overturn a pre-registered
+threshold would make every threshold in this repo decorative. It goes in the
+entry as a caveat on the benchmark and changes nothing. If I had wanted a
+ceiling correction to count, the place to define it was before the run.
+
+**What actually pays for the four days is a prediction I got wrong.** I
+registered that grounded generation would not be the bottleneck at any hop —
+that where the answer entity is present in the subgraph, it gets selected.
+Conditional on the answer being in the evidence the model received: 0.884 at
+1-hop, 0.677 at 2-hop, **0.339 at 3-hop**. At three hops the model uses one
+third of what retrieval hands it. The registration itself said that if this
+prediction failed, the finding would be about generation, would transfer
+straight to the MTG side, and would be the main reason the calibration
+earned its budget. It failed. It transfers.
+
+So Phase 6's first act ends with two things pointing at the same place: the
+budget policy deletes the frontier layer on large neighbourhoods, and the
+generator then uses a third of what survives. Both are about long multi-hop
+contexts, and `interaction_multihop` is 30 of the 57 evaluation questions.
+That is not a reason to stop — it is the pre-registration for the next
+experiment, and E-012 is written before anything is changed.
+
+I also want the process error on the record, because it is the one worth not
+repeating: **I did not build a development split before the first paid run.**
+The two-round budget I imposed afterwards is a patch over that, and a worse
+instrument than the structure it replaced. With a dev split from the start,
+iteration would have been unlimited where it is free and the frozen subset
+would have been touched exactly once. Instead it was scored three times, and
+the disclosure that the diagnosis read test-set failures is the price.
+
+## 2026-09-02 — The floor failed at 0.786, and the defect was a section I deleted
+
+The registered rule fired exactly as written: 1-hop Hits@1 came in at 0.786
+against a floor of 0.90, and below the floor nothing gets written up — the
+divergence is chased, harness first. Chased, and it was the harness. Mine.
+
+The shape gave it away before the cause did. The misses are not wrong
+answers, they are **refusals**: 90 of 107 at 1-hop, where the shown-reach
+ceiling is 1.000 and the answer was in the context every single time. At
+2-hop, 452 of 463. Zero fabricated citations in a thousand answers, which
+says the grounding half of the contract was working perfectly while the
+answering half never engaged.
+
+The model's own refusals name the cause — *"I do not have information on
+other films written by Randall Wallace"*. It resolves the first hop and then
+declares the second missing without looking for it. `answerer.SYSTEM` has
+four sections and the one I dropped when stripping the Magic vocabulary is
+the one that says to walk the evidence step by step. I then asked for the
+entity "and nothing else", which removes the room to compose at all. I had
+registered that prompt as "the grounding contract with the Magic removed";
+it was the contract with a section removed, and the registry sentence was
+wrong before the run was.
+
+Two things I want on the record about how this was repaired, because both
+are places where a project like this quietly cheats.
+
+**The iteration does not touch the registered questions.** Prompt rounds run
+on a draw from the complement of the frozen subset — 500 of 9,947 are
+spoken for at 1-hop, so the complement is enormous and free. Iterating on
+the subset would make the final number a report of its own tuning. Phase 5
+made the same split for the same reason, and I nearly skipped it here
+because the fix felt too obviously correct to need a control.
+
+**The budget is fixed now, at two rounds, not when I see the result.** A2 is
+round one. If it does not clear the floor, the number stands as measured and
+gets written up as a divergence. A repair budget decided after seeing
+whether the repair worked is not a budget.
+
+A2 restores the walk-the-steps section and keeps the output scoreable with a
+final `ANSWER:` line. On 40 development questions, paired: A1 got 3 with 36
+refusals, A2 got 23 with 12. Exact McNemar, 21 improved against 1 regressed,
+p = 0.00001. The diagnosis holds.
+
+What I take from the whole day: the calibration's value has not been a
+single number, it has been four defects surfaced in machinery that the MTG
+evaluation depends on — a silent evidence-dropping renderer, an inherited
+constant, a missing retry, and now a grounding prompt missing a quarter of
+its contract. Every one of them would have been invisible on the Magic side
+until it produced a plausible wrong number.
+
+## 2026-09-02 — The budget deletes the answer, and MetaQA found it before the golden set could
+
+The calibration paid for itself before a single token was spent, and not in
+the way the roadmap expected.
+
+The MetaQA KB loaded — 43,234 entities, 133,582 relationships, the 1,159
+duplicate lines in the release collapsing exactly as `read_kb`'s comment
+said they would. Then the free retrieval pass, and a number I nearly
+published: the traversal reaches the answer entity on 500 of 500 questions
+at 1-hop and 2-hop, and 482 of 500 at 3-hop.
+
+**That number was measured over the wrong set.** It asked whether the
+*traversal* touched the answer. The model never sees the traversal; it sees
+`subgraph.evidence`, after the per-kind cap and the token budget. Measured
+where the model actually looks, 2-hop was **0.752**, not 1.000. I had built
+a ceiling that flattered the system by a quarter of its questions.
+
+Underneath that sat a plain violation of this project's own rule.
+`DEFAULT_KIND_CAP = 25` was tuned on the Magic graph, where evidence has
+five kinds and the cap stops a `flying` hub returning thousands of cards.
+MetaQA evidence has one kind, so 25 per level meant 75 items total and the
+6000-token budget never bound: `capped` fired on 100% of 3-hop questions and
+`dropped` on none. Concepts transfer, constants do not — and I had carried a
+constant across a corpus boundary without re-deriving it. Re-derived at 1000
+by a criterion that never looks at the score: high enough that the budget is
+what binds, which is what the cap was designed to allow. Sweeping cap values
+against the reach number was available and refused.
+
+**The re-derivation is not an improvement, and the correction matters more
+than the number.** It lifts 2-hop shown-reach from 0.752 to 0.842 and
+*drops* 3-hop from 0.564 to 0.448. I said "reach improved" before the 3-hop
+pass finished; that was wrong, and the trade is the interesting part. At 25
+items per level the subgraph never exceeded 75 items, so the token budget
+never trimmed and the distance-3 layer survived **by accident**. Lifting the
+cap lets the near layers fill the budget, and `enforce_budget` trims
+farthest-first — deleting the frontier, which on a 3-hop question is where
+the answer is.
+
+I did not revert. Reverting because 3-hop scores better under the old value
+is choosing a constant by its number, which is the thing I refused an hour
+earlier when I refused to sweep caps. The accident is not a design.
+
+**What is left is the actual finding, and I am not fixing it either.** At
+2-hop the failure is size: `dropped` fires on 79 of 79 losses against 42 of
+421 keeps, and losers carry a median 4,434 triples against 17. At 3-hop the
+counters stop discriminating altogether and neighbourhood size inverts —
+because the layer is gone on nearly every question. Measured: 226 of 500
+3-hop questions have their answer reachable within 2 hops anyway, and 213 of
+the 224 survivors are among them. Shown-reach 0.448 against a shallow
+fraction of 0.452. **The system answers the 3-hop questions that are not
+really 3-hop, plus eleven.**
+
+Changing the trimming order would raise both numbers and empty the
+experiment of meaning: E-002 calibrates the machinery that ships. So the
+behaviour stays and gets published, and what to do about it is a decision
+taken after the run, on this evidence.
+
+**And it is not a movie-KG problem.** `interaction_multihop` is 30 of the 57
+evaluation questions, and its answer is at depth by construction —
+composition of two or more effects. A large Magic neighbourhood loses the
+answer layer by the same mechanism, and the run would read as the central
+hypothesis failing when the cause is a budget policy. That is the failure
+E-002 existed to catch: found on a graph where extraction and linking cannot
+be the explanation, before the 57 questions that are touched once.
+
+One process error to write down, since the phase note is emphatic about the
+harness being the first suspect: I left two 3-hop passes writing to the same
+`.jsonl` concurrently, one under each cap. The console numbers were computed
+in memory and are fine; the file was garbage. Killed and re-run to a clean
+file rather than analysed as it stood.
+
 ## 2026-09-02 — The E-002 harness, and the frontier cap nobody would have counted
 
 Writing the runner forced four choices the registration had not named, and
