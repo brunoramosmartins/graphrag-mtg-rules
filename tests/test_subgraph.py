@@ -9,6 +9,7 @@ from graphrag_mtg.retrieval.subgraph import (
     Subgraph,
     add_evidence,
     enforce_budget,
+    kinds_in_order,
     serialize,
 )
 
@@ -103,6 +104,28 @@ class TestSerialize:
         sg = Subgraph(question="q")
         add_evidence(sg, [ev("rule", "702.9")])
         assert "NOTICE" not in serialize(sg)
+
+    def test_a_kind_outside_the_ontology_still_reaches_the_prompt(self) -> None:
+        """It used not to. `serialize` looped over the five MTG kinds, so
+        anything else vanished between retrieval and prompt with no error —
+        found when E-002 built 206 `triple` items per subgraph and rendered
+        none of them."""
+        sg = Subgraph(question="q")
+        add_evidence(sg, [ev("triple", "1", "Kismet | directed_by | Dieterle")])
+        rendered = serialize(sg)
+        assert "[triple:1]" in rendered
+        assert "Kismet | directed_by | Dieterle" in rendered
+
+    def test_the_ontology_kinds_still_come_first(self) -> None:
+        sg = Subgraph(question="q")
+        add_evidence(sg, [ev("triple", "1"), ev("rule", "702.9"), ev("card", "c1")])
+        rendered = serialize(sg)
+        assert rendered.index("## card") < rendered.index("## rule") < rendered.index("## triple")
+
+    def test_kinds_in_order_is_stable_for_several_unknown_kinds(self) -> None:
+        sg = Subgraph(question="q")
+        add_evidence(sg, [ev("zeta", "1"), ev("alpha", "2"), ev("rule", "702.9")])
+        assert kinds_in_order(sg) == ["rule", "alpha", "zeta"]
 
 
 class TestExplicitFailure:

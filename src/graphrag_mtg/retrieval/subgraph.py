@@ -204,6 +204,31 @@ def enforce_budget(subgraph: Subgraph, budget: int = DEFAULT_TOKEN_BUDGET) -> No
         )
 
 
+#: Presentation order for the kinds this project's ontology defines. It is
+#: an *ordering*, not a filter — see :func:`kinds_in_order`.
+KIND_ORDER: tuple[str, ...] = ("card", "keyword", "rule", "ruling", "legality")
+
+
+def kinds_in_order(subgraph: Subgraph) -> list[str]:
+    """Kinds present, ontology order first, anything else after.
+
+    The fallback is not decoration. `serialize` used to loop over
+    :data:`KIND_ORDER` directly, so evidence of any other kind was dropped
+    from the prompt **silently** — no error, no notice, just a context
+    missing the facts it was built from. E-002 retrieves `triple` evidence
+    from a foreign KB and hit exactly that: 206 items per subgraph, none of
+    them rendered. It was caught by a cost estimate that came in too small,
+    which is not a control anybody should rely on.
+
+    In a project whose first rule is that no claim goes uncited, evidence
+    disappearing between retrieval and prompt is the worst failure shape
+    available. Unknown kinds now render last, in a stable order.
+    """
+    present = {item.kind for item in subgraph.evidence}
+    known = [kind for kind in KIND_ORDER if kind in present]
+    return known + sorted(present - set(KIND_ORDER))
+
+
 def serialize(subgraph: Subgraph) -> str:
     """Render the subgraph for a generation prompt.
 
@@ -217,7 +242,7 @@ def serialize(subgraph: Subgraph) -> str:
 
     handle_for = {id(item): handle for handle, item in subgraph.handles().items()}
     lines: list[str] = []
-    for kind in ("card", "keyword", "rule", "ruling", "legality"):
+    for kind in kinds_in_order(subgraph):
         items = [e for e in subgraph.evidence if e.kind == kind]
         if not items:
             continue
