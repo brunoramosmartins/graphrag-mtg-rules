@@ -1,14 +1,27 @@
 #!/usr/bin/env python
-"""E-001's harness. Arm B first, on the development split only.
+"""E-001's harness: three arms, on the development split only.
 
 The evaluation split is 57 questions and is opened once, in Phase 8. Every
 command here defaults to `--split dev` and prints which side it ran, because
 the one irreversible mistake available in this file is touching the other
 one early.
 
-    retrieve   arm B's subgraphs for the 20 development questions (free)
+    index      build the shared corpus and embed it (paid, once)
+    retrieve   one arm's contexts for the 20 development questions (free)
     generate   answers over that dump (paid, ~20 calls)
-    ceiling    hand those answers to the correctness worksheet as batch 2
+    ceiling    hand those answers to the correctness worksheet as a batch
+
+**Arm identity decides configuration**, in `plan_arm`, and every run prints
+what it used. That is not tidiness: the harness once passed a text retriever
+unconditionally and recorded the result as arm B. Text search fires on 2 of
+these 20 questions, so every summary number looked exactly as a graph-only
+arm would look, and the mislabel survived a full run and a registry entry.
+
+**Run files are named by configuration, not by arm.** `runs/` is gitignored,
+so a generated answers file is the only copy of the prose a label describes:
+E-007 lost ten answers to a shared default path, and E-011a's batch 2 points
+at one of these files with finished labels behind it. Arm C's ablations
+differ only in flags, so an arm-only name would let one overwrite another.
 
 Registered configuration this implements, from E-001's amendments:
 
@@ -26,16 +39,16 @@ Registered configuration this implements, from E-001's amendments:
   * **`--limit` and a printed estimate before any spend**, per the
     project's cost rule.
 
-What this file does **not** do yet, named so its absence is not read as a
-result: arm A does not exist, arm C is not configured, and nothing here
-judges. The dress rehearsal is binding and is not complete until all three
-arms and the judge have run end to end on these 20.
+What this file does **not** do, named so its absence is not read as a
+result: nothing here judges, and the judge's human audit does not exist yet.
+The dress rehearsal is binding only once all three arms and the judge have
+run end to end on these 20.
 
 Usage:
-    python scripts/run_eval.py retrieve --arm B
-    python scripts/run_eval.py generate --arm B --dry-run
-    python scripts/run_eval.py generate --arm B
-    python scripts/run_eval.py ceiling
+    python scripts/run_eval.py index --dry-run
+    python scripts/run_eval.py retrieve --arm A
+    python scripts/run_eval.py generate --arm A --dry-run
+    python scripts/run_eval.py retrieve --arm C --text tfidf   # pin 12's ablation
 """
 
 from __future__ import annotations
@@ -60,6 +73,13 @@ from graphrag_mtg.evaluation.dense import (
     VectorCache,
     estimate_embedding_cost,
 )
+from graphrag_mtg.evaluation.judge import (
+    CORRECTNESS_SYSTEM,
+    JUDGE_PROMPT_VERSION,
+    correctness_prompt,
+    score,
+)
+from graphrag_mtg.evaluation.rubric import RUBRIC_VERSION, render_for_judgement, rubric_hash
 from graphrag_mtg.extraction.llm import LlmClient, estimate_cost
 from graphrag_mtg.generation.answerer import PROMPT_VERSION, SYSTEM, answer, build_prompt
 from graphrag_mtg.graph.connection import driver_session
@@ -90,8 +110,14 @@ GOLDEN_DIR = Path("data/golden")
 SPLIT_PATH = Path("data/golden/phase4_dev_ids.json")
 CACHE_DIR = Path("data/interim/golden_cache")
 
-RETRIEVAL = "runs/e001_{arm}_retrieval_{split}.jsonl"
-ANSWERS = "runs/e001_{arm}_answers_{split}.jsonl"
+RETRIEVAL = "runs/e001_{slug}_retrieval_{split}.jsonl"
+ANSWERS = "runs/e001_{slug}_answers_{split}.jsonl"
+VERDICTS = "runs/e001_{slug}_verdicts_{split}.jsonl"
+
+#: Output cap per verdict. Two lines is the required format; this is
+#: generous enough for a model that reasons first and small enough that a
+#: runaway verdict cannot quietly multiply the bill.
+MAX_JUDGE_TOKENS = 200
 
 #: E-001 pin 11. Flipping this to True is a change to the registered
 #: protocol, not a flag to try — it is here so the suppression is visible
@@ -229,6 +255,30 @@ class ArmPlan:
     always_text: bool
 
 
+def config_slug(args: argparse.Namespace) -> str:
+    """A filename fragment naming the exact configuration that ran.
+
+    Not decoration. `runs/` is gitignored, so a generated answers file is
+    the only copy of the prose a label describes — E-007 lost ten answers
+    to a shared default path, and E-011a's batch 2 points at one of these
+    files with 19 finished labels behind it. Arm C's ablations differ only
+    in flags, so a name carrying just the arm would have let the vector
+    run overwrite the TF-IDF run that the ceiling is measured on.
+    """
+    plan = plan_arm(args)
+    if args.arm == "A":
+        parts = ["A", args.mode]
+    elif args.arm == "B":
+        parts = ["B"]
+    else:
+        parts = ["C", plan.retriever, "always" if plan.always_text else "routed"]
+        if plan.retriever == "vector":
+            parts.insert(2, args.mode)
+    if getattr(args, "iterative", False):
+        parts.append("iter")
+    return "-".join(parts)
+
+
 def plan_arm(args: argparse.Namespace) -> ArmPlan:
     """The retrieval plan for one arm — a decision, with no I/O.
 
@@ -270,7 +320,7 @@ def run_retrieval(args: argparse.Namespace) -> int:
     }[plan.retriever]
     if plan.retriever == "vector":
         searcher = vector_searcher(args)
-    out = args.out or Path(RETRIEVAL.format(arm=args.arm, split=side))
+    out = args.out or Path(RETRIEVAL.format(slug=config_slug(args), split=side))
     out.parent.mkdir(parents=True, exist_ok=True)
 
     outcomes: Counter[str] = Counter()
@@ -350,8 +400,9 @@ def describe(args: argparse.Namespace) -> str:
 def run_generation(args: argparse.Namespace) -> int:
     """Answer every retrieved question. Costs tokens; estimate prints first."""
     side = guard_side(args)
-    retrieval = args.retrieval or Path(RETRIEVAL.format(arm=args.arm, split=side))
-    out = args.out or Path(ANSWERS.format(arm=args.arm, split=side))
+    slug = config_slug(args)
+    retrieval = args.retrieval or Path(RETRIEVAL.format(slug=slug, split=side))
+    out = args.out or Path(ANSWERS.format(slug=slug, split=side))
     if not retrieval.exists():
         raise SystemExit(f"No retrieval dump at {retrieval}. Run `retrieve` first.")
     if out.exists() and not args.force and not args.dry_run:
@@ -475,9 +526,99 @@ def index(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_judge(args: argparse.Namespace) -> int:
+    """Score one arm's answers against the keys. Costs tokens.
+
+    Rubric iteration is permitted on **dress-rehearsal** answers and
+    forbidden on the evaluation split, so this defaults to `dev` like
+    everything else here and the version and hash it ran under are written
+    into every verdict.
+    """
+    side = guard_side(args)
+    slug = config_slug(args)
+    answers_path = args.answers or Path(ANSWERS.format(slug=slug, split=side))
+    out = args.out or Path(VERDICTS.format(slug=slug, split=side))
+    if not answers_path.exists():
+        raise SystemExit(f"No answers at {answers_path}. Run `generate` first.")
+    if out.exists() and not args.force and not args.dry_run:
+        raise SystemExit(f"{out} already exists — pass --force only if you mean to replace it.")
+
+    rows = [
+        json.loads(line)
+        for line in answers_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    if args.limit:
+        rows = rows[: args.limit]
+    keys = {r["id"]: key_for(r, args.cache_dir) for r in question_rows(args.golden, args.split, side)}
+    questions = {
+        r["id"]: text_of(r, args.cache_dir)
+        for r in question_rows(args.golden, args.split, side)
+    }
+
+    billed = [r for r in rows if not r["refused"] and render_for_judgement(r["text"]).strip()]
+    client = LlmClient(model=args.model, max_tokens=MAX_JUDGE_TOKENS, temperature=0.0)
+    prompts = [
+        correctness_prompt(questions[r["question_id"]], r["text"], keys[r["question_id"]])
+        for r in billed
+    ]
+    estimate = estimate_cost(
+        prompts,
+        model=client.model,
+        output_tokens_per_call=MAX_JUDGE_TOKENS,
+        system=CORRECTNESS_SYSTEM,
+    )
+    print(f"arm {args.arm} ({slug})   split {side}   rubric {RUBRIC_VERSION} @ {rubric_hash()[:12]}")
+    print(f"judge {client.model} @ temperature 0, prompt {JUDGE_PROMPT_VERSION}")
+    print(f"{len(rows) - len(billed)} scored by rule (refused or empty), {len(billed)} billed")
+    print(f"estimate: {estimate}")
+    if args.dry_run:
+        print("\nDry run: nothing was sent.")
+        return 0
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tally: Counter[str] = Counter()
+    with out.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            qid = row["question_id"]
+            verdict = score(
+                qid,
+                questions[qid],
+                row["text"],
+                keys[qid],
+                lambda system, prompt: client.complete_text(prompt, system=system),
+                model=client.model,
+                refused=row["refused"],
+            )
+            tally[verdict.label.value] += 1
+            handle.write(
+                json.dumps({**asdict(verdict), "label": verdict.label.value, "arm": args.arm,
+                            "slug": slug, "split": side}, ensure_ascii=False)
+                + "\n"
+            )
+    print(f"\n{dict(tally)}  -> {out}")
+    print("Judged, not audited. No figure from this may be published until the")
+    print("judge-versus-human agreement in E-011 has been measured against the ceiling.")
+    return 0
+
+
+def key_for(row: dict, cache: Path) -> str:
+    """A question's answer key, from the row or the gitignored cache."""
+    if row.get("answer"):
+        return row["answer"]
+    path = cache / f"{row['id']}.json"
+    if not path.exists():
+        raise SystemExit(f"No cached key for {row['id']} at {path}.")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    key = payload.get("answerSimple") or payload.get("answer") or ""
+    if not key:
+        raise SystemExit(f"{row['id']} has no answer key. It cannot be judged against nothing.")
+    return key
+
+
 def ceiling(args: argparse.Namespace) -> int:
     """Hand these answers to the correctness worksheet as a labelling batch."""
-    out = args.answers or Path(ANSWERS.format(arm=args.arm, split="dev"))
+    out = args.answers or Path(ANSWERS.format(slug=config_slug(args), split="dev"))
     if not out.exists():
         raise SystemExit(f"No answers at {out}. Run `generate` first.")
     print("These answers are E-011a's batch 2 — the strata batch 1 has none of.")
@@ -550,6 +691,14 @@ def main() -> int:
     idx.add_argument("--embedding-model", default=DEFAULT_EMBEDDING_MODEL)
     idx.add_argument("--dry-run", action="store_true", help="print the estimate, send nothing")
     idx.set_defaults(func=index)
+
+    jud = sub.add_parser("judge", parents=[common], help="score an arm's answers (costs tokens)")
+    jud.add_argument("--answers", type=Path, default=None)
+    jud.add_argument("--out", type=Path, default=None)
+    jud.add_argument("--model", default=None, help="defaults to LLM_MODEL in .env")
+    jud.add_argument("--force", action="store_true")
+    jud.add_argument("--dry-run", action="store_true", help="print the estimate, send nothing")
+    jud.set_defaults(func=run_judge)
 
     cei = sub.add_parser("ceiling", parents=[common], help="hand the answers to E-011a")
     cei.add_argument("--answers", type=Path, default=None)

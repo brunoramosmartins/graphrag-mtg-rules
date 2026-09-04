@@ -444,6 +444,71 @@ multiple-comparison correction when strata are tested jointly.
   `scripts/eval_rule_search.py` and E-006's figures keep measuring what
   they measured.
 
+- **Dress rehearsal, all three arms generated and judged (2026-09-04,
+  development split, US$ 0.04 + US$ 0.01).** Nothing here is a result: the
+  judge is unaudited above the registered floor, and the correctness
+  ceiling's second pass is not due until 2026-09-09.
+
+  **Run files are now named by configuration, not by arm**, which is a fix
+  and not tidiness. `runs/` is gitignored, so a generated answers file is
+  the only copy of the prose a label describes; E-007 lost ten answers to a
+  shared default path, and E-011a's batch 2 points at one of these files
+  with 19 finished labels behind it. Arm C's ablations differ only in
+  flags, so an arm-only name would have let the vector run overwrite the
+  TF-IDF run the ceiling is measured on. Existing files migrated;
+  `require_same_prose` re-verified against the renamed batch-2 source.
+
+  **Pin 1's generator-parity check, run as registered, before any
+  comparison.** `p5-a3` was iterated against *graph* serializations and
+  asks for `kind:key` handles, so the pin requires the malformed-citation
+  rate, refusal rate and mean answer length to be compared per arm on the
+  rehearsal, with a material difference triggering an arm-A serialization
+  adapter built and published before the evaluation run.
+
+  | configuration | answered | refused | unknown handles | mean chars |
+  |---|---|---|---|---|
+  | A, hybrid | 18 | 2 | 1 | 838 |
+  | B | 17 | 3 | 1 | 819 |
+  | C, vector, routed | 17 | 3 | 0 | 964 |
+  | C, TF-IDF, routed | 19 | 1 | 1 | 947 |
+
+  **No material difference. The adapter is therefore not built**, and that
+  is recorded as a check that passed rather than a step that was skipped.
+
+  Judge verdicts on the same 20 questions, `gpt-4o-mini` at temperature 0
+  under `p6-j1` and rubric `p6-c1 @ dfcfb0851c8c`: A 10/3/7, B 9/2/9,
+  C-vector 9/3/8, C-tfidf 8/3/9 (correct/partial/incorrect). **These are
+  not scores.** They are unaudited verdicts on a development split, and no
+  arm comparison may be drawn from them.
+
+- **First judge-versus-human agreement (2026-09-04, 19 answers, below the
+  floor, descriptive only).** `scripts/audit_judge.py` reads a frozen
+  correctness worksheet as the human side and a verdicts file as the judge
+  side, rather than building a second worksheet format that would drift
+  from the first.
+
+  **The blindness E-011 point 5 requires is satisfied structurally here
+  rather than by a tool.** Batch 2's 19 labels were entered on 2026-09-04
+  *before* `judge.py` existed, so the human could not have seen a verdict.
+  That is luck, not design, and it is written down as luck.
+
+      exact agreement 17/19 = 0.895 [0.686, 0.971]   n_clusters 19
+      correct    8/9 = 0.889     partial 2/3 = 0.667     incorrect 7/7 = 1.000
+      disagreements: partial -> incorrect, correct -> partial
+
+  **Both disagreements sit on the `partial` boundary** — which is where
+  E-011a's registered prediction said the *human's* second pass would
+  disagree with its first, on tie-break 3, the right verdict by reasoning
+  the key contradicts. That is a different comparison (inter-rater, not
+  intra-rater) and it is suggestive rather than confirmatory; the
+  prediction is scored against the second human pass on 2026-09-09 and not
+  against this.
+
+  19 answers and 19 clusters is below the registered floor of 30, so this
+  **gates nothing** and no correctness figure may be published as validated
+  on it. It is recorded because it is the first evidence the judge and the
+  rubric produce compatible readings at all.
+
 - **Judge built 2026-09-04 (`evaluation/judge.py`), nothing judged yet.**
   Implements the E-011 amendment rather than restating it, and four of its
   clauses are properties of the code rather than promises:

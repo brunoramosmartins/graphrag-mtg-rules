@@ -90,6 +90,47 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — Three arms judged, and an audit that was blind by luck
+
+All three arms generated and judged on the development split — US$ 0.05
+total — and the first judge-versus-human agreement exists: **17/19 = 0.895**,
+below the registered floor of 30 and therefore gating nothing.
+
+**The audit reuses the ceiling's worksheet instead of getting its own.**
+E-011 point 5 asks for a human pass blind to the producing arm and to the
+judge's verdict. `audit_correctness.py` already produces exactly that —
+frozen, seeded, handles stripped — so `audit_judge.py` reads it as the human
+side rather than defining a second worksheet format. Two instruments
+measuring the same thing drift, and the drift would land on the agreement
+number that becomes the judge's pass mark.
+
+**And the blindness here is real but accidental.** Batch 2's 19 labels were
+entered before `judge.py` existed, so the human could not have seen a
+verdict. That is a stronger guarantee than any tool could arrange, and it is
+luck rather than design — worth writing down as luck, because the next audit
+will not have it and will need the freeze to do that job.
+
+**Both disagreements sit on the `partial` boundary.** E-011a's registered
+prediction says the human's second pass will disagree with its first exactly
+there, on tie-break 3 — the right verdict by reasoning the key contradicts.
+This is a different comparison, inter-rater rather than intra-rater, so it is
+suggestive and not confirmation. The prediction is scored on 09-09 against
+the second human pass and not against this.
+
+**One fix that was overdue.** Run files are now named by configuration
+rather than by arm. `runs/` is gitignored, so a generated answers file is the
+only copy of the prose a label describes — and arm C's ablations differ only
+in flags, so the vector run was about to overwrite the TF-IDF run that the
+ceiling's 19 labels are measured on. The guard against overwriting existed
+and would have fired; a name that cannot collide is better than a guard that
+has to.
+
+Pin 1's generator-parity check ran as registered: malformed-citation rate 0
+to 1 per arm, mean answer length 819 to 964 characters, refusals 1 to 3. No
+material difference, so the arm-A serialization adapter the pin would have
+required is **not** built — recorded as a check that passed rather than a
+step nobody took.
+
 ## 2026-09-04 — The judge, and the parser bug I wrote against instead of into
 
 `evaluation/judge.py` exists. What made it quick to write is that the rubric
