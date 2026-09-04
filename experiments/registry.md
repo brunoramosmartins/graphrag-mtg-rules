@@ -2652,6 +2652,87 @@ dress-rehearsal sample** before it gates anything. No sentence in
 `docs/evaluation.md` claims a judge "cannot" exceed a human's
 self-agreement.
 
+### E-011a — the correctness ceiling itself (registered 2026-09-04, pass 1 open)
+
+The amendment above fixed the *rule* — the judge's threshold is the lower
+bound of a human self-agreement interval, and no other mapping is permitted
+— and left the *sample* unspecified. Unspecified samples are chosen after
+the number, so the sample is pinned here, before the first label exists.
+
+- **Pool.** E-007's 42 RulesGuru questions and the answers the shipped graph
+  arm gave them: `runs/e007_answers_audit.jsonl` (32, generated 2026-08-10)
+  plus `runs/e007_answers_dev.jsonl` (10, generated 2026-09-04 for this
+  purpose), all `gpt-4o-mini` at temperature 0 under prompt `p5-a3`.
+  `scripts/audit_correctness.py build` refuses to run if those files
+  disagree on model or prompt version.
+
+- **Why this pool and not the golden set.** The 42 are **disjoint from the
+  77 golden questions** — verified in code, not asserted: `build` computes
+  E-001's evaluation split (the golden set less its Phase 4 development
+  draw, 57 ids) and exits if any candidate appears in it. A ceiling measured
+  on questions the head-to-head is later scored on would make the instrument
+  a function of the data it grades, and no downstream check could see it.
+
+- **Refusals are excluded from the ceiling, and this is the load-bearing
+  exclusion.** 6 of the 42 answers are refusals. A refusal is a flag, not a
+  judgement: both passes would agree on every one of them without reading
+  anything, and those free agreements would inflate the exact number that
+  becomes the judge's pass mark. They are counted and reported. Downstream,
+  a refusal on an answerable question still scores as a miss in E-001 —
+  that is a scoring rule and it belongs there, not here. **36 rows remain**,
+  above the registered floor of 30.
+
+- **Labels, with the middle one's edges fixed in advance.**
+  `correct` / `partial` / `incorrect`, plus `void` for a key that does not
+  answer its own question (excluded from every denominator). E-007c is the
+  reason the tie-breaks are written before the labels: `partial` took 25 of
+  42 subgraphs there, and the disagreement then landed on the boundary that
+  entry's prediction had called the easy one. The six tie-breaks live in
+  `src/graphrag_mtg/evaluation/rubric.py`, are hashed with the rubric text,
+  and are the same constant the judge prompt will be built from — "the same
+  rubric the judge uses" is enforced by there being one object, not two.
+
+- **Blinding.** Citation handles are stripped before judgement, by the
+  same function for both passes and later for both arms. Correctness asks
+  whether the answer matches the key; whether its citations hold is a
+  different measurement with its own instrument. Stripping also means the
+  graph arm and the vector arm reach the reader looking alike, so the
+  ceiling is measured on **exactly the rendering the head-to-head will
+  use** rather than a friendlier one. Presentation order is reshuffled at a
+  different seed in each pass.
+
+- **The clock.** Pass 1 built 2026-09-04, seed `20260904`, 36 rows. Pass 2
+  is refused by the tool until **5 days** after pass 1 is frozen, at seed
+  `20260909`. Pass 1's labels are recorded, never copied into pass 2, and
+  `show` on pass 1 is refused while pass 2 has an unlabelled row.
+
+- **Guards that can actually fail.** `reaudit` re-renders the answers from
+  the live files and compares the hash to what pass 1 recorded — comparing
+  pass 2's copied hash against its own source is a check that cannot fail,
+  and an earlier draft did exactly that. The rubric hash is checked the same
+  way. Either guard firing means the two passes read different text.
+
+- **Decision rule, from the amendment, restated so it is not re-derived
+  later.** The judge's threshold is the lower bound of this interval. If
+  fewer than 30 judged rows survive, or the lower bound falls below 0.70,
+  correctness is **not gated** and the head-to-head is published with the
+  ceiling beside it, on the `sufficiency` precedent.
+
+- **Prediction, recorded before pass 1 is labelled.** Exact agreement lands
+  between 0.75 and 0.90, below E-003a's 0.990 on claim factuality and nearer
+  E-007c's 0.800 on sufficiency, because correctness against a prose key is
+  a judgement and factual/non-factual is closer to a rule. The disagreements
+  concentrate on the `correct` / `partial` boundary — tie-break 3, the right
+  verdict by reasoning the key contradicts — and not on `incorrect`.
+
+- **Known limitation, stated now rather than when it becomes inconvenient.**
+  This ceiling is measured on **graph-arm prose only**, because the vector
+  arm does not exist yet. Amendment point 8 requires a ceiling to be
+  re-measured where a Phase 6 label differs materially in its input, so the
+  vector arm gets its own pass-1 sample as soon as `baseline_vector.py`
+  produces dress-rehearsal answers. Until then no correctness figure for
+  that arm is gated by this number.
+
 ## E-012 — is long-context generation the bottleneck, and is it size or depth?
 
 - **Registered:** 2026-09-03, before any 12b question has been drawn and

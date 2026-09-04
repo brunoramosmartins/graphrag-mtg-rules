@@ -35,7 +35,7 @@ from graphrag_mtg.graph.connection import driver_session, metaqa_target
 from graphrag_mtg.retrieval.subgraph import DEFAULT_TOKEN_BUDGET, Subgraph
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from run_e002 import (  # noqa: E402 — sibling script, path set above
+from run_e002 import (  # sibling script; the sys.path line above enables it
     DEFAULT_FRONTIER_CAP,
     E002_KIND_CAP,
     MAX_ANSWER_TOKENS,
@@ -108,7 +108,7 @@ def explore(args: argparse.Namespace) -> int:
     for hops in HOPS:
         retrieval = rows(Path(RETRIEVAL.format(hops=hops)))
         answers = rows(Path(ANSWERS.format(hops=hops)))
-        for qid, answer in answers.items():
+        for qid, graded in answers.items():
             record = retrieval.get(qid)
             # Conditioning on the answer being shown is post-selection, and
             # is why this arm cannot decide anything: it asks what the model
@@ -116,7 +116,7 @@ def explore(args: argparse.Namespace) -> int:
             if record is None or not record["answer_shown"]:
                 continue
             size = record["evidence"]
-            cells.setdefault((hops, bucket_of(size)), []).append(bool(answer["correct"]))
+            cells.setdefault((hops, bucket_of(size)), []).append(bool(graded["correct"]))
             sizes.setdefault(hops, []).append(size)
 
     print("E-012a — EXPLORATORY. Chooses the buckets 12b uses; decides nothing.")
@@ -346,7 +346,7 @@ def report(args: argparse.Namespace) -> int:
     for rank, (name, p, up, down) in enumerate(sorted(tests, key=lambda t: t[1])):
         threshold = 0.05 / (len(tests) - rank)
         verdict = "significant" if p <= threshold else "not significant"
-        print(f"  {name:<32} +{up}/-{down}  p={p:.5f}  Holm α={threshold:.4f}  {verdict}")
+        print(f"  {name:<32} +{up}/-{down}  p={p:.5f}  Holm alpha={threshold:.4f}  {verdict}")
     return 0
 
 

@@ -90,6 +90,54 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — Phase 6 Act 2 is sequenced by a clock, not by the deliverable list
+
+The roadmap lists Act 2's deliverables in a reasonable order and that
+order is wrong, because one item on it cannot be compressed by working
+harder. E-011's amendment fixes the judge's pass mark as the lower bound
+of a human self-agreement interval, and that interval requires a **second
+blind pass at least five days after the first**. Nothing else in the phase
+has a calendar dependency; everything else is work. So the first task is
+whatever starts that clock, and the rest of Act 2 runs beside it.
+
+Starting it needed a pool of ≥ 30 dress-rehearsal answers, and none
+existed: `runs/e008_answers_dev.jsonl` holds 6 fixture probes, and E-007's
+audit is claim-level, not answer-level. Resolved by pooling E-007's two
+sides — the 32 audit answers already on disk plus 10 newly generated for
+the dev side, US$ 0.01, same model and prompt version, which the tool
+verifies rather than assumes.
+
+**The choice that took the most thought was which questions.** The
+tempting pool is the golden set, because those are the questions Phase 6
+cares about — and that is exactly why it is disqualified: a ceiling
+measured on questions the head-to-head is later scored on makes the
+instrument a function of the data it grades, and nothing downstream could
+detect it. E-007's 42 turn out to be **disjoint from the golden 77**, which
+was not a fact I trusted from memory: `audit_correctness.py build`
+computes E-001's evaluation split and exits if any candidate appears in it.
+
+**Refusals are excluded from the ceiling, and that exclusion is
+load-bearing.** 6 of the 42 answers are refusals. Both passes would agree
+on all six without reading anything — a refusal is a flag, not a judgement
+— and those free agreements would inflate the precise number that becomes
+the judge's pass mark. Excluding them costs 6 rows and leaves 36, still
+above the registered floor of 30. A refusal still scores as a miss in
+E-001; that is a scoring rule and it belongs there.
+
+Registered as E-011a before the first label, with the sample, the seeds,
+the label set, the six `partial` tie-breaks and a prediction. The rubric
+lives in `evaluation/rubric.py` as one hashed constant so that "the same
+rubric the judge uses" is enforced by there being a single object rather
+than a promise.
+
+Two guards were written the wrong way round first and are worth recording:
+the second pass carried a *copy* of the first pass's answer hash and
+compared it against its source, which is a check that cannot fail. It now
+re-renders from the live files. And stripping citation handles left a space
+before the punctuation they preceded — a typo the model did not make, and a
+tell that a handle had stood there, which is the arm-identifying cue the
+blinding exists to remove.
+
 ## 2026-09-03 — The teardown I wrote to prevent E-008 destroyed the corpus container
 
 Running E-002's documented teardown removed **both** Neo4j containers, the
