@@ -45,7 +45,7 @@ import json
 import sys
 import time
 from collections import Counter
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
@@ -213,27 +213,43 @@ def vector_searcher(args: argparse.Namespace) -> VectorRuleSearch:
     return VectorRuleSearch(arm, iterative=args.iterative)
 
 
-def configure(args: argparse.Namespace):
-    """The retrieval configuration for one arm, from the arm alone.
+@dataclass(frozen=True)
+class ArmPlan:
+    """What an arm is, decided from the arm and nothing else.
 
-    Returns `(text_searcher, uses_graph, always_text)`.
+    Attributes:
+        uses_graph: Whether traversal runs at all.
+        retriever: `vector`, `tfidf`, or None for no text retrieval.
+        always_text: Whether text retrieval fires on every question rather
+            than only where the router sends it.
+    """
 
-    This function exists because the harness previously passed
-    `rule_search` unconditionally and labelled the result **arm B**. Text
-    search fires on 2 of the 20 development questions, so the run was arm
-    C routed with TF-IDF wearing arm B's name, and nothing in the output
-    said otherwise. Arm identity now determines configuration in one
-    place, so a mislabel would have to be written here on purpose.
+    uses_graph: bool
+    retriever: str | None
+    always_text: bool
+
+
+def plan_arm(args: argparse.Namespace) -> ArmPlan:
+    """The retrieval plan for one arm — a decision, with no I/O.
+
+    Deliberately separate from building anything. The harness previously
+    passed `rule_search` unconditionally and labelled the result **arm B**;
+    text search fires on 2 of the 20 development questions, so the run was
+    arm C routed with TF-IDF wearing arm B's name and no number disagreed.
+    The decision is what was wrong, so the decision is what is isolated
+    here and tested — a version that had to build a 115k-document corpus
+    to be exercised is a version whose test gets skipped.
     """
     if args.arm == "A":
-        return vector_searcher(args), False, True
+        # No graph, and its retriever runs on every question by
+        # definition: there is no router to send it anywhere.
+        return ArmPlan(uses_graph=False, retriever="vector", always_text=True)
     if args.arm == "B":
         # Graph-only means graph-only: no text retriever is passed at all,
         # so a routed question comes back as NO_SEED rather than quietly
-        # reaching for the text half arm B is defined as not having.
-        return None, True, False
-    text = vector_searcher(args) if args.text == "vector" else "tfidf"
-    return text, True, args.always_text
+        # reaching for the half arm B is defined as not having.
+        return ArmPlan(uses_graph=True, retriever=None, always_text=False)
+    return ArmPlan(uses_graph=True, retriever=args.text, always_text=args.always_text)
 
 
 def run_retrieval(args: argparse.Namespace) -> int:
@@ -245,10 +261,15 @@ def run_retrieval(args: argparse.Namespace) -> int:
     if args.limit:
         rows = rows[: args.limit]
 
-    searcher, uses_graph, always_text = configure(args)
+    plan = plan_arm(args)
     linker, tfidf, oracle_text = build_stack(args.cr)
-    if searcher == "tfidf":
-        searcher = tfidf
+    searcher = {
+        None: None,
+        "tfidf": tfidf,
+        "vector": None,  # built below, since it costs a corpus load
+    }[plan.retriever]
+    if plan.retriever == "vector":
+        searcher = vector_searcher(args)
     out = args.out or Path(RETRIEVAL.format(arm=args.arm, split=side))
     out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -257,7 +278,7 @@ def run_retrieval(args: argparse.Namespace) -> int:
         run = neo4j_runner(session)
         for row in rows:
             question = text_of(row, args.cache_dir)
-            if uses_graph:
+            if plan.uses_graph:
                 subgraph = retrieve(
                     question,
                     linker=linker,
@@ -266,7 +287,7 @@ def run_retrieval(args: argparse.Namespace) -> int:
                     oracle_text=oracle_text,
                     token_budget=args.token_budget,
                     kind_cap=args.kind_cap,
-                    always_text_search=always_text,
+                    always_text_search=plan.always_text,
                 )
             else:
                 subgraph = vector_only_subgraph(

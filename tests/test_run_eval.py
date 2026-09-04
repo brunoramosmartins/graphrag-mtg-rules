@@ -116,23 +116,20 @@ class TestRegisteredConfiguration:
         assert run_eval.UNBUILT == {}
 
 
-class TestConfigure:
-    """Arm identity determines configuration, in one place.
+class TestPlanArm:
+    """Arm identity decides the configuration, in one place and with no I/O.
 
     The harness previously passed a text retriever unconditionally and
     labelled the output arm B. Text search fires on 2 of 20 development
     questions, so every summary number looked exactly as a graph-only arm
     would look, and the mislabel survived a full run and a registry entry.
+    The decision is what was wrong, so the decision is what these test —
+    a version needing a 115k-document corpus to be exercised is a version
+    whose test gets skipped.
     """
 
     def namespace(self, arm: str, **kw) -> argparse.Namespace:
-        defaults = {
-            "arm": arm,
-            "mode": "lexical",
-            "text": "tfidf",
-            "always_text": False,
-            "iterative": False,
-        }
+        defaults = {"arm": arm, "text": "tfidf", "always_text": False}
         return argparse.Namespace(**{**defaults, **kw})
 
     def test_arm_b_is_handed_no_text_retriever_at_all(self) -> None:
@@ -140,24 +137,33 @@ class TestConfigure:
         # NO_SEED rather than quietly reaching for a half arm B is defined
         # as not having. Re-run properly, arm B gives 2 no_seed of 20 —
         # the property the mislabelled run concealed.
-        searcher, uses_graph, always_text = run_eval.configure(self.namespace("B"))
-        assert searcher is None and uses_graph and not always_text
+        plan = run_eval.plan_arm(self.namespace("B"))
+        assert plan.retriever is None and plan.uses_graph and not plan.always_text
 
     def test_arm_c_gets_a_text_half_and_the_graph(self) -> None:
-        searcher, uses_graph, _ = run_eval.configure(self.namespace("C"))
-        assert searcher == "tfidf" and uses_graph
+        plan = run_eval.plan_arm(self.namespace("C"))
+        assert plan.retriever == "tfidf" and plan.uses_graph
+
+    def test_arm_c_carries_whichever_text_half_was_asked_for(self) -> None:
+        assert run_eval.plan_arm(self.namespace("C", text="vector")).retriever == "vector"
 
     def test_arm_c_routing_is_off_by_default(self) -> None:
-        # Off is the shipped behaviour, and always-on is the published
+        # Off is the shipped behaviour and always-on is the published
         # ablation — not the other way round.
-        _, _, always_text = run_eval.configure(self.namespace("C"))
-        assert always_text is False
-        _, _, always_text = run_eval.configure(self.namespace("C", always_text=True))
-        assert always_text is True
+        assert run_eval.plan_arm(self.namespace("C")).always_text is False
+        assert run_eval.plan_arm(self.namespace("C", always_text=True)).always_text is True
 
-    def test_arm_a_touches_no_graph(self) -> None:
-        _, uses_graph, always_text = run_eval.configure(self.namespace("A", mode="lexical"))
-        assert not uses_graph and always_text
+    def test_arm_a_touches_no_graph_and_always_retrieves(self) -> None:
+        # There is no router in arm A to send retrieval anywhere, so
+        # "always" is a description rather than a setting.
+        plan = run_eval.plan_arm(self.namespace("A"))
+        assert not plan.uses_graph and plan.retriever == "vector" and plan.always_text
+
+    def test_arm_a_ignores_the_text_flag(self) -> None:
+        # `--text` configures arm C's text *half*. Arm A has no half, and
+        # honouring the flag there would let a TF-IDF arm A be published
+        # under the hybrid's name.
+        assert run_eval.plan_arm(self.namespace("A", text="tfidf")).retriever == "vector"
 
 
 class TestDescribe:
