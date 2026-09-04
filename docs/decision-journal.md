@@ -90,6 +90,54 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — Arm A: a deviation that had to strengthen the control to be allowed
+
+The vector baseline is built — corpus, BM25, dense index, fusion, ablations
+— and one registered thing changed. The roadmap names BGE-M3 as reuse from
+Project 1; arm A uses OpenAI `text-embedding-3-small`.
+
+The practical reason is arithmetic: the corpus under pin 8 is 115,547
+documents and ~8.6M tokens, which is hours of CPU and a 2.5 GB dependency
+locally against ~US$ 0.17 and minutes through a provider already wired up.
+But cost is not what makes a deviation admissible, and it is worth being
+explicit about the test I actually applied. `text-embedding-3-small` is a
+**stronger** English retrieval model than BGE-M3, so the substitution makes
+arm A stronger — and arm A is the control this project predicts losing.
+A change that strengthens the control cannot manufacture the predicted
+result; it can only make it harder to reach. Had the substitution weakened
+arm A it would have been refused at any price. What it costs is a sentence
+in the README: arm A is not "the Project 1 pipeline", it is the same
+protocol with a current embedding model.
+
+**Pin 8 turned out to run both ways.** It was written to stop arm A being
+unable to answer `legality_1hop` while the graph swept it. Building the
+corpus surfaced the mirror image: the Scryfall bulk has 38,262 card records
+and the graph loads 34,236, because `etl/cards.py` filters tokens, art
+series and non-playable layouts. Indexed naively, arm A would have carried
+4,026 documents no other arm can cite. Reusing `is_playable` rather than
+re-deciding it brought the counts to exactly equal. Parity is a property of
+the corpus, not a favour granted to one arm.
+
+**Two things the first run said that I would rather it had not.**
+
+The lexical ablation reaches a gold rule on 1 of 18 `interaction_multihop`
+opportunities — but on hand-written probes BM25 pulls up the Scryfall
+rulings that discuss *Humility* and *Opalescence* directly, which is the
+stratum `reachability.py` measured the graph as unable to seed for half its
+questions. The rulings corpus contains prose about exactly the interactions
+the hypothesis calls out of reach for text retrieval. That is an anecdote,
+not a measurement, and it is in the registry because it points against the
+project's own thesis and arrived before the experiment. It also exposes a
+limitation of pin 6's metric rather than of the arm: a ruling that answers
+the question carries no CR number, so rule-number recall scores it a miss.
+
+And token parity buys a larger item-count disparity than I expected — 55 to
+100 documents for arm A against a median of 8 evidence items for the graph.
+The registered choice stands, but pin 11's item-count ablation stops being
+a formality: an order of magnitude is what E-010's precision metric will
+read, and without the ablation the choice of parity would quietly decide
+which arm looks precise.
+
 ## 2026-09-04 — Arm B runs; the batch that fixes the pool is a by-product, not a detour
 
 `scripts/run_eval.py` exists and arm B ran end to end on the 20 development

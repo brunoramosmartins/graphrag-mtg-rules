@@ -354,6 +354,43 @@ multiple-comparison correction when strata are tested jointly.
   exists so that disagreeing with the key has somewhere to go other than a
   category that blames the system.
 
+- **Amendment 2026-09-04 — the dense encoder, changed before a single
+  vector exists.** The roadmap names BGE-M3 "reuse from Project 1". Arm A
+  uses **OpenAI `text-embedding-3-small`** instead. Recorded here, with the
+  argument, before anything was embedded.
+
+  **The measured reason.** The corpus under pin 8 is 115,547 documents and
+  ~8.6M tokens. BGE-M3 on a CPU laptop is hours of compute and a 2.5 GB
+  dependency; the API is ~US$ 0.17 and minutes, through a provider the
+  project already authenticates to.
+
+  **The reason that trade is admissible rather than merely convenient is
+  the direction it moves the result.** `text-embedding-3-small` is a
+  stronger English retrieval model than BGE-M3, so the substitution makes
+  **arm A stronger** — and arm A is the control this experiment predicts
+  losing to the graph. A change that strengthens the control cannot
+  manufacture the predicted outcome; it can only make it harder to reach.
+  Had the substitution weakened arm A it would not have been admissible at
+  any price, and that asymmetry is the whole test being applied.
+
+  **What it costs.** The README may not claim arm A *is* the Project 1
+  pipeline. The claim it may make is the one that matters — same protocol,
+  a current embedding model, tuned in good faith on the development split
+  with the sweep published. `evaluation/dense.py` puts the encoder behind
+  a `Encoder` protocol, so a local BGE-M3 implementing it drops in without
+  touching the retriever, the fusion or the harness.
+
+- **Amendment 2026-09-04 — pin 8 runs in both directions.** The pin was
+  written to stop arm A being unable to answer a stratum the graph sweeps.
+  Building the corpus surfaced the mirror: the Scryfall bulk holds 38,262
+  card records and the graph loads **34,236**, because `etl/cards.py`
+  filters tokens, art series and non-playable layouts. Indexed as-is, arm A
+  would have held 4,026 documents no other arm can cite. `corpus.py` reuses
+  `is_playable` rather than re-deciding it, and the card counts now match
+  exactly; rulings whose card is not in the corpus are dropped for the same
+  reason. Parity is a property of the corpus, not a favour granted to one
+  arm.
+
 - **Dress rehearsal, arm B only (2026-09-04, development split, nothing
   judged).** `scripts/run_eval.py` exists and runs arm B end to end over the
   20 development questions. Recorded now because the run happened, not
@@ -375,9 +412,49 @@ multiple-comparison correction when strata are tested jointly.
   question either way.
 
   **Still not built, named so the rehearsal does not read as complete:** arm
-  A does not exist, arm C is not configured, and there is no judge. `--arm`
-  offers only B, and both `retrieve` and the file's own docstring say so on
-  every run.
+  C is not configured and there is no judge. `--arm` offers only B, and
+  both `retrieve` and the file's own docstring say so on every run.
+
+- **Arm A's retriever built 2026-09-04, lexical ablation run, no vectors
+  yet.** `evaluation/corpus.py`, `bm25.py`, `dense.py` and
+  `baseline_vector.py`. The corpus is 115,547 documents — 3,308 rules, 739
+  glossary entries, 34,236 cards, 77,264 rulings — at `sha256 9a6fecc2`.
+  BM25 indexes it in 9 s and answers in 5–233 ms. Fusion is reciprocal rank
+  fusion at the published `k = 60`: BM25 scores and cosine similarities
+  live on incomparable scales, and any weighted sum needs a normalisation
+  constant, which is precisely the constant pin 7 exists to stop being
+  chosen after seeing which arm it favours.
+
+  **The lexical ablation on the 20 development questions, reported because
+  it ran and not because it decides anything:** gold-rule recall 6/26 —
+  `definition_1hop` 4/4, `interaction_multihop` **1/18**,
+  `negative_temporal` 1/3, `keyword_rule_2hop` 0/1, `legality_1hop` n/a by
+  pin 9. One ablation of a hybrid whose dense half does not exist yet. No
+  comparison may be drawn from it.
+
+  **Two observations recorded now, inconvenient in different directions.**
+
+  1. **Arm A may be stronger on `interaction_multihop` than the project
+     assumed.** On ad-hoc probes BM25 surfaces the Scryfall rulings that
+     discuss *Humility* / *Opalescence* directly — the stratum where
+     `reachability.py` found the graph produces no seed for 15 of 30
+     questions and where `rule_search` reaches a gold rule in 2 of 8. The
+     rulings corpus contains prose about exactly the interactions the
+     hypothesis calls out of reach for text. This is an anecdote from
+     hand-written probes, not a measurement, and it is written down now
+     because it points **against** the project's own hypothesis and
+     arrived before the experiment. Note also that rule-number recall
+     scores it as a miss: a ruling that answers the question carries no
+     `gold_cr_rules` number, which is a limitation of pin 6's metric and
+     not of the arm.
+  2. **Token parity buys item-count disparity, larger than expected.** At
+     the shared 6,000-token budget arm A keeps 55–100 documents per
+     question against a median of 8 evidence items for the graph arms. The
+     registered rule stands — token budget is what both arms face at
+     generation — but pin 11's item-count ablation is no longer a
+     formality: an order of magnitude in item count is exactly what
+     E-010's precision metric reads, and the ablation is what stops the
+     choice of parity from silently deciding which arm looks precise.
 
 - **Actual result:** _pending (Phase 8)._
 
