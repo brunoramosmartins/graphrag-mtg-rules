@@ -90,6 +90,43 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — Arm B runs; the batch that fixes the pool is a by-product, not a detour
+
+`scripts/run_eval.py` exists and arm B ran end to end on the 20 development
+questions: 20 of 20 resolved, 19 answered, 1 refused, US$ 0.01. Nothing was
+judged — there is no judge — so no number here is a result.
+
+The top-up batch for the correctness ceiling and the dress rehearsal turned
+out to be the same piece of work, which is why the ceiling's strata problem
+did not cost a detour. The rehearsal needs arm B's answers on the dev split;
+the ceiling needs answers on questions carrying `definition_1hop` and
+`legality_1hop`. One run produces both.
+
+**Pin 11 is implemented and it changed nothing observable, which is worth
+writing down before it gets mistaken for evidence.** The pin suppresses the
+incompleteness notice on every arm, because a passage retriever truncating
+at *k* cannot emit one and leaving it live would hand the graph arms an
+invitation to hedge that the baseline never receives — with refusals scoring
+as incorrect, in the experiment predicting the graph wins. On this split
+`context_incomplete` is **0 of 20**: the budget never fired, as it did not
+for E-007's 42 or E-008's 18 probes. So the pin is a parity guarantee
+against a case that has not yet occurred, not an intervention with a
+measured effect. Recorded as such.
+
+**Two batches, two configurations, and the difference is in the
+provenance rather than beside it.** Batch 1's answers carry the notice;
+batch 2's do not. A model invited to hedge writes prose of a different
+shape, and how hard a hedge is to re-judge is precisely what the ceiling
+measures — so `notice` joined the model and prompt version in the tuple a
+batch must be internally consistent on. `build` refuses a file that mixes
+them and the score reports each batch apart before pooling.
+
+One implementation note worth keeping: the worksheet's question lookup
+assumed E-007's layout, where the text lives in a gitignored cache and the
+row carries `null`. Half of batch 2 is authored and generated questions that
+carry their text inline. Assuming one layout would have produced a blank key
+for those rows — judged against nothing, silently.
+
 ## 2026-09-04 — An outside reading of the answers, and the guard that named a command
 
 After freezing pass 1 of the correctness ceiling, I asked an external LLM to

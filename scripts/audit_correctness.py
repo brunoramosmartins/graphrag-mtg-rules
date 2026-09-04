@@ -65,6 +65,7 @@ ANSWER_FILES = (
     Path("runs/e007_answers_dev.jsonl"),
 )
 CACHE_DIR = Path("data/interim/e007_cache")
+GOLDEN_CACHE = Path("data/interim/golden_cache")
 GOLDEN_DIR = Path("data/golden")
 PHASE4_SPLIT = Path("data/golden/phase4_dev_ids.json")
 
@@ -103,17 +104,35 @@ def jsonl(path: Path) -> list[dict]:
     ]
 
 
-def cached(question_id: str, cache: Path) -> dict:
-    """Question and answer key, from the gitignored cache.
+def question_and_key(question_id: str, caches: list[Path], golden: Path) -> tuple[str, str]:
+    """A question and its answer key, wherever this pool happens to keep them.
 
-    The committed pool carries ids and our own annotations only — the
-    licence posture the golden set already uses — so RulesGuru's text and
-    its answer key live here and never in the repo.
+    Two pools feed this worksheet and they store text differently. E-007's
+    RulesGuru rows carry `null` and keep the text in a gitignored cache —
+    the licence posture the golden set already uses. The golden set's
+    authored and generated rows carry theirs inline. Both are consulted
+    rather than one being assumed, because assuming the E-007 layout is
+    what would silently produce an empty key for half a batch.
+
+    Raises:
+        SystemExit: when neither source has the question or its key. A
+            blank key would be judged against nothing.
     """
-    path = cache / f"{question_id}.json"
-    if not path.exists():
-        raise SystemExit(f"No cached text for {question_id} at {path}. Re-run the draw.")
-    return json.loads(path.read_text(encoding="utf-8"))
+    for cache in caches:
+        path = cache / f"{question_id}.json"
+        if path.exists():
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            question = payload.get("questionSimple") or payload.get("question") or ""
+            key = payload.get("answerSimple") or payload.get("answer") or ""
+            if question and key:
+                return question, key
+    for row in load_questions(golden, QUESTION_FILES):
+        if row["id"] == question_id and row.get("question") and row.get("answer"):
+            return row["question"], row["answer"]
+    raise SystemExit(
+        f"No question text and answer key for {question_id} in {[str(c) for c in caches]} "
+        f"or {golden}. It cannot be judged against a key that is not there."
+    )
 
 
 def answers_fingerprint(answers: dict[str, dict]) -> str:
@@ -151,7 +170,7 @@ def gather_answers(paths: tuple[Path, ...] | list[Path]) -> tuple[dict[str, dict
             on a mixture, and the mixture is not what Phase 6 will judge.
     """
     answers: dict[str, dict] = {}
-    provenance: set[tuple[str, str]] = set()
+    provenance: set[tuple[str, str, bool]] = set()
     for path in paths:
         for row in jsonl(path):
             if row["question_id"] in answers:
@@ -160,15 +179,21 @@ def gather_answers(paths: tuple[Path, ...] | list[Path]) -> tuple[dict[str, dict
                     "question, or the worksheet does not know which prose was labelled."
                 )
             answers[row["question_id"]] = row
-            provenance.add((row.get("model", ""), row.get("prompt_version", "")))
+            # The incompleteness notice belongs in the provenance, not
+            # beside it: an arm invited to hedge produces prose of a
+            # different shape, and how hard a hedge is to re-judge is
+            # exactly what this instrument measures.
+            provenance.add(
+                (row.get("model", ""), row.get("prompt_version", ""), bool(row.get("notice", True)))
+            )
     if len(provenance) > 1:
-        listed = ", ".join(f"{m} / {p}" for m, p in sorted(provenance))
+        listed = ", ".join(f"{m} / {p} / notice={n}" for m, p, n in sorted(provenance))
         raise SystemExit(
             f"The answer files mix generators: {listed}. A ceiling pooled across two "
-            "of them describes neither."
+            "of them describes neither — run them as separate batches instead."
         )
-    model, prompt_version = next(iter(provenance))
-    return answers, {"model": model, "prompt_version": prompt_version}
+    model, prompt_version, notice = next(iter(provenance))
+    return answers, {"model": model, "prompt_version": prompt_version, "notice": notice}
 
 
 def evaluation_ids(golden_dir: Path, split: Path) -> set[str]:
@@ -210,6 +235,7 @@ def build(args: argparse.Namespace) -> int:
 
     meta = {
         "pass": "m1",
+        "batch": args.batch,
         "frozen": False,
         "rubric_version": RUBRIC_VERSION,
         "rubric_hash": rubric_hash(),
@@ -217,9 +243,12 @@ def build(args: argparse.Namespace) -> int:
         "drawn_at": date.today().isoformat(),
         "frozen_at": None,
         "sources": [str(p) for p in args.answers],
+        "caches": [str(p) for p in args.cache_dir],
+        "golden": str(args.golden),
         "answers_sha256": answers_fingerprint({q: answers[q] for q in eligible}),
         "model": provenance["model"],
         "prompt_version": provenance["prompt_version"],
+        "notice": provenance["notice"],
         "pool": {"total": len(answers), "refused": len(refused), "eligible": len(eligible)},
         "refused_ids": refused,
         "order": order,
@@ -241,10 +270,14 @@ def build(args: argparse.Namespace) -> int:
     return 0
 
 
-def render(question_id: str, entry: dict, answer: dict, position: str) -> str:
-    payload = cached(question_id, CACHE_DIR)
-    question = payload.get("questionSimple") or payload.get("question") or ""
-    key = payload.get("answerSimple") or payload.get("answer") or ""
+def render(
+    question_id: str, entry: dict, answer: dict, position: str, meta: dict
+) -> str:
+    question, key = question_and_key(
+        question_id,
+        [Path(c) for c in meta.get("caches", [str(CACHE_DIR)])],
+        Path(meta.get("golden", str(GOLDEN_DIR))),
+    )
     out = [
         RULE,
         f"{question_id}   {position}",
@@ -295,6 +328,7 @@ def show(args: argparse.Namespace) -> int:
                 labels[question_id],
                 answers[question_id],
                 f"[{i} of {len(chosen)} shown; {done}/{len(labels)} done]",
+                meta,
             )
         )
     print(RULE)
@@ -510,6 +544,7 @@ def reaudit_build(args: argparse.Namespace) -> int:
     random.Random(args.seed).shuffle(order)
     meta = {
         "pass": "m2",
+        "batch": first.get("batch", "b1"),
         "frozen": False,
         "rubric_version": first["rubric_version"],
         "rubric_hash": first["rubric_hash"],
@@ -537,49 +572,58 @@ def reaudit_build(args: argparse.Namespace) -> int:
     return 0
 
 
-def reaudit_score(args: argparse.Namespace) -> int:
-    """Exact agreement between the two passes, and the threshold it fixes."""
-    second = load_worksheet(args.out)
+def paired_labels(second_path: Path) -> tuple[dict, dict, list[tuple[str, str, str]]]:
+    """One batch's (pass 1, pass 2, label pairs), after its guards.
+
+    Raises:
+        SystemExit: while any row is unlabelled, or if the prose moved.
+    """
+    second = load_worksheet(second_path)
     pending = [q for q, row in second["labels"].items() if not (row.get("label") or "").strip()]
     if pending:
         raise SystemExit(
-            f"{len(pending)} row(s) still unlabelled. Scoring now would let the rest be "
-            "labelled against a visible agreement rate."
+            f"{second_path}: {len(pending)} row(s) still unlabelled. Scoring now would let "
+            "the rest be labelled against a visible agreement rate."
         )
     first = load_worksheet(Path(second["source"]))
     require_same_prose(first)
-
     pairs = [
         (q, first["labels"][q]["label"], second["labels"][q]["label"]) for q in second["order"]
     ]
+    return first, second, pairs
+
+
+def report_batch(first: dict, second: dict, pairs: list[tuple[str, str, str]]) -> list[bool]:
+    """Print one batch's figures and return the hits the pool should carry."""
     # Void is not a judgement about the answer, and E-011 excludes it from
     # every denominator. Declared here rather than discovered later.
     scored = [(q, a, b) for q, a, b in pairs if Correctness.VOID.value not in (a, b)]
     voided = len(pairs) - len(scored)
+    exposed = set(first.get("exposed", {}))
 
     agreed = [a == b for _, a, b in scored]
     interval = wilson_interval(sum(agreed), len(agreed))
-    print(f"rubric {second['rubric_version']} @ {second['rubric_hash'][:12]}")
-    print(f"{second['elapsed_days']} day(s) between passes   "
-          f"{second['model']} / {second['prompt_version']}")
-    print(RULE)
-    print(f"exact agreement {sum(agreed)}/{len(agreed)} = {interval.point:.3f} "
+    print(f"\nbatch {first.get('batch', 'b1')}   {second['elapsed_days']} day(s) between passes"
+          f"   {second['model']} / {second['prompt_version']}")
+    print(f"  notice {'on' if first.get('notice', True) else 'suppressed'}"
+          f"   sources {', '.join(Path(s).name for s in first['sources'])}")
+    print(f"  exact agreement {sum(agreed)}/{len(agreed)} = {interval.point:.3f} "
           f"[{interval.low:.3f}, {interval.high:.3f}]")
     if voided:
-        print(f"{voided} row(s) excluded: one or both passes called the key void.")
-    print(f"refused and excluded at build: {second['pool']['refused']}")
+        print(f"  {voided} row(s) excluded: one or both passes called the key void.")
+    print(f"  refused and excluded at build: {second['pool']['refused']}")
 
     # Pre-committed at flag time, not chosen here: a row whose content was
     # argued about outside the worksheet may agree for a reason that is not
-    # the annotator's consistency. Both figures print; neither is "the"
-    # number until the registry's rule picks one.
-    exposed = set(first.get("exposed", {}))
+    # the annotator's consistency. Both figures print; the unexposed one is
+    # what the pool carries.
     if exposed:
         clean = [a == b for q, a, b in scored if q not in exposed]
         clean_interval = wilson_interval(sum(clean), len(clean))
-        print(f"excluding {len(exposed)} exposed row(s): {sum(clean)}/{len(clean)} = "
-              f"{clean_interval.point:.3f} [{clean_interval.low:.3f}, {clean_interval.high:.3f}]")
-        interval, agreed = clean_interval, clean
+        print(f"  excluding {len(exposed)} exposed row(s): {sum(clean)}/{len(clean)} = "
+              f"{clean_interval.point:.3f} "
+              f"[{clean_interval.low:.3f}, {clean_interval.high:.3f}]")
+        agreed = clean
 
     # Void-involving pairs are listed apart from the scored disagreements.
     # Printing them together reads as a contradiction beside a 7/7, and it
@@ -587,21 +631,44 @@ def reaudit_score(args: argparse.Namespace) -> int:
     # and changing one's mind about whether the key answers its question.
     disagreements = [(q, a, b) for q, a, b in scored if a != b]
     if disagreements:
-        print("\ndisagreements (pass 1 -> pass 2):")
+        print("  disagreements (pass 1 -> pass 2):")
         for question, before, after in disagreements:
             mark = "  [exposed]" if question in exposed else ""
-            print(f"  {question}: {before} -> {after}{mark}")
-    void_moves = [
-        (q, a, b)
-        for q, a, b in pairs
-        if a != b and Correctness.VOID.value in (a, b)
-    ]
+            print(f"    {question}: {before} -> {after}{mark}")
+    void_moves = [(q, a, b) for q, a, b in pairs if a != b and Correctness.VOID.value in (a, b)]
     if void_moves:
-        print("\nvoid reassessments, excluded from the denominator:")
+        print("  void reassessments, excluded from the denominator:")
         for question, before, after in void_moves:
-            print(f"  {question}: {before} -> {after}")
+            print(f"    {question}: {before} -> {after}")
+    return agreed
+
+
+def reaudit_score(args: argparse.Namespace) -> int:
+    """Exact agreement per batch and pooled, and the threshold it fixes."""
+    paths = [args.out, *args.also]
+    batches = [paired_labels(path) for path in paths]
+    rubrics = {second["rubric_hash"] for _, second, _ in batches}
+    if len(rubrics) > 1:
+        raise SystemExit(
+            "The batches were labelled under different rubrics. Pooling them would "
+            "average two instruments."
+        )
+    print(f"rubric {batches[0][1]['rubric_version']} @ {batches[0][1]['rubric_hash'][:12]}")
+    print(RULE)
+
+    agreed: list[bool] = []
+    for first, second, pairs in batches:
+        agreed.extend(report_batch(first, second, pairs))
 
     print(RULE)
+    interval = wilson_interval(sum(agreed), len(agreed))
+    if len(batches) > 1:
+        # Pooled across batches that differ in composition and in
+        # generator configuration. Named rather than presented as one
+        # homogeneous sample, because it is not one.
+        names = ", ".join(first.get("batch", "b1") for first, _, _ in batches)
+        print(f"pooled over {len(batches)} batch(es) ({names}): {sum(agreed)}/{len(agreed)} = "
+              f"{interval.point:.3f} [{interval.low:.3f}, {interval.high:.3f}]")
     if len(agreed) < CEILING_FLOOR:
         print(f"{len(agreed)} judged rows < the registered floor of {CEILING_FLOOR}.")
         print("Reported descriptively; correctness is NOT gated by this ceiling.")
@@ -622,10 +689,18 @@ def main() -> int:
 
     builder = sub.add_parser("build", help="pass 1 worksheet over dress-rehearsal answers")
     builder.add_argument("--answers", type=Path, nargs="+", default=list(ANSWER_FILES))
+    builder.add_argument(
+        "--cache-dir", type=Path, nargs="+", default=[CACHE_DIR, GOLDEN_CACHE]
+    )
     builder.add_argument("--golden", type=Path, default=GOLDEN_DIR)
     builder.add_argument("--split", type=Path, default=PHASE4_SPLIT)
     builder.add_argument("--out", type=Path, default=PASS1_PATH)
     builder.add_argument("--n", type=int, default=0, help="0 = every eligible answer")
+    builder.add_argument(
+        "--batch",
+        default="b1",
+        help="names this batch in every reported figure; batches are scored apart and pooled",
+    )
     builder.add_argument("--seed", type=int, default=20260904)
     builder.add_argument("--force", action="store_true")
     builder.set_defaults(func=build)
@@ -672,6 +747,13 @@ def main() -> int:
 
     rs = re_sub.add_parser("score", help="exact agreement and the threshold it fixes")
     rs.add_argument("--out", type=Path, default=PASS2_PATH)
+    rs.add_argument(
+        "--also",
+        type=Path,
+        nargs="*",
+        default=[],
+        help="further second passes to pool; each batch is reported apart as well",
+    )
     rs.set_defaults(func=reaudit_score)
 
     args = parser.parse_args()

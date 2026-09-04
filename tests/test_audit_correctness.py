@@ -29,11 +29,14 @@ def write_jsonl(path: Path, rows: list[dict]) -> Path:
     return path
 
 
-def answer(qid: str, *, refused: bool = False, text: str = "Yes [rule:1.1].") -> dict:
+def answer(
+    qid: str, *, refused: bool = False, text: str = "Yes [rule:1.1].", notice: bool = True
+) -> dict:
     return {
         "question_id": qid,
         "text": text,
         "refused": refused,
+        "notice": notice,
         "model": "gpt-4o-mini",
         "prompt_version": "p5-a3",
     }
@@ -66,6 +69,8 @@ def build_args(tmp_path: Path, golden: tuple[Path, Path], answers: list[Path], *
         "out": tmp_path / "m1.json",
         "n": 0,
         "seed": 1,
+        "batch": "b1",
+        "cache_dir": [tmp_path / "cache"],
         "force": False,
     }
     return argparse.Namespace(**{**defaults, **kw})
@@ -82,6 +87,22 @@ class TestGatherAnswers:
         with pytest.raises(SystemExit, match="mix generators"):
             ac.gather_answers([first, second])
 
+    def test_refuses_a_notice_mismatch(self, tmp_path: Path) -> None:
+        # An arm invited to hedge writes prose of a different shape, and
+        # how hard a hedge is to re-judge is what this instrument measures.
+        first = write_jsonl(tmp_path / "a.jsonl", [answer("q1", notice=True)])
+        second = write_jsonl(tmp_path / "b.jsonl", [answer("q2", notice=False)])
+        with pytest.raises(SystemExit, match="mix generators"):
+            ac.gather_answers([first, second])
+
+    def test_a_missing_notice_field_reads_as_on(self, tmp_path: Path) -> None:
+        # E-007's answers predate the field and were generated with the
+        # notice live; defaulting the other way would mislabel a whole batch.
+        row = answer("q1")
+        del row["notice"]
+        path = write_jsonl(tmp_path / "a.jsonl", [row])
+        assert ac.gather_answers([path])[1]["notice"] is True
+
     def test_refuses_the_same_question_twice(self, tmp_path: Path) -> None:
         first = write_jsonl(tmp_path / "a.jsonl", [answer("q1")])
         second = write_jsonl(tmp_path / "b.jsonl", [answer("q1", text="No [rule:2.2].")])
@@ -92,7 +113,11 @@ class TestGatherAnswers:
         path = write_jsonl(tmp_path / "a.jsonl", [answer("q1"), answer("q2")])
         answers, provenance = ac.gather_answers([path])
         assert set(answers) == {"q1", "q2"}
-        assert provenance == {"model": "gpt-4o-mini", "prompt_version": "p5-a3"}
+        assert provenance == {
+            "model": "gpt-4o-mini",
+            "prompt_version": "p5-a3",
+            "notice": True,
+        }
 
 
 class TestBuild:
@@ -253,7 +278,7 @@ class TestReauditScore:
         source = prepared(tmp_path, golden, {"q1": "correct", "q2": "partial"})
         out = self.second_pass(tmp_path, source, {"q1": "correct"})
         with pytest.raises(SystemExit, match="still unlabelled"):
-            ac.reaudit_score(argparse.Namespace(out=out))
+            ac.reaudit_score(argparse.Namespace(out=out, also=[]))
 
     def test_excludes_void_pairs_from_the_denominator(
         self, tmp_path: Path, golden: tuple[Path, Path], capsys
@@ -264,7 +289,7 @@ class TestReauditScore:
         out = self.second_pass(
             tmp_path, source, {"q1": "correct", "q2": "partial", "q3": "void"}
         )
-        ac.reaudit_score(argparse.Namespace(out=out))
+        ac.reaudit_score(argparse.Namespace(out=out, also=[]))
         printed = capsys.readouterr().out
         assert "exact agreement 2/2" in printed
         assert "1 row(s) excluded" in printed
@@ -274,7 +299,7 @@ class TestReauditScore:
     ) -> None:
         source = prepared(tmp_path, golden, {"q1": "correct", "q2": "correct"})
         out = self.second_pass(tmp_path, source, {"q1": "correct", "q2": "partial"})
-        ac.reaudit_score(argparse.Namespace(out=out))
+        ac.reaudit_score(argparse.Namespace(out=out, also=[]))
         printed = capsys.readouterr().out
         assert "exact agreement 1/2" in printed
         assert "q2: correct -> partial" in printed
@@ -286,7 +311,7 @@ class TestReauditScore:
         # stops that from becoming a judge threshold.
         source = prepared(tmp_path, golden, {"q1": "correct", "q2": "correct"})
         out = self.second_pass(tmp_path, source, {"q1": "correct", "q2": "correct"})
-        ac.reaudit_score(argparse.Namespace(out=out))
+        ac.reaudit_score(argparse.Namespace(out=out, also=[]))
         assert "NOT gated" in capsys.readouterr().out
 
 
@@ -317,10 +342,41 @@ class TestExposedRows:
             meta["labels"][qid]["label"] = label
         out.write_text(json.dumps(meta), encoding="utf-8")
 
-        ac.reaudit_score(argparse.Namespace(out=out))
+        ac.reaudit_score(argparse.Namespace(out=out, also=[]))
         printed = capsys.readouterr().out
         assert "exact agreement 2/3" in printed
         assert "excluding 1 exposed row(s): 1/2" in printed
+
+
+class TestQuestionAndKey:
+    def test_reads_the_cache_when_the_row_is_null(self, tmp_path: Path) -> None:
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        (cache / "rg-1.json").write_text(
+            json.dumps({"questionSimple": "Does it trigger?", "answerSimple": "Yes."}),
+            encoding="utf-8",
+        )
+        assert ac.question_and_key("rg-1", [cache], tmp_path) == ("Does it trigger?", "Yes.")
+
+    def test_falls_back_to_the_inline_golden_row(self, tmp_path: Path) -> None:
+        # Two pools feed this worksheet and they store text differently.
+        # Assuming E-007's layout would silently produce an empty key for
+        # half a batch.
+        directory = tmp_path / "golden"
+        write_jsonl(
+            directory / "authored_v0.jsonl",
+            [{"id": "hand-1", "question": "What does trample do?", "answer": "Excess damage."}],
+        )
+        assert ac.question_and_key("hand-1", [tmp_path / "absent"], directory) == (
+            "What does trample do?",
+            "Excess damage.",
+        )
+
+    def test_refuses_when_the_key_is_nowhere(self, tmp_path: Path) -> None:
+        # A blank key would be judged against nothing.
+        (tmp_path / "golden").mkdir()
+        with pytest.raises(SystemExit, match="rg-9"):
+            ac.question_and_key("rg-9", [tmp_path / "absent"], tmp_path / "golden")
 
 
 def open_second(tmp_path: Path, source: Path, name: str = "m2.json") -> Path:
@@ -329,6 +385,58 @@ def open_second(tmp_path: Path, source: Path, name: str = "m2.json") -> Path:
         argparse.Namespace(source=source, out=out, min_days=0, seed=2, force=False)
     )
     return out
+
+
+class TestPooling:
+    def build_batch(
+        self, tmp_path: Path, golden: tuple[Path, Path], name: str, labels: dict[str, str]
+    ) -> Path:
+        """A frozen pass 1 and a fully-labelled pass 2, agreeing on all rows."""
+        path = write_jsonl(tmp_path / f"{name}.jsonl", [answer(qid) for qid in labels])
+        args = build_args(
+            tmp_path, golden, [path], out=tmp_path / f"{name}_m1.json", batch=name
+        )
+        ac.build(args)
+        first = json.loads(args.out.read_text(encoding="utf-8"))
+        for qid, label in labels.items():
+            first["labels"][qid]["label"] = label
+        first["frozen"] = True
+        first["frozen_at"] = date.today().isoformat()
+        args.out.write_text(json.dumps(first), encoding="utf-8")
+
+        out = tmp_path / f"{name}_m2.json"
+        ac.reaudit_build(
+            argparse.Namespace(source=args.out, out=out, min_days=0, seed=2, force=False)
+        )
+        second = json.loads(out.read_text(encoding="utf-8"))
+        for qid, label in labels.items():
+            second["labels"][qid]["label"] = label
+        out.write_text(json.dumps(second), encoding="utf-8")
+        return out
+
+    def test_reports_each_batch_and_the_pool(
+        self, tmp_path: Path, golden: tuple[Path, Path], capsys
+    ) -> None:
+        one = self.build_batch(tmp_path, golden, "b1", {"q1": "correct", "q2": "partial"})
+        two = self.build_batch(tmp_path, golden, "b2", {"q3": "correct"})
+        ac.reaudit_score(argparse.Namespace(out=one, also=[two]))
+        printed = capsys.readouterr().out
+        assert "batch b1" in printed
+        assert "batch b2" in printed
+        assert "pooled over 2 batch(es) (b1, b2): 3/3" in printed
+
+    def test_refuses_to_pool_across_rubrics(
+        self, tmp_path: Path, golden: tuple[Path, Path]
+    ) -> None:
+        # Two passes under two rubrics are two instruments, and averaging
+        # them is not a ceiling.
+        one = self.build_batch(tmp_path, golden, "b1", {"q1": "correct"})
+        two = self.build_batch(tmp_path, golden, "b2", {"q2": "correct"})
+        meta = json.loads(two.read_text(encoding="utf-8"))
+        meta["rubric_hash"] = "0" * 64
+        two.write_text(json.dumps(meta), encoding="utf-8")
+        with pytest.raises(SystemExit, match="different rubrics"):
+            ac.reaudit_score(argparse.Namespace(out=one, also=[two]))
 
 
 class TestWithholdMarginals:

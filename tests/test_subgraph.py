@@ -105,6 +105,23 @@ class TestSerialize:
         add_evidence(sg, [ev("rule", "702.9")])
         assert "NOTICE" not in serialize(sg)
 
+    def test_the_notice_can_be_suppressed_without_hiding_the_trim(self) -> None:
+        """E-001 pin 11: a passage retriever truncating at k cannot emit a
+        notice, so leaving it on hands the graph arms an invitation to
+        hedge that the baseline never receives — and refusals score as
+        incorrect. Suppressed for the comparison; `dropped` still records
+        what happened, so the rate is published either way."""
+        sg = Subgraph(question="q")
+        add_evidence(sg, [ev("rule", f"r{i}", "word " * 80, distance=2) for i in range(30)])
+        enforce_budget(sg, budget=500)
+        assert "NOTICE" not in serialize(sg, notice=False)
+        assert sg.dropped
+
+    def test_suppression_leaves_the_evidence_untouched(self) -> None:
+        sg = Subgraph(question="q")
+        add_evidence(sg, [ev("rule", "702.9", "Flying means...", template="kw")])
+        assert serialize(sg, notice=False) == serialize(sg)
+
     def test_a_kind_outside_the_ontology_still_reaches_the_prompt(self) -> None:
         """It used not to. `serialize` looped over the five MTG kinds, so
         anything else vanished between retrieval and prompt with no error —

@@ -229,13 +229,22 @@ def kinds_in_order(subgraph: Subgraph) -> list[str]:
     return known + sorted(present - set(KIND_ORDER))
 
 
-def serialize(subgraph: Subgraph) -> str:
+def serialize(subgraph: Subgraph, *, notice: bool = True) -> str:
     """Render the subgraph for a generation prompt.
 
     Grouped by kind, each line carrying its citation handle and the path
     it came from, so the answering prompt can be told to cite handles and
     nothing else. The trailing notice is deliberate: a model told the
     context was trimmed can hedge, and one told nothing cannot.
+
+    Args:
+        subgraph: What retrieval produced.
+        notice: Whether to append the incompleteness notice. E-001 pin 11
+            suppresses it for every arm, because a passage retriever
+            truncating at *k* cannot emit one — leaving it on would hand
+            the graph arms an invitation to hedge that the baseline never
+            receives, in the experiment predicting the graph wins. The
+            default stays True so E-007's configuration is unchanged.
     """
     if subgraph.is_empty:
         return f"NO EVIDENCE ({subgraph.outcome}). {subgraph.note}".strip()
@@ -250,7 +259,7 @@ def serialize(subgraph: Subgraph) -> str:
         for item in items:
             lines.append(f"[{handle_for.get(id(item), item.cite())}] {item.text}")
             lines.append(f"    via {item.template}: {item.path}")
-    if subgraph.dropped or subgraph.capped:
+    if notice and (subgraph.dropped or subgraph.capped):
         lines.append(
             "\nNOTICE: this context is incomplete — "
             f"dropped {dict(subgraph.dropped) or '{}'}, "

@@ -354,6 +354,31 @@ multiple-comparison correction when strata are tested jointly.
   exists so that disagreeing with the key has somewhere to go other than a
   category that blames the system.
 
+- **Dress rehearsal, arm B only (2026-09-04, development split, nothing
+  judged).** `scripts/run_eval.py` exists and runs arm B end to end over the
+  20 development questions. Recorded now because the run happened, not
+  because it produced a result — **no answer here has been scored**, and the
+  rehearsal is binding only when all three arms and the judge have run.
+
+  Retrieval resolved on 20 of 20. Generation: `gpt-4o-mini` at temperature
+  0, prompt `p5-a3`, US$ 0.01, 19 answered and 1 refused (`rg-2569`). Strata
+  present: `interaction_multihop` 8, `legality_1hop` 5, `definition_1hop` 4,
+  `negative_temporal` 2, `keyword_rule_2hop` 1.
+
+  **Pin 11's suppression changed nothing observable here, and that is worth
+  writing down before it is mistaken for evidence.** `context_incomplete` is
+  **0 of 20** — the budget never fired, as it did not for E-007's 42 or
+  E-008's 18 probes. So no answer on this split could have carried the
+  notice whether it was suppressed or not. The pin is a **parity guarantee
+  against a case that has not yet occurred**, not an intervention with a
+  measured effect, and if it ever does fire the rate is recorded per arm per
+  question either way.
+
+  **Still not built, named so the rehearsal does not read as complete:** arm
+  A does not exist, arm C is not configured, and there is no judge. `--arm`
+  offers only B, and both `retrieve` and the file's own docstring say so on
+  every run.
+
 - **Actual result:** _pending (Phase 8)._
 
 ## E-002 — MetaQA calibration
@@ -2815,6 +2840,26 @@ the number, so the sample is pinned here, before the first label exists.
   **batch 2** of the same pass 1 rather than as a second experiment. Frozen
   the day it is labelled; its own five-day clock then runs. Every reported
   figure names its batch.
+
+- **Batch 2 built 2026-09-04**, `data/golden/p6_correctness_b2_m1.json`, 19
+  rows from arm B's dress-rehearsal answers over the development split (20
+  generated, 1 refused and excluded). Strata: `interaction_multihop` 8,
+  `legality_1hop` 5, `definition_1hop` 4, `negative_temporal` 2,
+  `keyword_rule_2hop` 1 — the 1-hop coverage batch 1 has none of.
+
+  **The two batches differ in generator configuration and are not pooled
+  silently.** Batch 1's answers were generated under E-007's configuration,
+  with the incompleteness notice live; batch 2's under E-001 pin 11, with it
+  suppressed. An arm invited to hedge writes prose of a different shape, and
+  how hard a hedge is to re-judge is exactly what this instrument measures —
+  so `notice` joins the model and the prompt version in the provenance a
+  batch must be internally consistent on, `build` refuses a file that mixes
+  them, and `reaudit score` prints each batch apart with its notice state
+  before printing the pool. Batch 1 clears the floor of 30 on its own (32
+  after the exposed rows come out) and batch 2 does not (19), so batch 1
+  remains the multi-hop figure and the **pool** is what gates the 1-hop
+  strata. Every figure is published naming its composition rather than as
+  one homogeneous sample.
 
 ## E-012 — is long-context generation the bottleneck, and is it size or depth?
 
