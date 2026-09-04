@@ -90,6 +90,47 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-03 — E-012: the obvious repair was the wrong repair, and three predictions fell
+
+Branch 2. Holding the context at 8 items, accuracy still falls 0.883 → 0.660
+→ 0.489 across depth; holding depth fixed, a 32× change in context size
+moves nothing that survives a paired test. The bottleneck at three hops is
+composition, and context size is not a factor.
+
+So the repair I was about to build is not worth building. After E-002 the
+actionable finding looked obvious: `enforce_budget` trims farthest-first, a
+multi-hop answer lives at the frontier, 3-hop shown-reach was 0.448 — change
+the policy. That is a day inside shipped code with regression risk across
+two closed phases, and E-012 says it buys nothing. When the answer is
+present, how much surrounds it does not matter. **The experiment that stopped
+me from doing the work cost about a dollar and three hours of machine time.**
+
+Three predictions registered, three wrong — size dominates, a residual depth
+effect of 5–15 points, untrimmed worst everywhere. The depth effect is not
+residual, it is the entire effect, at roughly 24 points per hop. I am
+writing that down rather than softening it: E-002's falsified prediction was
+the finding that justified E-012, and now E-012's falsified predictions are
+what stopped a pointless refactor. Two experiments, and in both the value
+came from being wrong on the record.
+
+**The methodological result is the one I want to keep.** E-012a, reading the
+same 1,500 answers observationally, said *size* — accuracy collapsing 0.979
+→ 0.123 as context grew. E-012b, assigning the size, says *depth*. Same
+data, opposite conclusions, and the entry stated in advance why the first
+could not be trusted: the buckets were observed, and a 2-hop question only
+reaches 129–512 items when its seed is a hub, so that cell compared an
+anomalous minority against a typical majority. If I had shipped 12a's
+reading — and it was tempting, it was clean and it matched my prior — I
+would have built the wrong thing with a confident chart behind it.
+
+One number worth carrying to E-001: E-002 measured 0.339 at 3-hop given the
+raw retrieved evidence, E-012 measures 0.533 given a clean chain. Different
+samples so it is indicative, but it prices perfect evidence selection at
+about 19 points against 47 that stay compositional. **Retrieval quality is
+the smaller half of the multi-hop problem.** That is a sobering thing to
+learn in a project whose central hypothesis is about retrieval — and it is
+the kind of sentence the limitations section exists for.
+
 ## 2026-09-03 — E-012 registered: the 3-hop drop has two candidate causes and E-002 cannot separate them
 
 E-002 says the generator uses a third of what retrieval hands it at three

@@ -275,16 +275,18 @@ def load_frozen(path: Path, root: Path, *, split: str = "test") -> list[Question
 
 
 #: Version of the E-002 generation prompt, recorded on every answer.
-PROMPT_VERSION = "e002-a1"
+PROMPT_VERSION = "e002-a3"
 
-#: The grounding contract, carried over from `generation/answerer.py` with
-#: everything domain-specific removed. What E-002 calibrates is this shape —
-#: answer only from the evidence, cite the handle, refuse when it is not
-#: there — not the Magic instructions the shipped prompt wraps it in. The
-#: single-line answer format exists because Hits@1 scores one entity: asking
-#: for prose and then guessing which noun was the answer would measure the
-#: parser, not the spine.
-SYSTEM = f"""You answer questions from retrieved graph evidence.
+#: The first attempt, kept verbatim because a run was scored against it and
+#: the registry cites the number. It was described as "the shipped grounding
+#: contract with the Magic removed" and it was not: `answerer.SYSTEM` has
+#: four sections and this has three. The missing one licenses multi-step
+#: reasoning over the evidence, and its absence is visible in the failures —
+#: the model resolved the first hop and then wrote "I do not have
+#: information on other films written by Randall Wallace" without looking.
+#: Demanding the entity "and nothing else" removed the room to compose at
+#: all. Superseded by :data:`SYSTEM_A2`; see the amendment of 2026-09-02.
+SYSTEM_A1 = f"""You answer questions from retrieved graph evidence.
 
 THE EVIDENCE IS YOUR ONLY SOURCE.
 The context lists facts as `head | relation | tail`. If a fact is not in the
@@ -304,6 +306,97 @@ Reply exactly `{REFUSAL}` on the first line, followed by one sentence naming
 what is missing. This is a correct answer, not a failure. Do not fill a gap
 with a plausible entity.
 """
+
+#: The grounding contract of `generation/answerer.py` with the Magic
+#: vocabulary removed and **all four of its sections kept**: evidence-only,
+#: cite every step, show the reasoning, refuse when the evidence runs out.
+#: The third is the one A1 lost, and losing it is why A1's failures were
+#: refusals on questions whose answer was in the context.
+#:
+#: The answer still has to be machine-scoreable, so the reasoning happens
+#: first and the last line carries the entity behind a marker. Hits@1 scores
+#: one entity; parsing it out of free prose would measure the parser.
+SYSTEM_A2 = f"""You answer questions from retrieved graph evidence.
+
+THE EVIDENCE IS YOUR ONLY SOURCE.
+The context lists facts as `head | relation | tail`. If a fact is not in the
+context, you do not know it — even if you are certain. An answer built on
+what you remember is a wrong answer in this system, however correct it
+happens to be.
+
+WALK THE FACTS, ONE STEP PER LINE.
+Most questions need more than one fact chained together: find the entity the
+question names, then follow the context to what it asks for. Write one short
+line per step, each carrying the citation marker for the fact it used, e.g.
+  step: The Man in the Iron Mask | written_by | Randall Wallace [triple:3]
+  step: Braveheart | written_by | Randall Wallace [triple:17]
+Before deciding the evidence is missing, look for the second step in the
+context. It is usually there.
+
+CITE EVERY STEP.
+Copy handles exactly as they appear, in square brackets. Cite only handles
+that are in the context.
+
+LAST LINE.
+Write `ANSWER: ` followed by the answer entity, spelled exactly as the
+context spells it, and nothing else on that line. If several entities
+answer the question, give the single best one.
+
+WHEN THE EVIDENCE IS NOT ENOUGH.
+Write `ANSWER: {REFUSAL}` as the last line, and one line above it naming
+what is missing. This is a correct answer, not a failure — but only after
+you have looked for every step in the context.
+"""
+
+#: Round two of a two-round repair budget fixed before either round ran.
+#: A2's remaining losses were **compliance, not reasoning**: of 63 one-hop
+#: misses, 36 refused on questions whose answer was in the context and 11
+#: reasoned correctly but never wrote the `ANSWER:` line. Only 8 were wrong
+#: and 8 more were right about a MetaQA node that merges two same-titled
+#: films. A3 changes nothing about the grounding contract's four sections —
+#: it makes the output format unmissable and stops the step-by-step
+#: instruction from implying that a single fact cannot be an answer.
+SYSTEM_A3 = f"""You answer questions from retrieved graph evidence.
+
+THE EVIDENCE IS YOUR ONLY SOURCE.
+The context lists facts as `head | relation | tail`. If a fact is not in the
+context, you do not know it — even if you are certain. An answer built on
+what you remember is a wrong answer in this system, however correct it
+happens to be.
+
+WALK THE FACTS.
+Some questions are answered by a single fact in the context. Others need two
+or three chained: find the entity the question names, then follow the
+context to what it asks for. Write one short line per step you use, each
+carrying the citation marker of the fact it used, e.g.
+  step: The Man in the Iron Mask | written_by | Randall Wallace [triple:3]
+  step: Braveheart | written_by | Randall Wallace [triple:17]
+A direction is not a constraint: `X | directed_by | Y` answers both "who
+directed X" and "what did Y direct".
+
+CITE EVERY STEP.
+Copy handles exactly as they appear in the context, in square brackets.
+Never write a handle that is not in the context.
+
+THE LAST LINE IS ALWAYS `ANSWER:`.
+Every reply ends with a line beginning `ANSWER: `, with no other text on it.
+This is not optional and it is never omitted, whatever came before it:
+
+  ANSWER: Braveheart
+
+If several entities answer the question, give the single best one, spelled
+exactly as the context spells it.
+
+WHEN THE EVIDENCE IS NOT ENOUGH.
+End with `ANSWER: {REFUSAL}`, and one line above it naming what is missing.
+Do this only after looking through the context for every step — including
+the case where one fact is the whole answer. A refusal on a question the
+context answers is a wrong answer.
+"""
+
+#: What the harness sends. Bound to the current version, so a run records
+#: `PROMPT_VERSION` and the prompt cannot drift apart from it.
+SYSTEM = SYSTEM_A3
 
 #: Uniqueness constraint, applied before the load. Without it `MERGE` scans
 #: the label for every one of 43k entities and the load never finishes.
@@ -352,26 +445,138 @@ def triple_evidence(triples: Sequence[Triple], distance: int, start: int) -> lis
     ]
 
 
+def _endpoints(item: Evidence) -> tuple[str, str]:
+    """The two entities one triple-evidence item joins."""
+    head, _, tail = item.text.split(" | ")
+    return head, tail
+
+
+def answer_path(
+    evidence: Sequence[Evidence], seed: str, answers: Sequence[str]
+) -> list[Evidence] | None:
+    """One shortest chain of evidence from the seed to any accepted answer.
+
+    E-012 asks whether long contexts fail on size or on depth, and it can
+    only ask that if the answer is present at every context size. This finds
+    the chain that has to be kept: a breadth-first walk over the evidence
+    itself, so the returned items are ones the model would have been shown.
+
+    Args:
+        evidence: Triple evidence from one retrieval.
+        seed: The entity the question named.
+        answers: Every accepted answer.
+
+    Returns:
+        The items along one shortest chain, seed-first, or ``None`` when no
+        accepted answer is reachable through this evidence — in which case
+        the question is excluded from E-012 and counted, because a size
+        comparison on a context that never held the answer measures nothing.
+    """
+    wanted = {_norm(a) for a in answers}
+    if _norm(seed) in wanted:
+        return []
+
+    adjacency: dict[str, list[tuple[str, Evidence]]] = {}
+    for item in evidence:
+        head, tail = _endpoints(item)
+        adjacency.setdefault(head, []).append((tail, item))
+        adjacency.setdefault(tail, []).append((head, item))
+
+    previous: dict[str, tuple[str, Evidence]] = {}
+    seen = {seed}
+    frontier = [seed]
+    while frontier:
+        nxt: list[str] = []
+        for node in frontier:
+            for neighbour, item in adjacency.get(node, ()):
+                if neighbour in seen:
+                    continue
+                seen.add(neighbour)
+                previous[neighbour] = (node, item)
+                if _norm(neighbour) in wanted:
+                    chain: list[Evidence] = []
+                    cursor = neighbour
+                    while cursor in previous:
+                        cursor, edge = previous[cursor]
+                        chain.append(edge)
+                    return list(reversed(chain))
+                nxt.append(neighbour)
+        frontier = nxt
+    return None
+
+
+def reduce_to_k(
+    evidence: Sequence[Evidence], keep: Sequence[Evidence], k: int
+) -> list[Evidence]:
+    """Cut the context to ``k`` items while keeping the answer chain intact.
+
+    The rule is fixed here, and tested, before any E-012 question has run:
+    the chain first, then the nearest remaining evidence in the order
+    retrieval produced it, until ``k`` items are held. Deterministic — no
+    sampling, so a re-run of the same question at the same ``k`` sends the
+    same context.
+
+    Args:
+        evidence: The full retrieved evidence.
+        keep: Items that must survive at every size (the answer chain).
+        k: Target size. A ``k`` smaller than the chain keeps the whole chain
+            anyway; shipping a context that cannot answer the question would
+            make the cell measure the reduction rule instead of the model.
+
+    Returns:
+        Up to ``k`` items, in retrieval order.
+    """
+    required = {id(item) for item in keep}
+    chosen = [item for item in evidence if id(item) in required]
+    room = k - len(chosen)
+    if room > 0:
+        rest = sorted(
+            (item for item in evidence if id(item) not in required),
+            key=lambda item: item.distance,
+        )
+        chosen.extend(rest[:room])
+    order = {id(item): position for position, item in enumerate(evidence)}
+    return sorted(chosen, key=lambda item: order[id(item)])
+
+
 def parse_prediction(text: str) -> str | None:
     """The entity a generated answer asserts, or ``None`` if it refused.
 
-    The rule is fixed here, and tested, before any answer has been read —
-    the same discipline :func:`hits_at_1` follows. Deciding later how
-    generously to read the model's output is deciding the score.
+    Under prompt `e002-a2` the answer is the last `ANSWER:` line, because
+    the reasoning steps come before it. The `e002-a1` fallback — the first
+    non-empty line — is kept so answers already on disk still parse; a run
+    scored under one prompt must stay readable after the prompt changes.
 
     Args:
         text: The raw completion.
 
     Returns:
-        The first line, with citation markers and surrounding punctuation
-        removed, or ``None`` when the answer is a refusal or is empty.
+        The asserted entity, citation markers and surrounding punctuation
+        removed, or ``None`` when the answer refuses or is empty.
     """
-    if not text or REFUSAL.lower() in text.lower():
+    if not text:
+        return None
+
+    for line in reversed(text.splitlines()):
+        head, marker, tail = line.partition("ANSWER:")
+        if marker and not head.strip("* `"):
+            answer = _clean(tail)
+            return None if not answer or REFUSAL.lower() in answer.lower() else answer
+
+    if REFUSAL.lower() in text.lower():
         return None
     for line in text.splitlines():
-        stripped = _CITATION.sub("", line).strip().strip('".,;:')
-        if stripped:
-            return stripped
+        cleaned = _clean(line)
+        if not cleaned:
+            continue
+        # A reasoning line is not an answer. Under A2/A3 a reply that skips
+        # the `ANSWER:` marker is unparseable, and returning its first step
+        # verbatim — "step: X | directed_by | Y" — scored as a wrong answer
+        # while reading in the diagnosis as a wrong *entity*. It is neither:
+        # it is a format failure, and it counts as one.
+        if cleaned.lower().startswith("step:") or " | " in cleaned:
+            return None
+        return cleaned
     return None
 
 
@@ -484,6 +689,11 @@ def _lines(path: Path) -> Iterator[str]:
     for line in path.read_text(encoding="utf-8").splitlines():
         if line.strip():
             yield line.strip()
+
+
+def _clean(line: str) -> str:
+    """One output line reduced to the entity it names."""
+    return _CITATION.sub("", line).strip().strip('*`"').strip().strip('".,;:').strip()
 
 
 def _norm(value: str) -> str:

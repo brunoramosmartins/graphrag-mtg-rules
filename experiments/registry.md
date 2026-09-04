@@ -2805,4 +2805,79 @@ where a depth effect, if one exists, has the clearest room to show.
   `--limit` and a dry-run estimate printed before any spend as the project
   rule requires.
 
-- **Actual result:** _pending._
+- **Actual result (2026-09-03, confirmatory split, 300 questions per hop at
+  seed `20260904`, `gpt-4o-mini` at temperature 0, prompt `e002-a3`, one
+  run): branch 2 — the bottleneck is depth, and context size does nothing
+  measurable.**
+
+| *k* | 1-hop | 2-hop | 3-hop |
+|---|---|---|---|
+| 8 | 0.883 [0.842, 0.915] | 0.660 [0.599, 0.716] | 0.489 [0.407, 0.572] |
+| 16 | 0.890 [0.850, 0.921] | 0.672 [0.612, 0.727] | 0.511 [0.428, 0.593] |
+| 64 | 0.890 [0.850, 0.921] | 0.656 [0.595, 0.712] | 0.591 [0.508, 0.670] |
+| 256 | 0.897 [0.857, 0.926] | 0.628 [0.567, 0.686] | 0.518 [0.435, 0.600] |
+| untrimmed | 0.893 [0.853, 0.923] | 0.628 [0.567, 0.686] | 0.533 [0.450, 0.614] |
+
+n = 300 / 250 / 137 per cell. 213 of 900 questions were excluded because the
+answer was not reachable through the retrieved evidence — 0 at 1-hop, 50 at
+2-hop, **163 at 3-hop**.
+
+**Depth at matched size.** Every row is separated, with a spread of 0.30 to
+0.39. Holding the context at 8 items, accuracy still falls 0.883 -> 0.660 ->
+0.489. The fall is not the context being large.
+
+**Size at fixed depth.** Nothing. 1-hop moves between 0.883 and 0.897 across
+a 32x change in context. Paired within question, untrimmed against *k*=8:
+2-hop +36/-28 p=0.382, 3-hop +19/-25 p=0.451, 1-hop +8/-11 p=0.648 — none
+approaching its Holm threshold. Directionally, 3-hop is *worse* at *k*=8
+than at *k*=64, which is the opposite of a size effect.
+
+**Verdict: branch 2.** Per the rule fixed before the run: context reduction
+is **not** adopted into the graph arm, `enforce_budget`'s distance-first
+trim **stays**, and E-001's multi-hop stratum is reported with the
+compositional limit named as a known bound on the graph arm.
+
+### Predictions, scored
+
+1. **"Size dominates; 3-hop within ~10 points of 2-hop at *k*=16."**
+   *Wrong.* At *k*=16 the gap is 16 points, and at every size the depth
+   ordering is intact and the size ordering is noise.
+2. **"A residual depth effect of 5-15 points survives."** *Wrong in the
+   direction of understatement.* The depth effect is the whole effect, at
+   roughly 24 points per hop.
+3. **"The untrimmed arm is worst at every hop."** *Wrong.* Untrimmed is
+   statistically indistinguishable from every reduced arm at every hop.
+
+Three predictions, three wrong. Recorded rather than quietly dropped: the
+hypothesis this experiment was built to confirm is the one it refuted.
+
+### What this changes, and what it costs to have learned it
+
+**The obvious repair was the wrong repair.** After E-002 the actionable
+finding looked like `enforce_budget` — it trims farthest-first, a multi-hop
+answer lives at the frontier, and 3-hop shown-reach was 0.448. Changing that
+policy was a day of work on shipped code with regression risk to Phases 4
+and 5. E-012 says it would have bought nothing: when the answer is present,
+how much surrounds it does not matter.
+
+**What a perfect reranker would buy, bounded.** E-002 measured 0.339 at
+3-hop conditional on the answer being in the raw retrieved evidence; E-012
+measures 0.533 conditional on a clean chain being present. Different samples,
+so the comparison is indicative and not paired — but it puts the value of
+perfect evidence selection at roughly 19 points, against 47 points that
+remain compositional. Retrieval quality is the smaller half of the 3-hop
+problem.
+
+**And the exploratory arm pointed the other way.** E-012a, on the same
+1,500 answers, read as a size effect: accuracy collapsing 0.979 -> 0.123 as
+observed context grew. The entry said in advance why that could not be
+trusted — buckets observed rather than assigned, with a 2-hop question
+reaching 129-512 items only when its seed is a hub. Assigning the size
+inverts the conclusion. Two cuts of the same data, opposite answers, and
+only the one that controls the confound is admissible.
+
+**Bound on transfer.** MetaQA questions are templated and their chains are
+uniform; a judge-level Magic question composes effects that are not the same
+shape. The depth effect measured here is a floor on the depth effect there,
+not an estimate of it. And this measures the generator given good retrieval:
+no figure in this entry is an end-to-end system score.

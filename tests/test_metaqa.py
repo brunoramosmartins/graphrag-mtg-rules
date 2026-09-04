@@ -189,8 +189,97 @@ class TestNothingUnvettedReachesCypher:
         assert metaqa.ENTITY_LABEL in cypher
 
 
+class TestTheE012ReductionKeepsTheAnswerAtEverySize:
+    """A size comparison on a context that lost the answer measures nothing."""
+
+    def chain(self) -> list:
+        """A | r1 | B, B | r2 | C, plus noise that must be droppable."""
+        triples = [
+            metaqa.Triple("A", "directed_by", "B"),
+            metaqa.Triple("B", "starred_actors", "C"),
+        ]
+        noise = [metaqa.Triple("A", "has_genre", f"G{i}") for i in range(20)]
+        items = metaqa.triple_evidence(triples, distance=1, start=1)
+        items += metaqa.triple_evidence(noise, distance=2, start=3)
+        return items
+
+    def test_the_path_to_the_answer_is_found_through_the_evidence(self) -> None:
+        path = metaqa.answer_path(self.chain(), seed="A", answers=("C",))
+        assert path is not None
+        assert [item.text for item in path] == [
+            "A | directed_by | B",
+            "B | starred_actors | C",
+        ]
+
+    def test_an_unreachable_answer_is_none_not_an_empty_path(self) -> None:
+        """None excludes the question; an empty list would silently keep it."""
+        assert metaqa.answer_path(self.chain(), seed="A", answers=("Z",)) is None
+
+    def test_the_seed_itself_being_the_answer_needs_no_chain(self) -> None:
+        assert metaqa.answer_path(self.chain(), seed="A", answers=("A",)) == []
+
+    def test_reduction_keeps_the_chain_and_cuts_the_noise(self) -> None:
+        evidence = self.chain()
+        keep = metaqa.answer_path(evidence, seed="A", answers=("C",))
+        reduced = metaqa.reduce_to_k(evidence, keep, k=8)
+        assert len(reduced) == 8
+        assert "A | directed_by | B" in [item.text for item in reduced]
+        assert "B | starred_actors | C" in [item.text for item in reduced]
+
+    def test_a_k_below_the_chain_length_still_keeps_the_chain(self) -> None:
+        evidence = self.chain()
+        keep = metaqa.answer_path(evidence, seed="A", answers=("C",))
+        reduced = metaqa.reduce_to_k(evidence, keep, k=1)
+        assert len(reduced) == 2
+
+    def test_reduction_is_deterministic(self) -> None:
+        evidence = self.chain()
+        keep = metaqa.answer_path(evidence, seed="A", answers=("C",))
+        first = metaqa.reduce_to_k(evidence, keep, k=6)
+        second = metaqa.reduce_to_k(evidence, keep, k=6)
+        assert [i.key for i in first] == [i.key for i in second]
+
+    def test_retrieval_order_survives_the_cut(self) -> None:
+        evidence = self.chain()
+        keep = metaqa.answer_path(evidence, seed="A", answers=("C",))
+        reduced = metaqa.reduce_to_k(evidence, keep, k=10)
+        positions = [evidence.index(item) for item in reduced]
+        assert positions == sorted(positions)
+
+
+class TestThePredictionRuleUnderPromptA2:
+    """A2 reasons first and answers last, so the last ANSWER line decides."""
+
+    def test_the_answer_line_wins_over_the_reasoning_above_it(self) -> None:
+        text = (
+            "step: The Man in the Iron Mask | written_by | Randall Wallace [triple:3]\n"
+            "step: Braveheart | written_by | Randall Wallace [triple:17]\n"
+            "ANSWER: Braveheart"
+        )
+        assert metaqa.parse_prediction(text) == "Braveheart"
+
+    def test_a_refusal_on_the_answer_line_is_not_a_prediction(self) -> None:
+        assert metaqa.parse_prediction("step: nothing\nANSWER: CANNOT ANSWER") is None
+
+    def test_markdown_around_the_marker_does_not_hide_it(self) -> None:
+        assert metaqa.parse_prediction('**ANSWER:** "Kismet".') == "Kismet"
+
+    def test_the_last_answer_line_is_the_one_that_counts(self) -> None:
+        text = "ANSWER: Draft\nreconsidering\nANSWER: Final"
+        assert metaqa.parse_prediction(text) == "Final"
+
+    def test_a_step_mentioning_the_word_answer_is_not_the_marker(self) -> None:
+        text = "step: the film ANSWER: Wrong [triple:1]\nANSWER: Right"
+        assert metaqa.parse_prediction(text) == "Right"
+
+
 class TestThePredictionRuleWasFixedBeforeAnyAnswerWasRead:
-    """Deciding later how generously to read the output is deciding the score."""
+    """Deciding later how generously to read the output is deciding the score.
+
+    These cover prompt `e002-a1`, whose run is on disk and must stay
+    readable: a number scored under one prompt cannot become unparseable
+    because a later prompt changed the format.
+    """
 
     def test_the_first_line_is_the_prediction(self) -> None:
         assert metaqa.parse_prediction("Kismet\n[triple:4]") == "Kismet"

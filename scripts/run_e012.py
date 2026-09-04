@@ -26,14 +26,48 @@ import json
 import sys
 from pathlib import Path
 
+from graphrag_mtg.evaluation import metaqa
 from graphrag_mtg.evaluation.metaqa import HOPS
-from graphrag_mtg.evaluation.metrics import wilson_interval
+from graphrag_mtg.evaluation.metrics import mcnemar, wilson_interval
+from graphrag_mtg.extraction.llm import LlmClient, estimate_cost
+from graphrag_mtg.generation.answerer import answer, build_prompt
+from graphrag_mtg.graph.connection import driver_session, metaqa_target
+from graphrag_mtg.retrieval.subgraph import DEFAULT_TOKEN_BUDGET, Subgraph
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from run_e002 import (  # noqa: E402 — sibling script, path set above
+    DEFAULT_FRONTIER_CAP,
+    E002_KIND_CAP,
+    MAX_ANSWER_TOKENS,
+    PROMPTS,
+    _require_bolt,
+    collect,
+)
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 RETRIEVAL = "runs/e002_retrieval_{hops}hop.jsonl"
 ANSWERS = "runs/e002_answers_{hops}hop.jsonl"
+
+METAQA_DIR = Path("data/raw/metaqa")
+E002_SUBSET = Path("data/golden/metaqa_subset.json")
+
+#: The two draws, both made before the first paid call — the structure E-002
+#: did not have. `dev` carries every pilot and sanity check; `conf` is
+#: touched once, at the end, and is what the decision rule reads.
+SPLITS: dict[str, tuple[int, int, Path]] = {
+    "dev": (100, 20260903, Path("data/golden/metaqa_e012_dev.json")),
+    "conf": (300, 20260904, Path("data/golden/metaqa_e012_conf.json")),
+}
+
+#: Context sizes, amended from {16, 64, 256} by E-012a — which is what
+#: E-012a was registered to decide. `0` means the untrimmed subgraph.
+SIZES: tuple[int, ...] = (8, 16, 64, 256, 0)
+
+#: Prompt held fixed. E-012 is not a prompt experiment, and editing it here
+#: would void every comparison the entry registers.
+PROMPT_KEY = "a3"
 
 #: Context-size buckets, roughly logarithmic. Fixed here rather than derived
 #: from the data's quantiles, so the same edges hold when 12b re-measures and
@@ -117,6 +151,215 @@ def explore(args: argparse.Namespace) -> int:
     return 0
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 12b — size assigned, depth free to vary
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def sample(args: argparse.Namespace) -> int:
+    """Draw both splits from outside E-002's subset, and freeze them."""
+    spoken_for = set(json.loads(E002_SUBSET.read_text(encoding="utf-8"))["ids"])
+    for name, (n, seed, path) in SPLITS.items():
+        if path.exists():
+            print(f"{name}: {path} already frozen, left alone")
+            continue
+        drawn: list[metaqa.Question] = []
+        for hops in HOPS:
+            pool = [
+                q
+                for q in metaqa.read_questions(
+                    metaqa.question_path(args.metaqa_dir, hops), hops
+                )
+                if q.qid not in spoken_for
+            ]
+            drawn.extend(metaqa.sample(pool, n, seed=seed))
+        metaqa.freeze(drawn, path, seed=seed)
+        spoken_for |= {q.qid for q in drawn}
+        print(f"{name}: {len(drawn)} ids at seed {seed} -> {path}")
+    print("\nNeither split shares a question with E-002 or with the other.")
+    return 0
+
+
+def run(args: argparse.Namespace) -> int:
+    """Answer every question at every assigned context size."""
+    _, _, path = SPLITS[args.split]
+    if not path.exists():
+        raise SystemExit(f"No {args.split} split at {path}. Run `sample` first.")
+    questions = metaqa.load_frozen(path, args.metaqa_dir)
+    if args.hops:
+        questions = [q for q in questions if q.hops == args.hops]
+    if args.limit:
+        questions = questions[: args.limit]
+
+    done: set[tuple[str, int]] = set()
+    if args.resume and args.out.exists():
+        done = {(row["qid"], row["k"]) for row in _jsonl(args.out)}
+        print(f"resuming {args.out}: {len(done)} cell(s) already answered")
+    elif args.out.exists() and not args.force:
+        raise SystemExit(f"{args.out} exists — pass --resume or --force.")
+
+    system, version = PROMPTS[PROMPT_KEY]
+    client = LlmClient(model=args.model, max_tokens=MAX_ANSWER_TOKENS, temperature=0.0)
+    excluded = 0
+    pending: list[tuple[metaqa.Question, int, Subgraph]] = []
+
+    with driver_session(_require_bolt(metaqa_target())) as session:
+        for question in questions:
+            subgraph, _ = collect(
+                session,
+                question,
+                frontier_cap=DEFAULT_FRONTIER_CAP,
+                kind_cap=E002_KIND_CAP,
+                token_budget=DEFAULT_TOKEN_BUDGET,
+            )
+            chain = metaqa.answer_path(subgraph.evidence, question.seed, question.answers)
+            if chain is None:
+                # The answer is not reachable through the evidence, so no
+                # size can hold it. Excluded and counted: a size comparison
+                # on a context that never contained the answer measures the
+                # retrieval, not the generator.
+                excluded += 1
+                continue
+            for k in SIZES:
+                if (question.qid, k) in done:
+                    continue
+                kept = (
+                    subgraph.evidence if k == 0 else metaqa.reduce_to_k(subgraph.evidence, chain, k)
+                )
+                cell = Subgraph(question=question.text, evidence=list(kept))
+                pending.append((question, k, cell))
+
+    print(f"{len(questions)} question(s), {excluded} excluded (answer unreachable)")
+    if not pending:
+        print("Nothing to answer.")
+        return 0
+
+    estimate = estimate_cost(
+        [build_prompt(q.text, sg) for q, _, sg in pending],
+        model=client.model,
+        output_tokens_per_call=MAX_ANSWER_TOKENS,
+        system=system,
+    )
+    print(f"model {client.model} @ temperature 0, prompt {version}, sizes {SIZES}")
+    print(f"estimate: {estimate}")
+    if args.dry_run:
+        print("\nDry run: nothing was sent.")
+        return 0
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    with args.out.open("a" if done else "w", encoding="utf-8") as handle:
+        for index, (question, k, cell) in enumerate(pending, start=1):
+            result = answer(
+                question.text,
+                cell,
+                lambda system_text, prompt: client.complete_text(prompt, system=system_text),
+                system=system,
+            )
+            predicted = metaqa.parse_prediction(result.text)
+            handle.write(
+                json.dumps(
+                    {
+                        "qid": question.qid,
+                        "hops": question.hops,
+                        "k": k,
+                        "items": len(cell.evidence),
+                        "predicted": predicted,
+                        "correct": metaqa.hits_at_1(predicted, question),
+                        "refused": result.refused,
+                        "prompt_version": version,
+                        "model": client.model,
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+            if index % 100 == 0:
+                print(f"  {index}/{len(pending)}")
+
+    print(f"\nWrote {len(pending)} cell(s) -> {args.out}")
+    return 0
+
+
+def report(args: argparse.Namespace) -> int:
+    """Hits@1 by depth and assigned size, and the registered contrast."""
+    rows_ = _jsonl(args.answers)
+    if not rows_:
+        raise SystemExit(f"No answers at {args.answers}.")
+
+    cells: dict[tuple[int, int], list[bool]] = {}
+    paired: dict[int, dict[int, dict[str, bool]]] = {}
+    for row in rows_:
+        cells.setdefault((row["hops"], row["k"]), []).append(bool(row["correct"]))
+        paired.setdefault(row["hops"], {}).setdefault(row["k"], {})[row["qid"]] = bool(
+            row["correct"]
+        )
+
+    print(f"E-012b — {len(rows_)} cell(s), prompt {rows_[0]['prompt_version']}\n")
+    print(f"{'k':<10}" + "".join(f"{f'{h}-hop':<28}" for h in HOPS))
+    print(RULE)
+    for k in SIZES:
+        label = "untrimmed" if k == 0 else str(k)
+        line = f"{label:<10}"
+        for hops in HOPS:
+            scored = cells.get((hops, k), [])
+            if not scored:
+                line += f"{'—':<28}"
+            else:
+                ci = wilson_interval(sum(scored), len(scored))
+                line += f"{f'{ci.point:.3f} [{ci.low:.3f},{ci.high:.3f}] n={len(scored)}':<28}"
+        print(line)
+    print(RULE)
+
+    print("\nDEPTH AT MATCHED SIZE — the registered contrast.")
+    print("Flat rows mean size; falling rows mean depth.\n")
+    for k in SIZES:
+        label = "untrimmed" if k == 0 else f"k={k}"
+        points = [
+            (h, wilson_interval(sum(cells[(h, k)]), len(cells[(h, k)])))
+            for h in HOPS
+            if cells.get((h, k))
+        ]
+        if len(points) < 2:
+            continue
+        spread = max(p.point for _, p in points) - min(p.point for _, p in points)
+        overlap = all(
+            points[i][1].low <= points[j][1].high and points[j][1].low <= points[i][1].high
+            for i in range(len(points))
+            for j in range(i + 1, len(points))
+        )
+        shape = "flat (intervals overlap)" if overlap else "separated"
+        print(f"  {label:<12} " + "  ".join(f"{h}-hop {p.point:.3f}" for h, p in points))
+        print(f"  {'':<12} spread {spread:.3f} — {shape}")
+
+    print("\nSIZE AT FIXED DEPTH — paired within question, exact McNemar.")
+    print("Holm correction over the family; alpha = 0.05.\n")
+    tests: list[tuple[str, float, int, int]] = []
+    for hops in HOPS:
+        by_k = paired.get(hops, {})
+        if 8 not in by_k or 0 not in by_k:
+            continue
+        ids = sorted(set(by_k[8]) & set(by_k[0]))
+        if not ids:
+            continue
+        result = mcnemar([by_k[0][i] for i in ids], [by_k[8][i] for i in ids])
+        tests.append((f"{hops}-hop untrimmed -> k=8", result.p_value, result.improved, result.regressed))
+    for rank, (name, p, up, down) in enumerate(sorted(tests, key=lambda t: t[1])):
+        threshold = 0.05 / (len(tests) - rank)
+        verdict = "significant" if p <= threshold else "not significant"
+        print(f"  {name:<32} +{up}/-{down}  p={p:.5f}  Holm α={threshold:.4f}  {verdict}")
+    return 0
+
+
+def _jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -130,7 +373,29 @@ def main() -> int:
     )
     explorer.set_defaults(func=explore)
 
+    drawer = sub.add_parser("sample", help="freeze the dev and confirmatory splits")
+    drawer.add_argument("--metaqa-dir", type=Path, default=METAQA_DIR)
+    drawer.set_defaults(func=sample)
+
+    runner = sub.add_parser("run", help="12b — answer at every assigned size (paid)")
+    runner.add_argument("--split", choices=sorted(SPLITS), default="dev")
+    runner.add_argument("--metaqa-dir", type=Path, default=METAQA_DIR)
+    runner.add_argument("--hops", type=int, choices=HOPS, default=0)
+    runner.add_argument("--out", type=Path, default=None)
+    runner.add_argument("--model", default=None)
+    runner.add_argument("--limit", type=int, default=0)
+    runner.add_argument("--dry-run", action="store_true")
+    runner.add_argument("--resume", action="store_true")
+    runner.add_argument("--force", action="store_true")
+    runner.set_defaults(func=run)
+
+    rep = sub.add_parser("report", help="apply the registered decision rule")
+    rep.add_argument("--answers", type=Path, default=Path("runs/e012_conf.jsonl"))
+    rep.set_defaults(func=report)
+
     args = parser.parse_args()
+    if getattr(args, "out", None) is None and args.command == "run":
+        args.out = Path(f"runs/e012_{args.split}.jsonl")
     return int(args.func(args))
 
 
