@@ -40,6 +40,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -50,9 +51,13 @@ from graphrag_mtg.evaluation import metaqa
 from graphrag_mtg.evaluation.metrics import wilson_interval
 from graphrag_mtg.extraction.llm import LlmClient, estimate_cost
 from graphrag_mtg.generation.answerer import answer, build_prompt
-from graphrag_mtg.graph.connection import driver_session, metaqa_target
+from graphrag_mtg.graph.connection import (
+    Target,
+    driver_session,
+    metaqa_target,
+    verify_connectivity,
+)
 from graphrag_mtg.retrieval.subgraph import (
-    DEFAULT_KIND_CAP,
     DEFAULT_TOKEN_BUDGET,
     Outcome,
     Subgraph,
@@ -74,6 +79,10 @@ ANSWERS_PATH = Path("runs/e002_answers.jsonl")
 #: Registered configuration: 500 questions per hop, drawn once at this seed.
 SUBSET_SEED = 20260815
 SUBSET_N = 500
+
+#: Seed for the development draw. A separate seed from the subset's, so a
+#: dev sample can never coincide with the registered one by accident.
+DEV_SEED = 20260902
 
 #: One line plus a citation marker. Generous by a factor of several; the
 #: format is a single entity name, and anything longer is a prompt failure
@@ -97,6 +106,30 @@ BAND: dict[int, tuple[float, float]] = {1: (0.970, 0.975), 2: (0.988, 1.000), 3:
 #: alongside `dropped` and `capped`, and hiding it would corrupt exactly the
 #: prediction this experiment registered about budget.
 DEFAULT_FRONTIER_CAP = 400
+
+#: Per-`(template, kind)` cap for this experiment, re-derived rather than
+#: inherited. `DEFAULT_KIND_CAP = 25` was tuned on the Magic graph, where
+#: evidence has five kinds and the cap stops a hub like `flying` returning
+#: thousands of cards. MetaQA evidence has **one** kind, so 25 per level is
+#: a hard ceiling of 75 items and the 6000-token budget never binds: measured
+#: on the first pass, `capped` fired on 100% of 3-hop questions and `dropped`
+#: on none, and the answer entity was deleted after the traversal found it on
+#: a quarter of 2-hop questions.
+#:
+#: The criterion for the new value never looks at Hits@1: set it an order of
+#: magnitude above what the token budget can hold, so the cap goes back to
+#: being hub protection and `enforce_budget` — which trims by distance — is
+#: what decides. Concepts transfer, constants do not.
+E002_KIND_CAP = 1000
+
+#: Selectable prompts, so a comparison between them is a recorded argument
+#: rather than an edit nobody can reproduce. `a1` is kept because a run was
+#: scored under it; `a2` is the default and what the registry describes.
+PROMPTS: dict[str, tuple[str, str]] = {
+    "a1": (metaqa.SYSTEM_A1, "e002-a1"),
+    "a2": (metaqa.SYSTEM_A2, "e002-a2"),
+    "a3": (metaqa.SYSTEM_A3, "e002-a3"),
+}
 
 RULE = "-" * 78
 
@@ -135,7 +168,7 @@ def load(args: argparse.Namespace) -> int:
     distinct_edges = sum(len(rows) for rows in grouped.values())
     print(f"read {len(triples)} triples, {len(names)} entities, {len(grouped)} relations")
 
-    with driver_session(metaqa_target()) as session:
+    with driver_session(_require_bolt(metaqa_target())) as session:
         metaqa.assert_database_is_empty(session)
         session.run(metaqa.CONSTRAINT_ENTITY_NAME)
 
@@ -190,7 +223,11 @@ def collect(
     Returns:
         The subgraph, and a stats dict recording every way evidence was
         lost: `truncated` from the frontier cap, plus the subgraph's own
-        `dropped` and `capped` counters.
+        `dropped` and `capped` counters. `walked` is every entity the
+        traversal touched; `shown` is only those that survived into the
+        evidence the model will actually see. The two are not the same
+        number and confusing them is how a retrieval ceiling gets reported
+        as more generous than the system is.
     """
     subgraph = Subgraph(question=question.text)
     seed_exists = session.run(
@@ -200,7 +237,7 @@ def collect(
     if not seed_exists:
         subgraph.outcome = Outcome.NO_SEED
         subgraph.note = f"seed entity {question.seed!r} is not in the KB"
-        return subgraph, {"truncated": 0, "entities": [], "triples": 0}
+        return subgraph, {"truncated": 0, "walked": [], "shown": [], "triples": 0}
 
     frontier = [question.seed]
     visited = {question.seed}
@@ -248,9 +285,16 @@ def collect(
     enforce_budget(subgraph, token_budget)
     if subgraph.is_empty:
         subgraph.outcome = Outcome.NO_MATCH
+
+    shown = {question.seed}
+    for item in subgraph.evidence:
+        head, _, tail = item.text.split(" | ")
+        shown.update((head, tail))
+
     return subgraph, {
         "truncated": truncated,
-        "entities": sorted(entities),
+        "walked": sorted(entities),
+        "shown": sorted(shown),
         "triples": len(seen),
     }
 
@@ -263,16 +307,20 @@ def collect(
 def verify(args: argparse.Namespace) -> int:
     """Traverse every question and record whether the answer is reachable.
 
-    This is the ceiling Hits@1 is read against. An answer the traversal
-    never retrieved cannot be produced by any prompt, and scoring generation
-    against it would blame the model for the graph.
+    Two ceilings are recorded, and only the second one bounds Hits@1.
+    `walked` is whether the traversal ever touched the answer entity;
+    `shown` is whether it survived the per-kind cap and the token budget
+    into the evidence the model receives. The gap between them is the
+    project's own budget machinery deleting the answer, and reporting only
+    the first would flatter the system by exactly that amount.
     """
     questions = _subset(args)
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
-    reach: Counter[int] = Counter()
+    walked_reach: Counter[int] = Counter()
+    shown_reach: Counter[int] = Counter()
     totals: Counter[int] = Counter()
-    with driver_session(metaqa_target()) as session, args.out.open("w", encoding="utf-8") as fh:
+    with driver_session(_require_bolt(metaqa_target())) as session, args.out.open("w", encoding="utf-8") as fh:
         for question in questions:
             subgraph, stats = collect(
                 session,
@@ -281,9 +329,11 @@ def verify(args: argparse.Namespace) -> int:
                 kind_cap=args.kind_cap,
                 token_budget=args.token_budget,
             )
-            present = any(metaqa.hits_at_1(name, question) for name in stats["entities"])
+            walked = any(metaqa.hits_at_1(name, question) for name in stats["walked"])
+            shown = any(metaqa.hits_at_1(name, question) for name in stats["shown"])
             totals[question.hops] += 1
-            reach[question.hops] += int(present)
+            walked_reach[question.hops] += int(walked)
+            shown_reach[question.hops] += int(shown)
             fh.write(
                 json.dumps(
                     {
@@ -291,7 +341,8 @@ def verify(args: argparse.Namespace) -> int:
                         "hops": question.hops,
                         "seed": question.seed,
                         "outcome": str(subgraph.outcome),
-                        "answer_reachable": present,
+                        "answer_walked": walked,
+                        "answer_shown": shown,
                         "evidence": len(subgraph.evidence),
                         "triples_seen": stats["triples"],
                         "truncated": stats["truncated"],
@@ -304,11 +355,16 @@ def verify(args: argparse.Namespace) -> int:
             )
 
     print(f"Verified {len(questions)} question(s) -> {args.out}\n")
-    print("reach ceiling (answer entity present in the traversed subgraph):")
+    print(f"{'hop':<7}{'walked (traversal touched it)':<38}{'shown (survived into evidence)'}")
+    print(RULE)
     for hops in sorted(totals):
-        interval = wilson_interval(reach[hops], totals[hops])
-        print(f"  {hops}-hop  {interval}")
-    print("\nHits@1 cannot exceed this. A gap here is retrieval, not reasoning.")
+        walked_ci = wilson_interval(walked_reach[hops], totals[hops])
+        shown_ci = wilson_interval(shown_reach[hops], totals[hops])
+        print(f"{hops}-hop  {walked_ci!s:<38}{shown_ci}")
+    print(RULE)
+    print("\nHits@1 is bounded by the SHOWN column, not the walked one. The gap")
+    print("between them is the budget machinery deleting the answer after the")
+    print("traversal found it — a loss this project owns, not the benchmark's.")
     return 0
 
 
@@ -320,14 +376,26 @@ def verify(args: argparse.Namespace) -> int:
 def run(args: argparse.Namespace) -> int:
     """One grounded answer per question, at temperature 0."""
     questions = _subset(args)
+
+    done: set[str] = set()
+    if args.resume and args.out.exists():
+        done = {row["qid"] for row in _jsonl(args.out)}
+        questions = [q for q in questions if q.qid not in done]
+        print(f"resuming {args.out}: {len(done)} answered, {len(questions)} to go")
+    elif args.out.exists() and not args.force:
+        raise SystemExit(
+            f"{args.out} exists — pass --resume to continue it, or --force to replace it."
+        )
+
     if args.limit:
         questions = questions[: args.limit]
-    if args.out.exists() and not args.force:
-        raise SystemExit(f"{args.out} exists — pass --force only if you mean to replace it.")
+    if not questions:
+        print("Nothing left to answer.")
+        return 0
 
     client = LlmClient(model=args.model, max_tokens=MAX_ANSWER_TOKENS, temperature=0.0)
 
-    with driver_session(metaqa_target()) as session:
+    with driver_session(_require_bolt(metaqa_target())) as session:
         prepared = [
             (question, *collect(
                 session,
@@ -338,27 +406,28 @@ def run(args: argparse.Namespace) -> int:
             ))
             for question in questions
         ]
+        system, version = PROMPTS[args.prompt]
         prompts = [_prompt(q, s) for q, s, _ in prepared]
         estimate = estimate_cost(
             prompts,
             model=client.model,
             output_tokens_per_call=MAX_ANSWER_TOKENS,
-            system=metaqa.SYSTEM,
+            system=system,
         )
-        print(f"model {client.model} @ temperature 0, prompt {metaqa.PROMPT_VERSION}")
+        print(f"model {client.model} @ temperature 0, prompt {version}")
         print(f"estimate: {estimate}")
         if args.dry_run:
             print("\nDry run: nothing was sent.")
             return 0
 
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        with args.out.open("w", encoding="utf-8") as fh:
+        with args.out.open("a" if done else "w", encoding="utf-8") as fh:
             for question, subgraph, stats in prepared:
                 result = answer(
                     question.text,
                     subgraph,
                     lambda system, prompt: client.complete_text(prompt, system=system),
-                    system=metaqa.SYSTEM,
+                    system=system,
                 )
                 predicted = metaqa.parse_prediction(result.text)
                 correct = metaqa.hits_at_1(predicted, question)
@@ -369,6 +438,7 @@ def run(args: argparse.Namespace) -> int:
                             "hops": question.hops,
                             "question": question.text,
                             "predicted": predicted,
+                            "text": result.text,
                             "answers": list(question.answers),
                             "correct": correct,
                             "refused": result.refused,
@@ -378,7 +448,7 @@ def run(args: argparse.Namespace) -> int:
                             "truncated": stats["truncated"],
                             "dropped": dict(subgraph.dropped),
                             "capped": dict(subgraph.capped),
-                            "prompt_version": metaqa.PROMPT_VERSION,
+                            "prompt_version": version,
                             "model": client.model,
                         },
                         ensure_ascii=False,
@@ -399,9 +469,20 @@ def run(args: argparse.Namespace) -> int:
 
 def report(args: argparse.Namespace) -> int:
     """Hits@1 per hop against the floor, beside the band, with the counters."""
-    rows = _jsonl(args.answers)
+    rows: list[dict] = []
+    read: list[Path] = []
+    for path in args.answers:
+        found = _jsonl(path)
+        if found:
+            rows.extend(found)
+            read.append(path)
     if not rows:
-        raise SystemExit(f"No answers at {args.answers}. Run `run` first.")
+        raise SystemExit(
+            "No answers found in: "
+            + ", ".join(str(p) for p in args.answers)
+            + "\nRun `run` first, or pass --answers with the files you want."
+        )
+    print("read: " + ", ".join(str(p) for p in read))
 
     by_hop: dict[int, list[dict]] = {}
     for row in rows:
@@ -425,7 +506,7 @@ def report(args: argparse.Namespace) -> int:
         else:
             reading = "inside the band"
         verdicts[hops] = reading
-        print(f"{hops}-hop {str(interval):<34}[{low:.3f}, {high:.3f}]{'':<7}{reading}")
+        print(f"{hops}-hop {interval!s:<34}[{low:.3f}, {high:.3f}]{'':<7}{reading}")
 
     print(RULE)
     one_hop = by_hop.get(1, [])
@@ -500,7 +581,11 @@ def teardown(args: argparse.Namespace) -> int:
     on its own is the shape of the problem, not the fix.
     """
     print("Teardown is destroying the container. The data has no volume:\n")
-    print("  docker compose --profile metaqa rm -sf\n")
+    print("  docker rm -f graphrag-mtg-neo4j-metaqa\n")
+    print("Name the container, not the profile. `--profile metaqa` ADDS this")
+    print("service to the default set instead of narrowing to it, so")
+    print("`docker compose --profile metaqa rm -sf` takes the corpus container")
+    print("with it — it did, on 2026-09-03.\n")
     return verify_clean(args)
 
 
@@ -509,13 +594,62 @@ def teardown(args: argparse.Namespace) -> int:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _require_bolt(target: Target, *, timeout: float = 60.0) -> Target:
+    """Wait for the instance to accept Bolt, or say what to do about it.
+
+    A container reports `Started` several seconds before Bolt is listening,
+    and `docker compose up -d` returns as soon as the container starts. The
+    gap between those two is a sixty-line driver traceback that says nothing
+    about the cause, which is an afternoon lost inside a four-day timebox.
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            verify_connectivity(target)
+            return target
+        except ServiceUnavailable:
+            if time.monotonic() >= deadline:
+                raise SystemExit(
+                    f"{target.uri} is not accepting Bolt after {timeout:.0f}s.\n"
+                    "  Start it:  docker compose --profile metaqa up -d --wait\n"
+                    "  Check it:  docker logs graphrag-mtg-neo4j-metaqa"
+                ) from None
+            print(f"  waiting for {target.uri} ...")
+            time.sleep(3.0)
+
+
 def _subset(args: argparse.Namespace) -> list[metaqa.Question]:
+    if getattr(args, "dev", 0):
+        return _dev_questions(args)
     if not args.subset.exists():
         raise SystemExit(f"No frozen subset at {args.subset}. Run `sample` first.")
     questions = metaqa.load_frozen(args.subset, args.metaqa_dir, split=args.split)
     if args.hops:
         questions = [q for q in questions if q.hops == args.hops]
     return questions
+
+
+def _dev_questions(args: argparse.Namespace) -> list[metaqa.Question]:
+    """Draw a development sample from outside the frozen subset.
+
+    Prompt iteration has to happen somewhere, and it must not happen on the
+    registered questions: a prompt tuned until the test set improves is a
+    number reporting its own tuning. The splits hold 9,947 / 14,872 / 14,274
+    questions and the subset takes 500 of each, so the complement is large
+    and drawing from it costs nothing. Phase 5 ran its prompt rounds on a dev
+    split for the same reason.
+    """
+    frozen: set[str] = set()
+    if args.subset.exists():
+        frozen = set(json.loads(args.subset.read_text(encoding="utf-8"))["ids"])
+    hops = [args.hops] if args.hops else list(metaqa.HOPS)
+    drawn: list[metaqa.Question] = []
+    for depth in hops:
+        path = metaqa.question_path(args.metaqa_dir, depth, args.split)
+        pool = [q for q in metaqa.read_questions(path, depth) if q.qid not in frozen]
+        drawn.extend(metaqa.sample(pool, args.dev, seed=DEV_SEED))
+    print(f"DEV sample: {len(drawn)} question(s) drawn outside the frozen subset")
+    return drawn
 
 
 def _prompt(question: metaqa.Question, subgraph: Subgraph) -> str:
@@ -548,7 +682,7 @@ def main() -> int:
     common.add_argument("--split", default="test")
     common.add_argument("--hops", type=int, choices=metaqa.HOPS, default=0)
     common.add_argument("--frontier-cap", type=int, default=DEFAULT_FRONTIER_CAP)
-    common.add_argument("--kind-cap", type=int, default=DEFAULT_KIND_CAP)
+    common.add_argument("--kind-cap", type=int, default=E002_KIND_CAP)
     common.add_argument("--token-budget", type=int, default=DEFAULT_TOKEN_BUDGET)
 
     drawer = sub.add_parser("sample", help="draw and freeze the registered subset")
@@ -572,12 +706,38 @@ def main() -> int:
     runner.add_argument("--out", type=Path, default=ANSWERS_PATH)
     runner.add_argument("--model", default=None)
     runner.add_argument("--limit", type=int, default=0)
+    runner.add_argument(
+        "--prompt",
+        choices=sorted(PROMPTS),
+        default="a3",
+        help="which registered prompt to send; a1 is kept so its run stays reproducible",
+    )
+    runner.add_argument(
+        "--dev",
+        type=int,
+        default=0,
+        metavar="N",
+        help="answer N questions per hop drawn from OUTSIDE the frozen subset; "
+        "the only place prompt iteration may happen",
+    )
     runner.add_argument("--dry-run", action="store_true")
+    runner.add_argument(
+        "--resume",
+        action="store_true",
+        help="append to an existing output, skipping questions already answered",
+    )
     runner.add_argument("--force", action="store_true")
     runner.set_defaults(func=run)
 
     rep = sub.add_parser("report", help="apply the registered decision rule")
-    rep.add_argument("--answers", type=Path, default=ANSWERS_PATH)
+    rep.add_argument(
+        "--answers",
+        type=Path,
+        nargs="+",
+        default=[ANSWERS_PATH.with_name(f"e002_answers_{h}hop.jsonl") for h in metaqa.HOPS],
+        help="answer files to pool; missing ones are skipped and the run is "
+        "reported on the hops that exist",
+    )
     rep.set_defaults(func=report)
 
     clean = sub.add_parser("verify-clean", help="prove the corpus holds no MetaQA nodes")

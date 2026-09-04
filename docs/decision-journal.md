@@ -90,6 +90,42 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-03 — The teardown I wrote to prevent E-008 destroyed the corpus container
+
+Running E-002's documented teardown removed **both** Neo4j containers, the
+corpus one included. `docker compose --profile metaqa rm -sf` does not mean
+"act on the metaqa profile"; `--profile` *adds* a profiled service to the
+default set. Confirmed after the fact: `docker compose config --services`
+lists one service, with the flag it lists two, and `rm -sf` took both.
+
+The corpus data survived because it lives in a named volume — `docker
+compose up -d --wait` recreated the container and reattached it, and the
+counts are unchanged: 34,236 cards, 3,308 rules, 77,229 rulings, 895,082
+relationships. Nothing was lost. That is luck wearing the costume of design.
+
+What makes this worth an entry is where it happened. The whole amendment of
+2026-09-02 argued that moving MetaQA to a disposable container **removes**
+the failure mode behind E-008 — where a teardown `DELETE` matched three real
+CR rules — because there would be no teardown query at all. That reasoning
+was right about the query and wrong about the blast radius: I replaced a
+dangerous Cypher statement with a dangerous shell command and did not read
+the second one as carefully as I had read the first. The class of failure
+was never "Cypher". It was **a teardown whose scope I assumed instead of
+verified.**
+
+The correction, in the compose file, `.env.example`, the registry clause and
+the script's own output: teardown names the **container**,
+`docker rm -f graphrag-mtg-neo4j-metaqa`. A container name cannot expand to
+include something else; a profile can.
+
+Two things I am taking from it beyond the command itself. The isolation that
+actually held was the one I did not argue for in the amendment — the corpus
+having a named volume and the throwaway having none. And a destructive
+command deserves the same treatment as a destructive query: run it once
+against something you can afford to lose, or check what it resolves to
+before running it. `docker compose config --services` would have taken five
+seconds.
+
 ## 2026-09-03 — E-012: the obvious repair was the wrong repair, and three predictions fell
 
 Branch 2. Holding the context at 8 items, accuracy still falls 0.883 → 0.660

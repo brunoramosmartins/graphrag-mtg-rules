@@ -469,8 +469,13 @@ relaxation, and the three differences are the point:
 
 1. **There is no teardown query.** E-008's incident was not the load — it
    was a teardown `DELETE` that matched three real CR rules. Teardown here
-   is `docker compose --profile metaqa rm -sf`, and with no volume the 135k
-   triples go with the container. No Cypher runs near the corpus at any
+   is `docker rm -f graphrag-mtg-neo4j-metaqa`, and with no volume the 135k
+   triples go with the container. **Corrected 2026-09-03:** this clause
+   first read `docker compose --profile metaqa rm -sf`, which removes the
+   corpus container as well — `--profile` adds a service to the default set
+   rather than restricting to it. Run once, and the corpus container was
+   destroyed; its named volume is the only reason the graph survived. The
+   teardown names the container. No Cypher runs near the corpus at any
    point in E-002.
 2. **`verify-clean` changes shape.** The registration verifies teardown by a
    count returning to its pre-load value. That check now reads: the
