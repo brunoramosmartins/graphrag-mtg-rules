@@ -50,6 +50,8 @@ from pathlib import Path
 
 from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
 from graphrag_mtg.etl.cr_parser import CR_TXT_PATH, parse_cr
+from graphrag_mtg.evaluation.arm_c import VectorRuleSearch
+from graphrag_mtg.evaluation.baseline_vector import build_arm
 from graphrag_mtg.evaluation.corpus import build_corpus, corpus_sha256, counts_by_kind
 from graphrag_mtg.evaluation.dense import (
     BATCH,
@@ -61,8 +63,6 @@ from graphrag_mtg.evaluation.dense import (
 from graphrag_mtg.extraction.llm import LlmClient, estimate_cost
 from graphrag_mtg.generation.answerer import PROMPT_VERSION, SYSTEM, answer, build_prompt
 from graphrag_mtg.graph.connection import driver_session
-from graphrag_mtg.evaluation.arm_c import VectorRuleSearch
-from graphrag_mtg.evaluation.baseline_vector import build_arm
 from graphrag_mtg.retrieval.pipeline import neo4j_runner, retrieve
 from graphrag_mtg.retrieval.subgraph import (
     DEFAULT_KIND_CAP,

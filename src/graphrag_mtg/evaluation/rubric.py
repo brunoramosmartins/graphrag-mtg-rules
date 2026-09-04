@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from enum import Enum
+from enum import StrEnum
 
 from graphrag_mtg.generation.citations import MARKER
 
@@ -48,7 +48,7 @@ _ORPHANED_SPACE = re.compile(r"\s+([,.;:!?)\]])")
 RUBRIC_VERSION = "p6-c1"
 
 
-class Correctness(str, Enum):
+class Correctness(StrEnum):
     """The three-way correctness label. Refusal is an outcome, not a label."""
 
     CORRECT = "correct"

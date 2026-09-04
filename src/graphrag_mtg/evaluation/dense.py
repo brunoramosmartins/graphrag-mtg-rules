@@ -225,7 +225,7 @@ class VectorCache:
     def load(self, *, corpus_hash: str, encoder: str, count: int) -> np.ndarray | None:
         """Cached vectors as a `(count, dimensions)` float32 array, or None.
 
-        Returned as an array rather than nested lists: 115,547 × 1,536 is
+        Returned as an array rather than nested lists: 115,547 x 1,536 is
         710 MB in float32 and 5.7 GB as Python floats, so the conversion
         is not a convenience, it is the difference between loading and
         not.

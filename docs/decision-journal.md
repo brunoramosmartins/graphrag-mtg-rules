@@ -90,6 +90,43 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — The judge, and the parser bug I wrote against instead of into
+
+`evaluation/judge.py` exists. What made it quick to write is that the rubric
+was already a hashed constant from building the ceiling, so "the judge uses
+the same rubric the human used" needed no plumbing — the system prompt is an
+f-string over `RUBRIC`, and a drift becomes a hash mismatch.
+
+Three things I want on the record about how it was built rather than what it
+does.
+
+**The parser reads the last `LABEL:` line, not the first.** E-002 lost a
+prompt round to exactly this: a model reasoning aloud writes "incorrect" on
+the way to "correct", and a first-match parser scores the reasoning instead
+of the verdict. That cost real money there. Here it cost a comment, because
+I wrote the parser against the defect rather than into it. No label at all
+raises rather than defaulting — a default is a score, and a silent default
+would be a score nobody chose.
+
+**A refusal is scored without calling the model.** It is a rule, registered
+in E-011a, not a judgement. Paying a model to decide it would invite it to
+disagree with a decision that is already made, and the disagreement would
+look like data. The verdict carries `by_rule=True` so the two kinds of
+verdict are distinguishable in the record.
+
+**The perturbed-key control refuses a perturbation identical to the real
+key.** That guard exists because a control that changes nothing measures
+nothing while *looking* like evidence, which is worse than having no
+control — the run log would carry a fidelity rate of 1.000 that means the
+judge agreed with itself. This is the same shape as the shuffled-citation
+control in E-007 and the blindness guard in the ceiling: the failure mode of
+a control is passing vacuously.
+
+What is still missing before anything is judged: the audit worksheet for
+judge-versus-human agreement, which needs the blind-to-the-verdict ordering
+E-011 point 5 specifies, and the perturbed fixtures themselves, which are
+hand-written and are the author's work rather than mine.
+
 ## 2026-09-04 — The run I called arm B was arm C, and the numbers did not say so
 
 Wiring arms A and C into the harness, I found that `run_eval.py` had been

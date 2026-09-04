@@ -51,9 +51,20 @@ _WORD = re.compile(r"[a-z][a-z0-9'\-]*")
 #: Deliberately short: an aggressive list would remove `may`, `must` and
 #: `can`, which are the modal verbs the rules turn on.
 STOPWORDS = frozenset(
-    """a an the and or of to in on at is are was were be been being it its this that
-    these those for with as by from what does do did if then than there their they
-    them he she his her you your i we our but so about into over under""".split()
+    (
+        # articles, conjunctions, prepositions
+        "a", "an", "the", "and", "or", "of", "to", "in", "on", "at", "for",
+        "with", "as", "by", "from", "if", "then", "than", "but", "so",
+        "about", "into", "over", "under",
+        # copulas
+        "is", "are", "was", "were", "be", "been", "being",
+        # pronouns and determiners
+        "it", "its", "this", "that", "these", "those", "there", "their",
+        "they", "them", "he", "she", "his", "her", "you", "your", "i", "we",
+        "our",
+        # interrogative scaffolding
+        "what", "does", "do", "did",
+    )
 )
 
 #: Standard BM25. Registered as untuned; pin 7 governs any change.

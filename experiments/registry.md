@@ -444,6 +444,48 @@ multiple-comparison correction when strata are tested jointly.
   `scripts/eval_rule_search.py` and E-006's figures keep measuring what
   they measured.
 
+- **Judge built 2026-09-04 (`evaluation/judge.py`), nothing judged yet.**
+  Implements the E-011 amendment rather than restating it, and four of its
+  clauses are properties of the code rather than promises:
+
+  1. **One rubric.** `CORRECTNESS_SYSTEM` and `PREFERENCE_SYSTEM` are built
+     from `evaluation/rubric.py::RUBRIC` — the same constant
+     `audit_correctness.py` prints to the human. Every verdict carries
+     `rubric_hash()`, so a drift is a hash mismatch and not a silent change
+     of instrument. The threshold this judge is graded against is the lower
+     bound of a ceiling measured "on the same rubric"; that sentence is now
+     enforced by there being one object.
+  2. **The answer reaches the judge blinded**, through the same
+     `render_for_judgement` that blinds the human. Ceiling and judge are
+     measured on one rendering, and the arms reach both readers looking
+     alike.
+  3. **Both orderings, and a disagreeing pair is a tie.** `resolve_pair`
+     refuses to break it on the first ordering, on a coin, or on whichever
+     matches the correctness labels: a model that answers differently when
+     the answers swap places has reported position, and the honest record
+     of that is no preference. `order_disagreement_rate` is what the
+     registered 0.20 gate reads.
+  4. **Domain blindness is controlled, not asserted.** `perturbed_key`
+     builds E-008's fixture and refuses a perturbation identical to the
+     real key — a control that changes nothing measures nothing while
+     looking like evidence. `follows_key` scores it, and the pass mark
+     stays the registered 0.90.
+
+  **One scoring rule implemented without a model call.** A refusal, or an
+  answer that is empty once the handles are stripped, scores `incorrect` by
+  rule with `by_rule=True` on the verdict. Registered in E-011a and applied
+  here: a refusal is excluded from the *ceiling*, because both human passes
+  would agree on it without judging anything, but downstream a refusal to
+  an answerable question is not the key's answer. Paying a model to decide
+  it would invite it to disagree with a registered decision.
+
+  **Parsing takes the last `LABEL:` line, not the first.** A model that
+  reasons aloud writes "incorrect" on the way to "correct"; reading the
+  first match scores the reasoning rather than the verdict. This is the
+  E-002 defect that cost a prompt round, arriving in a new file, and the
+  parser was written against it rather than into it. No label at all raises
+  rather than defaulting, because a default is a score.
+
 - **Correction 2026-09-04 — the run recorded below as "arm B" was arm C.**
   `run_eval.py` passed `rule_search` unconditionally, so the traversal ran
   with the TF-IDF text half attached. Text search fires on 2 of the 20
