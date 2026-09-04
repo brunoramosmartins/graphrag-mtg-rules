@@ -111,8 +111,10 @@ class TestRegisteredConfiguration:
         # trusted to stay where it was put.
         assert run_eval.NOTICE is False
 
-    def test_only_the_built_arm_is_offerable(self) -> None:
-        # Naming the unbuilt arms keeps `--arm` from implying arm B is the
-        # whole experiment, and keeps the rehearsal from reading complete.
+    def test_the_unbuilt_arms_are_named(self) -> None:
+        # Naming what is missing keeps `--arm` from implying the offered
+        # arms are the experiment, and keeps the rehearsal from reading
+        # complete. Arm A left this set when it was built, and this test
+        # is what noticed.
         assert set(run_eval.ARMS) == {"B"}
-        assert set(run_eval.UNBUILT) == {"A", "C"}
+        assert set(run_eval.UNBUILT) == {"C"}

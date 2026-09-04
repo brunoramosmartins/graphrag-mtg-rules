@@ -12,6 +12,7 @@ import json
 import struct
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from graphrag_mtg.evaluation.dense import (

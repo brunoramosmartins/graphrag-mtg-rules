@@ -391,6 +391,59 @@ multiple-comparison correction when strata are tested jointly.
   reason. Parity is a property of the corpus, not a favour granted to one
   arm.
 
+- **Amendment 2026-09-04 — pin 12 fixed the wrong half of arm C's problem,
+  and the routing is the other half.** Pin 12 assumed arm C's text
+  retriever was too *weak*. Measured on the 20 development questions before
+  any arm C answer exists: the router takes the text branch on **2 of 20**
+  — 1 of 8 `interaction_multihop`, 0 of 4 `definition_1hop`, 0 of 5
+  `legality_1hop`. Text retrieval is not weak in arm C so much as **rarely
+  invoked**.
+
+  Consequence for the registered readings, stated before the rehearsal:
+  "C vs B isolates the text contribution" would compare two configurations
+  that differ on **a tenth of the split**, which is close to a null
+  comparison by construction rather than by finding. And the README figure,
+  C vs A, would put a system whose text half fires twice against a hybrid
+  that retrieves on every question.
+
+  Registered, using the pattern pins 4 and 13 already established for the
+  reranker and for iterative retrieval rather than inventing a new one:
+  **arm C runs in two states, both published** — `routed`, which is the
+  shipped system and stays the default, and `always-on`, where text
+  retrieval fires on every question. `retrieval/pipeline.py` gains
+  `always_text_search`, defaulting to False, because off *is* the shipped
+  behaviour and this is a measurement of the routing decision, not a change
+  to the product. Which state the README figure quotes is fixed here: the
+  **shipped** one, with the always-on state published beside it.
+
+- **Arm C built 2026-09-04 (`evaluation/arm_c.py`), development split,
+  nothing judged.** `VectorRuleSearch` is a drop-in for `RuleSearch` — same
+  `search` and `evidence` methods, same call site, no change to the
+  traversal, the budget or the prompt, exactly the "configuration change,
+  not a rebuild" pin 12 asked for.
+
+  | configuration | gold-rule recall | text fired |
+  |---|---|---|
+  | B, graph only | 7/26 | 0/20 |
+  | C routed, TF-IDF (shipped today) | 8/26 | 2/20 |
+  | C routed, vector (pin 12) | 9/26 | 2/20 |
+  | C always-on, vector | 9/26 | 20/20 |
+
+  Always-on adds no gold rule over routed **on this metric** while taking
+  the evidence pool from 157 to 522 rulings — which is precisely the
+  blindness the amendment above records, and the reason the two states are
+  compared on Context Sufficiency rather than on rule recall.
+
+  **One deliberate widening beyond a literal reading of pin 12.**
+  `RuleSearch.evidence` returns rule nodes only; `VectorRuleSearch.evidence`
+  returns rules, rulings, cards and glossary entries, because the pin's
+  requirement is that C's text half be *the same retriever* A uses, and a
+  rules-only adapter would be weaker than A by construction — throwing away
+  exactly the rulings that all 8 development `interaction_multihop`
+  questions retrieve. `search` stays a rules-only view, so
+  `scripts/eval_rule_search.py` and E-006's figures keep measuring what
+  they measured.
+
 - **Dress rehearsal, arm B only (2026-09-04, development split, nothing
   judged).** `scripts/run_eval.py` exists and runs arm B end to end over the
   20 development questions. Recorded now because the run happened, not

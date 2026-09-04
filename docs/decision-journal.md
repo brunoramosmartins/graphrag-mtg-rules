@@ -90,6 +90,48 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — Arm C: pin 12 fixed the wrong half of the problem
+
+Arm C is built, and it took twenty minutes to write because pin 12 was
+right that it should be a configuration change. `VectorRuleSearch` is a
+drop-in for `RuleSearch` — same two methods, same call site, no change to
+the traversal, the budget or the prompt.
+
+Then I measured something pin 12 had not: **the router takes the text
+branch on 2 of the 20 development questions.** One of eight
+`interaction_multihop`, zero of four `definition_1hop`, zero of five
+`legality_1hop`.
+
+Pin 12 assumed arm C's text half was too *weak*, and swapping the retriever
+fixes weak. It does not fix **rarely invoked**. With text firing twice,
+"C vs B isolates the text contribution" compares two configurations that
+differ on a tenth of the split — a null comparison by construction rather
+than by finding — and the README figure would put a system whose text half
+fires twice against a hybrid that retrieves on every question.
+
+I did not change the router. Arm C is the shipped system and quietly making
+the shipped system retrieve more so that a comparison looks better is the
+exact move this project exists to avoid. Instead arm C runs in two states,
+both published, using the pattern pins 4 and 13 already set for the
+reranker and iterative retrieval: `routed`, the default and the shipped
+behaviour, and `always-on`. `pipeline.retrieve` gains
+`always_text_search=False`. Which state the README quotes is fixed now, in
+writing, before the numbers: the shipped one.
+
+Measured, with nothing judged: B 7/26 gold rules, C routed with TF-IDF
+8/26, C routed with the vector retriever 9/26, C always-on 9/26. Always-on
+buys no gold rule while taking the evidence pool from 157 rulings to 522 —
+which is the metric blindness from the entry below, arriving again in a
+different costume. The two states will be compared on Context Sufficiency.
+
+One small thing worth keeping. Folding glossary entries into `rule` kind
+produced citation handles like `[rule:Trample]` — a handle claiming a rule
+numbered "Trample", which is a citation that cannot be checked. Folding
+them into `keyword` would be as wrong the other way, since "APNAP Order" is
+not a keyword. They keep their own kind and render in `serialize`'s
+trailing group, which is the behaviour E-002 added for exactly this and
+which I had forgotten was already there.
+
 ## 2026-09-04 — The retrieval metric cannot see the evidence the arm retrieves
 
 Arm A is embedded — 115,547 vectors, US$ 0.17, 20 minutes — and running the

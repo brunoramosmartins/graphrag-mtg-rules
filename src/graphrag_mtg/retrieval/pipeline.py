@@ -60,6 +60,7 @@ def retrieve(
     oracle_text: Mapping[str, str] | None = None,
     token_budget: int = DEFAULT_TOKEN_BUDGET,
     kind_cap: int = DEFAULT_KIND_CAP,
+    always_text_search: bool = False,
 ) -> Subgraph:
     """Retrieve evidence for one question.
 
@@ -80,6 +81,16 @@ def retrieve(
             retrieval. Measured on dev as worth 6 of 15 against 8 of 15.
         token_budget: Context ceiling.
         kind_cap: Per ``(template, kind)`` hub cap.
+        always_text_search: Run text retrieval on every question rather
+            than only where the plan routes there. Off by default, because
+            off *is* the shipped system. It exists because the routed
+            branch fires on **2 of the 20** Phase 4 development questions
+            — 1 of 8 `interaction_multihop` — so E-001's arm C would
+            otherwise differ from arm B on a tenth of the split, and
+            "C vs B isolates the text contribution" would be close to a
+            null comparison by construction. E-001 publishes both states,
+            the same pattern its reranker and iterative-retrieval pins
+            already use.
 
     Returns:
         A :class:`Subgraph`. Its ``outcome`` is ``RESOLVED`` only when
@@ -98,12 +109,23 @@ def retrieve(
         subgraph.templates_run.append(call.template)
         add_evidence(subgraph, to_evidence(template, rows), kind_cap=kind_cap)
 
-    if chosen.text_search:
+    if chosen.text_search or always_text_search:
         if rule_search is None:
+            if not chosen.text_search:
+                # Asked for text on every question and given no retriever.
+                # The routed branch would have failed loudly; this one has
+                # a graph result to fall back on, so it continues rather
+                # than discarding it.
+                enforce_budget(subgraph, token_budget)
+                return subgraph
             subgraph.outcome = Outcome.NO_SEED
             subgraph.note = f"{chosen.reason}; no text retrieval configured"
             return subgraph
-        subgraph.templates_run.append("rule_search")
+        # Named by the retriever rather than hardcoded: arm C swaps in a
+        # different searcher behind the same contract, and a run log
+        # saying `rule_search` when `vector_search` ran is a record that
+        # disagrees with what happened.
+        subgraph.templates_run.append(getattr(rule_search, "template_name", "rule_search"))
         add_evidence(
             subgraph,
             rule_search.evidence(question, chosen.expansions),
