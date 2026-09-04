@@ -46,9 +46,28 @@ CORPUS = [
 
 
 class TestReciprocalRankFusion:
-    def test_a_document_ranked_by_both_halves_wins(self) -> None:
-        fused = reciprocal_rank_fusion([["a", "b", "c"], ["c", "b", "a"]])
-        assert fused[0] == "b"
+    def test_a_document_both_halves_found_beats_one_only_half_found(self) -> None:
+        # This is the property fusion exists for, and it is not the same
+        # as "the document both halves agree is middling wins".
+        assert reciprocal_rank_fusion([["x", "only_a"], ["x", "only_b"]])[0] == "x"
+
+    def test_a_deep_hit_in_one_half_survives_a_top_hit_in_the_other(self) -> None:
+        # 30th by one half and 2nd by the other is exactly the document a
+        # single retriever loses, and the reason CANDIDATE_DEPTH is read
+        # deeper than the final k.
+        deep = [f"filler{i}" for i in range(29)] + ["wanted"]
+        fused = reciprocal_rank_fusion([deep, ["top", "wanted"]])
+        assert fused[0] == "wanted"
+
+    def test_the_extremes_beat_the_middle_on_reversed_rankings(self) -> None:
+        # Counterintuitive and worth pinning rather than discovering: with
+        # two exactly reversed rankings, ranks (1,3) sum to more than
+        # (2,2), because 1/(k+1) + 1/(k+3) > 2/(k+2) — 1/x is convex. A
+        # document both halves rank *second* therefore loses to one each
+        # half disagrees about. Real rankings are not reversals, so this
+        # is a property of the metric and not a defect, but an intuition
+        # that "agreed-on documents win" is wrong in exactly this shape.
+        assert reciprocal_rank_fusion([["a", "b", "c"], ["c", "b", "a"]]) == ["a", "c", "b"]
 
     def test_reads_ranks_not_scores(self) -> None:
         # BM25 scores and cosine similarities live on incomparable scales.

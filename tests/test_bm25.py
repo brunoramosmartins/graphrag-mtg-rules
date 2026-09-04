@@ -36,9 +36,26 @@ class TestTokenize:
 
 class TestBm25Index:
     def test_length_normalisation_prefers_the_short_exact_match(self) -> None:
-        # This is the reason TF-IDF was not reused: without `b`, a
-        # 400-word card outranks the one-line rule that answers the
-        # question, simply by mentioning the term more times.
+        # The reason TF-IDF was not reused. Both documents mention the
+        # term once; without `b` they would score identically, and the
+        # one-line rule that answers the question would have no advantage
+        # over a 300-word card that merely contains the word.
+        index = Bm25Index(
+            ["rule:702.19", "card:long"],
+            [
+                "702.19. Trample lets excess combat damage through.",
+                "A long card with trample " + "unrelated " * 300,
+            ],
+        )
+        assert index.search("trample", k=1)[0].doc_id == "rule:702.19"
+
+    def test_length_normalisation_does_not_overturn_repeated_mentions(self) -> None:
+        # The limit of the previous property, pinned so it is not
+        # mistaken for a bug later: a document saying "trample" forty
+        # times still outranks a short one saying it once. BM25 saturates
+        # term frequency, it does not discard it, and forty mentions
+        # genuinely are evidence. `b` decides between documents of
+        # comparable term frequency, not between all long and all short.
         index = Bm25Index(
             ["rule:702.19", "card:long"],
             [
@@ -46,7 +63,7 @@ class TestBm25Index:
                 "A long card. " + "trample " * 40 + "unrelated " * 300,
             ],
         )
-        assert index.search("trample", k=1)[0].doc_id == "rule:702.19"
+        assert index.search("trample", k=1)[0].doc_id == "card:long"
 
     def test_a_term_in_every_document_stops_contributing(self) -> None:
         # The unfloored IDF goes negative for a term in more than half the

@@ -167,7 +167,7 @@ class TestBuildCorpus:
 class TestWindowChunks:
     def test_short_documents_pass_through_whole(self) -> None:
         document = Document(doc_id="rule:1", kind="rule", title="t", text="a b c")
-        assert list(window_chunks([document], size=10)) == [document]
+        assert list(window_chunks([document], size=10, overlap=2)) == [document]
 
     def test_windows_carry_the_grading_fields(self) -> None:
         # A window landing on the half of a rule that does not repeat its

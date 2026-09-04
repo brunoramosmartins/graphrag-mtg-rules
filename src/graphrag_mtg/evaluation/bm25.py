@@ -10,11 +10,21 @@ embedding is actively misleading — `flying`, `protection`, `regenerate`,
 this corpus depends on.
 
 `extraction/cite_search.py` already has a TF-IDF index and is deliberately
-not reused: it scores 3,308 CR rules for an annotation aid, and arm A
-indexes 115k documents including cards and rulings, at a scale where TF-IDF
-without length normalisation would rank a 400-word card above the one-line
-rule that answers the question. BM25's `b` parameter is that
-normalisation, and it is the thing missing rather than a preference.
+not reused: it scores 3,308 CR rules for an annotation aid, while arm A
+indexes 115k documents whose lengths span two orders of magnitude — an
+eight-word rule beside a 300-word card. Without length normalisation those
+two score **identically** on a term each mentions once, so the one-line
+rule that answers the question has no advantage over a card that merely
+contains the word. BM25's `b` parameter is what separates them, and it is
+the thing missing rather than a preference.
+
+What `b` does **not** do, stated because the first draft of this docstring
+claimed otherwise and a test caught it: it does not overturn term
+frequency. A 300-word card saying "trample" forty times still outranks an
+eight-word rule saying it once, because BM25 saturates term frequency
+rather than discarding it, and forty mentions genuinely are evidence.
+Length normalisation decides between documents of comparable term
+frequency; it is not a preference for short documents.
 
 Parameters are the standard `k1=1.2`, `b=0.75`. They are **not** tuned
 here: pin 7 allows tuning on the 20 development questions and requires the
