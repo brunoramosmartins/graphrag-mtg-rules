@@ -755,7 +755,7 @@ def run_report(args: argparse.Namespace) -> int:
     }
     shared = sorted(set.intersection(*(set(v) for v in arms.values())))
     print(f"split {side}   {len(shared)} shared question(s)   arms {', '.join(args.arms)}")
-    print(f"unit: judge-scored correctness, `correct` against everything else")
+    print("unit: judge-scored correctness, `correct` against everything else")
     print(RULE_LINE)
 
     strata = sorted({rows[q]["stratum"] for q in shared})

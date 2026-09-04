@@ -90,6 +90,40 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — evaluation.md gets Phase 6, and the header stops promising
+
+Wrote the Phase 6 sections of `docs/evaluation.md` — Act 1's calibration
+failure and Act 2's dress rehearsal — as an **append**, leaving the
+pre-registration above them unedited. That is the form the document already
+had for Phases 3 to 5 and the form it should keep: where a result
+contradicts a prediction, the analysis goes in the results section and the
+prediction stays exactly as recorded. E-002 has three predictions scored and
+two of them wrong; E-012 has three and all three wrong. Those stay visible.
+
+Two decisions about what the document says rather than what it reports.
+
+**The header no longer says "results land here in Phase 6."** It carries a
+dated status instead, naming what is reported, what failed, and — the part
+that matters — that no number in Act 2 is a result about the arms. A reader
+arriving at a table of per-stratum accuracies will read them as findings
+unless the document says otherwise before they get there.
+
+**Every Act 2 section says what it is not.** The rehearsal table is followed
+by "nothing separates, which at n = 20 is the expected outcome whatever is
+true"; the judge agreement is followed by "below the registered floor, so
+this gates nothing". I considered leaving those out and letting the pending
+table at the end carry it, and decided against: a caveat that lives only at
+the end is a caveat most readers do not reach.
+
+The limitations section has seven entries and the last one is the one I
+least wanted to write: **arm A is untuned.** Pin 7 permits tuning on the
+development split with the sweep published, and I have not run it, so the
+baseline sits at published defaults — BM25 1.2/0.75, RRF 60. Every one of
+those is a constant a good-faith baseline would be allowed to move. Not
+moving them is a limitation of the baseline, not a virtue of the graph, and
+the roadmap's own risk register calls a strawman baseline the critical
+credibility risk. That sweep is the next thing worth doing.
+
 ## 2026-09-04 — A pre-registered gate fired, and it cost the prettier figure
 
 The pairwise head-to-head runs, and E-011 point 7's gate fired on two of

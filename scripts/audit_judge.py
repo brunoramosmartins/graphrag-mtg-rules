@@ -39,7 +39,7 @@ from collections import Counter
 from pathlib import Path
 
 from graphrag_mtg.evaluation.metrics import wilson_interval
-from graphrag_mtg.evaluation.rubric import JUDGED, Correctness
+from graphrag_mtg.evaluation.rubric import JUDGED
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
