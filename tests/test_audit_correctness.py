@@ -365,7 +365,18 @@ class TestQuestionAndKey:
         directory = tmp_path / "golden"
         write_jsonl(
             directory / "authored_v0.jsonl",
-            [{"id": "hand-1", "question": "What does trample do?", "answer": "Excess damage."}],
+            # `stratum` is not decoration here: `load_questions` admits a row
+            # only if it carries `stratum` or `gold_path`, and every real
+            # golden row does. A row without one is invisible to the lookup,
+            # which then raises rather than returning a blank key.
+            [
+                {
+                    "id": "hand-1",
+                    "stratum": "definition_1hop",
+                    "question": "What does trample do?",
+                    "answer": "Excess damage.",
+                }
+            ],
         )
         assert ac.question_and_key("hand-1", [tmp_path / "absent"], directory) == (
             "What does trample do?",
