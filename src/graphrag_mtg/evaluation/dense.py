@@ -33,9 +33,16 @@ from pathlib import Path
 from typing import Protocol
 
 import httpx
+import numpy as np
 
 from graphrag_mtg.config import get_settings
-from graphrag_mtg.extraction.llm import MAX_ATTEMPTS, RETRY_STATUSES, retry_delay
+from graphrag_mtg.extraction.llm import (
+    MAX_ATTEMPTS,
+    RETRY_EXCEPTIONS,
+    RETRY_STATUSES,
+    backoff,
+    retry_delay,
+)
 
 OPENAI_EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings"
 
@@ -121,12 +128,23 @@ class OpenAiEncoder:
         """
         payload = {"model": self.model, "input": list(texts)}
         for attempt in range(1, MAX_ATTEMPTS + 1):
-            response = self._http.post(OPENAI_EMBEDDINGS_URL, json=payload)
+            try:
+                response = self._http.post(OPENAI_EMBEDDINGS_URL, json=payload)
+            except RETRY_EXCEPTIONS as exc:
+                # A connection reset never becomes a status code, so the
+                # status-only loop passed it straight through and killed a
+                # pass at 16,640 of 115,547 documents.
+                if attempt == MAX_ATTEMPTS:
+                    raise
+                delay = backoff(attempt)
+                print(f"  {type(exc).__name__} in transport; retrying in {delay:.0f}s", flush=True)
+                time.sleep(delay)
+                continue
             if response.status_code not in RETRY_STATUSES or attempt == MAX_ATTEMPTS:
                 response.raise_for_status()
                 break
             delay = retry_delay(response, attempt)
-            print(f"  {response.status_code} from the provider; retrying in {delay:.0f}s")
+            print(f"  {response.status_code} from the provider; retrying in {delay:.0f}s", flush=True)
             time.sleep(delay)
         rows = sorted(response.json()["data"], key=lambda row: row["index"])
         return [normalise(row["embedding"]) for row in rows]
@@ -141,35 +159,54 @@ class Hit:
 
 
 class DenseIndex:
-    """A flat index: every vector compared against the query.
+    """A flat index: every vector compared against the query, in float32.
 
-    Exact rather than approximate, deliberately. 115k dot products of 1536
-    floats is well under a second in pure Python per query, the golden set
-    is 77 questions, and an ANN structure would introduce a recall
-    parameter that becomes one more thing arm A could be accused of having
-    been handicapped by.
+    Exact rather than approximate, deliberately. The golden set is 77
+    questions, so the whole run is a few hundred queries, and an ANN
+    structure would introduce a recall parameter that becomes one more
+    thing arm A could be accused of having been handicapped by. Exact
+    search cannot be accused of anything.
+
+    **Backed by a numpy array rather than lists, and the reason is not
+    style.** 115,547 vectors of 1,536 dimensions is 710 MB as float32 and
+    **5.7 GB** as `list[list[float]]`, because a CPython float is 24 bytes
+    plus an 8-byte pointer. And one query is 177M multiply-adds: tens of
+    seconds in a Python loop against tens of milliseconds as a single
+    matrix product. The first draft of this class used lists, which was
+    fine at test scale and unusable at corpus scale — the kind of defect
+    that only appears when the data is real.
     """
 
-    def __init__(self, doc_ids: Sequence[str], vectors: Sequence[Sequence[float]]) -> None:
-        if len(doc_ids) != len(vectors):
+    def __init__(self, doc_ids: Sequence[str], vectors: Sequence[Sequence[float]] | np.ndarray):
+        matrix = np.asarray(vectors, dtype=np.float32)
+        if matrix.ndim != 2:
+            matrix = matrix.reshape(len(doc_ids), -1)
+        if len(doc_ids) != matrix.shape[0]:
             raise ValueError(
-                f"{len(vectors)} vectors against {len(doc_ids)} ids — the index would "
+                f"{matrix.shape[0]} vectors against {len(doc_ids)} ids — the index would "
                 "score documents under the wrong handles."
             )
         self.doc_ids = list(doc_ids)
-        self.vectors = [list(v) for v in vectors]
+        self.matrix = matrix
 
     def __len__(self) -> int:
         return len(self.doc_ids)
 
     def search(self, query_vector: Sequence[float], *, k: int = 20) -> list[Hit]:
-        """The `k` most similar documents. Ties break by `doc_id`."""
-        scored = [
-            (sum(a * b for a, b in zip(query_vector, vector, strict=True)), index)
-            for index, vector in enumerate(self.vectors)
-        ]
-        ranked = sorted(scored, key=lambda pair: (-pair[0], self.doc_ids[pair[1]]))
-        return [Hit(doc_id=self.doc_ids[i], score=score) for score, i in ranked[:k]]
+        """The `k` most similar documents. Ties break by `doc_id`.
+
+        Vectors are unit-length at index time, so the similarity is one
+        matrix-vector product and the sort is over `k`, not over 115k.
+        """
+        if not self.doc_ids:
+            return []
+        query = np.asarray(query_vector, dtype=np.float32)
+        scores = self.matrix @ query
+        take = min(k, scores.shape[0])
+        # argpartition finds the top-k without ordering the other 115k.
+        top = np.argpartition(-scores, take - 1)[:take]
+        ranked = sorted(top, key=lambda i: (-float(scores[i]), self.doc_ids[i]))
+        return [Hit(doc_id=self.doc_ids[i], score=float(scores[i])) for i in ranked]
 
 
 class VectorCache:
@@ -185,11 +222,20 @@ class VectorCache:
         self.path = path
         self.header_path = path.with_suffix(".json")
 
-    def load(self, *, corpus_hash: str, encoder: str, count: int) -> list[list[float]] | None:
-        """Cached vectors, or None when nothing valid is stored."""
+    def load(self, *, corpus_hash: str, encoder: str, count: int) -> np.ndarray | None:
+        """Cached vectors as a `(count, dimensions)` float32 array, or None.
+
+        Returned as an array rather than nested lists: 115,547 × 1,536 is
+        710 MB in float32 and 5.7 GB as Python floats, so the conversion
+        is not a convenience, it is the difference between loading and
+        not.
+        """
         if not (self.path.exists() and self.header_path.exists()):
             return None
-        header = json.loads(self.header_path.read_text(encoding="utf-8"))
+        try:
+            header = json.loads(self.header_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return None
         if (
             header.get("corpus_sha256") != corpus_hash
             or header.get("encoder") != encoder
@@ -197,14 +243,10 @@ class VectorCache:
         ):
             return None
         dimensions = header["dimensions"]
-        raw = self.path.read_bytes()
-        stride = dimensions * 4
-        if len(raw) != count * stride:
+        if self.path.stat().st_size != count * dimensions * 4:
             return None
-        return [
-            list(struct.unpack_from(f"<{dimensions}f", raw, index * stride))
-            for index in range(count)
-        ]
+        matrix = np.fromfile(self.path, dtype="<f4", count=count * dimensions)
+        return matrix.reshape(count, dimensions)
 
     def save(
         self, vectors: Sequence[Sequence[float]], *, corpus_hash: str, encoder: str
@@ -215,18 +257,84 @@ class VectorCache:
         with self.path.open("wb") as handle:
             for vector in vectors:
                 handle.write(struct.pack(f"<{dimensions}f", *vector))
+        self._write_header(corpus_hash=corpus_hash, encoder=encoder, count=len(vectors),
+                           dimensions=dimensions)
+
+    def _write_header(
+        self, *, corpus_hash: str, encoder: str, count: int, dimensions: int
+    ) -> None:
         self.header_path.write_text(
             json.dumps(
                 {
                     "corpus_sha256": corpus_hash,
                     "encoder": encoder,
-                    "count": len(vectors),
+                    "count": count,
                     "dimensions": dimensions,
                 },
                 indent=2,
             ),
             encoding="utf-8",
         )
+
+    def resume_count(self, *, corpus_hash: str, encoder: str) -> int:
+        """How many vectors on disk may be kept and continued from.
+
+        Embedding 115k documents is ~450 requests, and E-002 lost 163 of
+        500 answers to one unretried 429 — the project's most expensive
+        lesson about work that is not resumable. Vectors are therefore
+        appended batch by batch and the header advanced with them, so a
+        failure at request 400 costs one batch rather than everything.
+
+        Returns 0 whenever anything about the run has changed, because a
+        partial file from a different corpus or encoder is not a prefix of
+        this one, it is a different index with the same filename.
+        """
+        if not (self.path.exists() and self.header_path.exists()):
+            return 0
+        try:
+            header = json.loads(self.header_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return 0
+        if header.get("corpus_sha256") != corpus_hash or header.get("encoder") != encoder:
+            return 0
+        count, dimensions = header.get("count", 0), header.get("dimensions", 0)
+        if not dimensions:
+            return 0
+        # Trust the bytes over the header: a process killed mid-write
+        # leaves a header claiming more than the file holds, and resuming
+        # from the header would leave a hole no later check could see.
+        on_disk = self.path.stat().st_size // (dimensions * 4)
+        return min(count, on_disk)
+
+    def append(
+        self,
+        vectors: Sequence[Sequence[float]],
+        *,
+        corpus_hash: str,
+        encoder: str,
+        done: int,
+    ) -> int:
+        """Append `vectors` after `done` existing ones; return the new total.
+
+        The file is truncated to `done` vectors first, so a resume after a
+        partial write overwrites the torn tail instead of appending past
+        it.
+        """
+        if not vectors:
+            return done
+        dimensions = len(vectors[0])
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        stride = dimensions * 4
+        with self.path.open("r+b" if self.path.exists() else "wb") as handle:
+            handle.seek(done * stride)
+            handle.truncate()
+            for vector in vectors:
+                handle.write(struct.pack(f"<{dimensions}f", *vector))
+        total = done + len(vectors)
+        self._write_header(
+            corpus_hash=corpus_hash, encoder=encoder, count=total, dimensions=dimensions
+        )
+        return total
 
 
 def estimate_embedding_cost(texts: Iterable[str], *, model: str) -> str:

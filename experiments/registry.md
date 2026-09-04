@@ -447,7 +447,81 @@ multiple-comparison correction when strata are tested jointly.
      scores it as a miss: a ruling that answers the question carries no
      `gold_cr_rules` number, which is a limitation of pin 6's metric and
      not of the arm.
-  2. **Token parity buys item-count disparity, larger than expected.** At
+  **Two defects the first embedding pass found, both invisible at test
+  scale.** Recorded because each is a class of failure rather than a
+  one-off, and because the second is the same lesson E-002 already paid
+  for, one layer further down.
+
+  1. **The dense index was `list[list[float]]`.** Correct, tested, and
+     unusable: 115,547 × 1,536 float32 is 710 MB as an array and **5.7 GB**
+     as Python floats — a CPython float is 24 bytes plus an 8-byte pointer
+     — and one query is 177M multiply-adds, tens of seconds in a loop
+     against tens of milliseconds as a matrix product. Rewritten on numpy,
+     which moves from an optional extra to a core dependency because
+     `dense.py` cannot run without it. The defect existed from the first
+     commit and no test could have caught it: the tests are right, and
+     they run on three vectors.
+  2. **The retry policy covered statuses and not transport.** The pass
+     died at **16,640 of 115,547** on `httpx.ReadError` (WinError 10054,
+     the remote host resetting the connection), which never becomes a
+     status code and so went straight through a loop that only inspected
+     `response.status_code`. `RETRY_EXCEPTIONS = (httpx.TransportError,)`
+     now covers it in both `extraction/llm.py` and `evaluation/dense.py`.
+     E-002's 429 taught that a long loop needs retry; this adds that a
+     long loop meets every transient failure the network has, not only the
+     ones the server was well enough to name.
+
+     **The resume worked, which is the point of having built it.** All
+     16,640 vectors were valid and the run continued from there — one
+     batch lost rather than a whole pass, and no spend repeated.
+
+  **Arm A complete 2026-09-04: 115,547 vectors, `text-embedding-3-small`,
+  US$ 0.17, 20 min, no transport retry needed on the second pass.** All
+  three modes run on the development split, and the numbers are recorded
+  because they ran, not because they decide anything — arm B's answers are
+  not judged, so no comparison exists.
+
+  | mode | build | p50 query | gold-rule recall |
+  |---|---|---|---|
+  | lexical | 8.6 s | 0.12 s | 6/26 |
+  | dense | 0.3 s | 0.48 s | 7/26 |
+  | hybrid | 8.7 s | 0.68 s | 7/26 |
+
+  Per stratum the three agree almost exactly: `definition_1hop` 4/4,
+  `interaction_multihop` **1/18**, `keyword_rule_2hop` 0/1,
+  `negative_temporal` 1–2/3, `legality_1hop` n/a by pin 9. The hybrid buys
+  nothing over dense alone on this metric at this n, which is a fact about
+  20 questions and not a reason to drop a registered ablation.
+
+- **Amendment 2026-09-04 — pin 6 is close to uninformative on the stratum
+  that carries the hypothesis, and the instrument that covers it already
+  exists.** Prompted by seeing rule recall read 1/18, and the prompt is
+  disclosed because that ordering matters.
+
+  Measured on the 8 development `interaction_multihop` questions: **all 8**
+  retrieve between 2 and 17 Scryfall rulings belonging to a card the answer
+  key names, while **7 of 8** score zero on gold-rule recall. A ruling
+  carries no CR number, so pin 6's rule-number granularity cannot see it.
+
+  What may and may not be concluded from that, stated carefully: it shows
+  rule recall **does not measure whether answer-bearing evidence was
+  retrieved** when that evidence is a ruling. It does **not** show those
+  rulings answer the questions — that is a judgement, and asserting it from
+  card-name overlap would be exactly the shortcut this registry exists to
+  refuse.
+
+  **No new metric is invented here.** Inventing one after watching the
+  registered one read zero is the pattern pin 7 forbids, and the roadmap
+  already lists the right instrument: **Context Sufficiency**, judged, whose
+  stated purpose is to separate a retrieval failure from a reasoning
+  failure. Registered consequence: pin 6's rule recall is published
+  unchanged, and on `interaction_multihop` the retrieval-layer claim is
+  carried by Context Sufficiency rather than by rule recall, with the reason
+  named in `docs/evaluation.md`. The blindness is symmetric — the graph arm
+  holds the same rulings — so it cannot favour an arm, which is why it is
+  a reporting decision and not a scoring change.
+
+  3. **Token parity buys item-count disparity, larger than expected.** At
      the shared 6,000-token budget arm A keeps 55–100 documents per
      question against a median of 8 evidence items for the graph arms. The
      registered rule stands — token budget is what both arms face at

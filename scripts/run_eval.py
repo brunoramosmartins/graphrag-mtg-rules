@@ -43,11 +43,21 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
 
-from graphrag_mtg.etl.cr_parser import CR_TXT_PATH
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
+from graphrag_mtg.etl.cr_parser import CR_TXT_PATH, parse_cr
+from graphrag_mtg.evaluation.corpus import build_corpus, corpus_sha256, counts_by_kind
+from graphrag_mtg.evaluation.dense import (
+    BATCH,
+    DEFAULT_EMBEDDING_MODEL,
+    OpenAiEncoder,
+    VectorCache,
+    estimate_embedding_cost,
+)
 from graphrag_mtg.extraction.llm import LlmClient, estimate_cost
 from graphrag_mtg.generation.answerer import PROMPT_VERSION, SYSTEM, answer, build_prompt
 from graphrag_mtg.graph.connection import driver_session
@@ -82,10 +92,20 @@ ANSWERS = "runs/e001_{arm}_answers_{split}.jsonl"
 #: rather than buried in a call.
 NOTICE = False
 
-#: Arms this file can run. A and C are registered and not built; naming
-#: them here keeps `--arm` from implying arm B is the whole experiment.
+#: Arms this file can retrieve and generate with. C is registered and not
+#: built; naming it here keeps `--arm` from implying B is the experiment.
 ARMS = {"B": "graph-only traversal"}
-UNBUILT = {"A": "vector baseline", "C": "hybrid (ADR-007)"}
+UNBUILT = {"C": "hybrid (ADR-007)"}
+
+RULINGS_PATH = Path("data/raw/scryfall_rulings.json")
+VECTORS_PATH = Path("data/interim/e001_vectors.bin")
+
+#: Characters a document may contribute to one embedding request. The
+#: provider's limit is 8,192 tokens; this is comfortably under it at the
+#: chars/4 heuristic. Truncation is counted and printed rather than
+#: applied quietly — a document silently cut in half is a retrieval miss
+#: with no visible cause.
+MAX_EMBED_CHARS = 24_000
 
 
 def question_rows(golden: Path, split: Path, side: str) -> list[dict]:
@@ -269,6 +289,57 @@ def run_generation(args: argparse.Namespace) -> int:
     return 0
 
 
+def load_corpus(args: argparse.Namespace) -> list:
+    """Build arm A's document set from the raw sources."""
+    cr = parse_cr(args.cr)
+    cards = list(iter_bulk(bulk_path(ORACLE_CARDS_STEM)))
+    rulings = json.loads(args.rulings.read_text(encoding="utf-8"))
+    return build_corpus(cr, cards, rulings)
+
+
+def index(args: argparse.Namespace) -> int:
+    """Build the corpus and embed it, resumably, printing the cost first."""
+    documents = load_corpus(args)
+    corpus_hash = corpus_sha256(documents)
+    texts = [d.text[:MAX_EMBED_CHARS] for d in documents]
+    oversized = sum(1 for d in documents if len(d.text) > MAX_EMBED_CHARS)
+
+    print(f"corpus {len(documents):,} documents   sha256 {corpus_hash[:12]}")
+    print(f"by kind: {counts_by_kind(documents)}")
+    print(f"estimate: {estimate_embedding_cost(texts, model=args.model)}")
+    if oversized:
+        print(f"{oversized} document(s) truncated to {MAX_EMBED_CHARS:,} chars for embedding.")
+    if args.dry_run:
+        print("\nDry run: nothing was sent.")
+        return 0
+
+    encoder = OpenAiEncoder(model=args.model)
+    cache = VectorCache(args.vectors)
+    done = cache.resume_count(corpus_hash=corpus_hash, encoder=encoder.name)
+    if done >= len(documents):
+        print(f"\nAlready embedded: {done:,} vectors at {args.vectors}. Nothing to do.")
+        return 0
+    if done:
+        print(f"\nResuming at {done:,} of {len(documents):,} — {len(documents) - done:,} to go.")
+
+    started = time.time()
+    for start in range(done, len(documents), BATCH):
+        batch = texts[start : start + BATCH]
+        done = cache.append(
+            encoder.encode(batch), corpus_hash=corpus_hash, encoder=encoder.name, done=done
+        )
+        elapsed = time.time() - started
+        print(
+            f"  {done:>7,}/{len(documents):,}  {done / len(documents):5.1%}  "
+            f"{elapsed:6.0f}s elapsed",
+            flush=True,
+        )
+    print(f"\nEmbedded {done:,} document(s) -> {args.vectors} in {time.time() - started:.0f}s")
+    print(f"corpus sha256 {corpus_hash} — the cache is keyed on it, so a corpus change")
+    print("invalidates these vectors rather than scoring new documents against old ones.")
+    return 0
+
+
 def ceiling(args: argparse.Namespace) -> int:
     """Hand these answers to the correctness worksheet as a labelling batch."""
     out = args.answers or Path(ANSWERS.format(arm=args.arm, split="dev"))
@@ -310,6 +381,14 @@ def main() -> int:
     gen.add_argument("--force", action="store_true")
     gen.add_argument("--dry-run", action="store_true", help="print the estimate, send nothing")
     gen.set_defaults(func=run_generation)
+
+    idx = sub.add_parser("index", help="build arm A's corpus and embed it (costs tokens)")
+    idx.add_argument("--cr", type=Path, default=CR_TXT_PATH)
+    idx.add_argument("--rulings", type=Path, default=RULINGS_PATH)
+    idx.add_argument("--vectors", type=Path, default=VECTORS_PATH)
+    idx.add_argument("--model", default=DEFAULT_EMBEDDING_MODEL)
+    idx.add_argument("--dry-run", action="store_true", help="print the estimate, send nothing")
+    idx.set_defaults(func=index)
 
     cei = sub.add_parser("ceiling", parents=[common], help="hand the answers to E-011a")
     cei.add_argument("--answers", type=Path, default=None)

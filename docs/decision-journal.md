@@ -90,6 +90,78 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — The retrieval metric cannot see the evidence the arm retrieves
+
+Arm A is embedded — 115,547 vectors, US$ 0.17, 20 minutes — and running the
+hybrid on the dev split produced a number I went looking behind:
+`interaction_multihop` gold-rule recall of 1/18, near-identical across
+lexical, dense and hybrid.
+
+Behind it: **all 8** development `interaction_multihop` questions retrieve
+between 2 and 17 Scryfall rulings belonging to a card the answer key names,
+while **7 of 8** score zero. A ruling carries no CR number, and pin 6 grades
+at rule-number granularity, so the metric is structurally blind to that
+evidence.
+
+I want to be precise about what that licenses. It shows rule recall does not
+measure whether answer-bearing evidence was retrieved when the evidence is a
+ruling. It does **not** show those rulings answer the questions — that is a
+judgement, and asserting it from card-name overlap would be the shortcut the
+whole registry exists to refuse.
+
+**And I am deliberately not inventing a metric.** Watching the registered
+one read zero and then proposing a second one that reads better is the
+pattern pin 7 forbids, and I would not accept the argument from someone
+else. The roadmap already lists the instrument for exactly this — Context
+Sufficiency, judged, whose stated purpose is separating a retrieval failure
+from a reasoning failure. So rule recall is published unchanged, and on
+`interaction_multihop` the retrieval-layer claim rests on sufficiency, with
+the reason written down.
+
+The blindness is symmetric: the graph arm holds the same rulings. That is
+what makes this a reporting decision rather than a scoring change, and it is
+also why noticing it now is worth something — a stratum where both arms
+score ~0 on the headline retrieval metric would otherwise read as "retrieval
+is hopeless here" when what is hopeless is the metric.
+
+## 2026-09-04 — Two defects that only exist at 115,547 documents
+
+Embedding arm A's corpus found two things three-vector tests cannot.
+
+**The dense index was `list[list[float]]`.** Correct, tested, and unusable.
+115,547 × 1,536 float32 is 710 MB as an array and **5.7 GB** as Python
+floats, because a CPython float is 24 bytes plus an 8-byte pointer. And one
+query is 177M multiply-adds: tens of seconds in a Python loop against tens
+of milliseconds as a matrix product. Rewritten on numpy, which moves from
+an optional extra to a core dependency — `evaluation/dense.py` cannot run
+without it, and a required dependency is not made lighter by being declared
+optional.
+
+What is worth keeping from this is that **no test would have caught it**.
+The tests are correct and they run on three vectors; the property that
+broke is a relationship between the data structure and the size of the
+data, and the only instrument that reads it is arithmetic done before the
+run. I did that arithmetic only because I was estimating the file size for
+`.gitignore`.
+
+**The retry policy covered statuses and not transport.** The pass died at
+16,640 of 115,547 on `httpx.ReadError` — WinError 10054, the remote host
+resetting the connection. That never becomes a status code, so a loop
+inspecting `response.status_code` passed it straight through.
+`RETRY_EXCEPTIONS = (httpx.TransportError,)` now covers it in both
+`extraction/llm.py` and `evaluation/dense.py`.
+
+This is E-002's lesson one layer down. E-002 taught that a long loop needs
+retry, and I added retry for the failures the server was well enough to
+name. A long batched loop also meets every transient failure the *network*
+has, and those arrive as exceptions rather than responses. Fixing only what
+had already bitten me looked complete and was not.
+
+**The resume worked, and that is the part that paid.** All 16,640 vectors
+were valid, the run continued from there, and the cost was one batch rather
+than a whole pass. I built that mechanism citing E-002's 163 lost answers;
+it earned its keep on the first run.
+
 ## 2026-09-04 — Arm A: a deviation that had to strengthen the control to be allowed
 
 The vector baseline is built — corpus, BM25, dense index, fusion, ablations

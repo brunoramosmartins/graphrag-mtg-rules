@@ -7,13 +7,42 @@ import pytest
 
 from graphrag_mtg.extraction.llm import (
     DEFAULT_OPENAI_MODEL,
+    RETRY_EXCEPTIONS,
     RETRY_STATUSES,
     _parse_json,
+    backoff,
     estimate_cost,
     price_for_model,
     resolve_model,
     retry_delay,
 )
+
+
+class TestRetryExceptions:
+    def test_a_connection_reset_is_retryable(self) -> None:
+        # An E-001 embedding pass died at 16,640 of 115,547 documents on
+        # httpx.ReadError — WinError 10054, the remote host closing the
+        # connection. It never becomes a status code, so a loop inspecting
+        # response.status_code passed it straight through.
+        assert issubclass(httpx.ReadError, RETRY_EXCEPTIONS)
+
+    def test_a_timeout_and_a_connect_failure_are_retryable(self) -> None:
+        assert issubclass(httpx.ReadTimeout, RETRY_EXCEPTIONS)
+        assert issubclass(httpx.ConnectError, RETRY_EXCEPTIONS)
+
+    def test_a_bad_status_is_not_a_transport_failure(self) -> None:
+        # The two paths stay separate: a 4xx that is not a rate limit must
+        # fail immediately, not be retried five times.
+        assert not issubclass(httpx.HTTPStatusError, RETRY_EXCEPTIONS)
+
+    def test_backoff_is_exponential_and_capped(self) -> None:
+        assert [backoff(i) for i in range(1, 5)] == [2.0, 4.0, 8.0, 16.0]
+        assert backoff(99) == 60.0
+
+    def test_backoff_has_no_jitter(self) -> None:
+        # A run that hits the same limits twice must behave the same way
+        # twice, or a re-run is not comparable.
+        assert backoff(3) == backoff(3)
 
 
 class TestPrices:

@@ -56,8 +56,28 @@ OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions"
 #: the file is a partial nobody may score.
 RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 
+#: Failures that never become a status code at all. A connection reset,
+#: a read timeout, a DNS blip: the request dies in transport and there is
+#: no response to inspect. Retrying only statuses looked complete and was
+#: not — an E-001 embedding pass died at 16,640 of 115,547 documents on
+#: `httpx.ReadError` (WinError 10054, the remote host closing the
+#: connection), which the status-only loop passed straight through. The
+#: lesson is the same one E-002's 429 taught, one layer lower down:
+#: a long batched loop meets every transient failure the network has,
+#: not only the ones the server was well enough to name.
+RETRY_EXCEPTIONS = (httpx.TransportError,)
+
 #: Attempts per call, the first one included.
 MAX_ATTEMPTS = 5
+
+
+def backoff(attempt: int) -> float:
+    """Deterministic exponential backoff, capped at a minute.
+
+    No jitter: a run that hits the same limits twice behaves the same way
+    twice, which is what makes a re-run comparable.
+    """
+    return min(2.0**attempt, 60.0)
 
 
 def retry_delay(response: httpx.Response, attempt: int) -> float:
@@ -74,7 +94,7 @@ def retry_delay(response: httpx.Response, attempt: int) -> float:
             return min(max(float(header), 0.0), 60.0)
         except ValueError:
             pass
-    return min(2.0**attempt, 60.0)
+    return backoff(attempt)
 
 _JSON_BLOCK = re.compile(r"\{.*\}|\[.*\]", re.DOTALL)
 
@@ -220,7 +240,15 @@ class LlmClient:
                 answer must stop and say so, not silently record a gap.
         """
         for attempt in range(1, MAX_ATTEMPTS + 1):
-            response = self._http.post(OPENAI_CHAT_URL, json=payload)
+            try:
+                response = self._http.post(OPENAI_CHAT_URL, json=payload)
+            except RETRY_EXCEPTIONS as exc:
+                if attempt == MAX_ATTEMPTS:
+                    raise
+                delay = backoff(attempt)
+                print(f"  {type(exc).__name__} in transport; retrying in {delay:.0f}s")
+                time.sleep(delay)
+                continue
             if response.status_code not in RETRY_STATUSES or attempt == MAX_ATTEMPTS:
                 response.raise_for_status()
                 return response
