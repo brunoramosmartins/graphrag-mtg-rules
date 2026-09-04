@@ -90,6 +90,47 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — An outside reading of the answers, and the guard that named a command
+
+After freezing pass 1 of the correctness ceiling, I asked an external LLM to
+look at how retrieval was performing on a set of these questions. I shared
+no labels. The reply came back naming four rows — `rg-1702`, `rg-256`,
+`rg-3859`, `rg-6417` — with an argument for why each answer fails, which is
+material I now carry into the second pass on those rows. Four of 36, and the
+direction is not predictable: agreeing with what I first called it inflates
+agreement, contradicting it deflates.
+
+Recorded rather than deleted. A new `flag` command marks a row as exposed on
+a frozen pass — it moves no label, it constrains what the score may claim —
+and `reaudit score` prints the ceiling over all rows and over the unexposed
+ones, with the second as the reported figure. Both pre-committed before
+either number exists.
+
+**The useful half is the instrument gap.** `show` was guarded against
+revealing pass 1 while pass 2 was open. `status` was not, and `status`
+prints the label mix. Knowing that pass 1 said `correct` nine times pulls
+pass 2 toward saying it nine times. The guard named a command instead of the
+property it was protecting — the same shape as the teardown that named a
+profile instead of a container, two entries below. Both now hold the
+property.
+
+And neither guard would have stopped what actually happened. Exporting rows
+and importing an analysis is not a hole in the code; it is a rule that had
+never been written down. Written down now: while a pass is open, rows from
+it are not shown to anything that can argue back. That the rule did not
+exist is on the design of the instrument, not on the person who ran into it.
+
+Separately, the reading itself is worth recording as a method note. Its
+conclusion — that the failures are compositional rather than retrieval — is
+correct and is what E-012 already established with a design that could have
+said otherwise. But it was built on the 9 rows that happened to be visible,
+a slice holding no `correct` label when the full 36 hold 9, a composition a
+random draw produces about 5% of the time. Same error as E-012a: a
+conclusion read off a non-random cut. Its **categories**, on the other hand,
+are usable and well timed, and are now fixed as E-001's error taxonomy
+before any E-001 output exists — which is strictly better than inventing
+categories after seeing which ones each arm loses on.
+
 ## 2026-09-04 — Phase 6 Act 2 is sequenced by a clock, not by the deliverable list
 
 The roadmap lists Act 2's deliverables in a reasonable order and that

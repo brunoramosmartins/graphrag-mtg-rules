@@ -290,33 +290,126 @@ class TestReauditScore:
         assert "NOT gated" in capsys.readouterr().out
 
 
-class TestGuardBlindness:
-    def test_refuses_to_show_pass_one_while_pass_two_is_open(
-        self, tmp_path: Path, golden: tuple[Path, Path], monkeypatch
+class TestExposedRows:
+    def test_flagging_is_allowed_on_a_frozen_pass(
+        self, tmp_path: Path, golden: tuple[Path, Path]
     ) -> None:
-        # Blindness is a property of what the tool will display, not a
-        # promise the annotator makes to themself.
+        # Flagging changes no label — it changes what the score may claim.
         source = prepared(tmp_path, golden, {"q1": "correct", "q2": "partial"})
-        out = self.open_second(tmp_path, source)
-        monkeypatch.setattr(ac, "PASS2_PATH", out)
-        first = json.loads(source.read_text(encoding="utf-8"))
-        with pytest.raises(SystemExit, match="unlabelled row"):
-            ac.guard_blindness(source, first)
+        ac.flag_exposed(
+            argparse.Namespace(question_id="q1", reason="discussed elsewhere", out=source)
+        )
+        meta = json.loads(source.read_text(encoding="utf-8"))
+        assert set(meta["exposed"]) == {"q1"}
+        assert meta["labels"]["q1"]["label"] == "correct"
 
-    def test_allows_it_once_pass_two_is_complete(
-        self, tmp_path: Path, golden: tuple[Path, Path], monkeypatch
+    def test_score_reports_with_and_without(
+        self, tmp_path: Path, golden: tuple[Path, Path], capsys
     ) -> None:
-        source = prepared(tmp_path, golden, {"q1": "correct"})
-        out = self.open_second(tmp_path, source)
-        meta = json.loads(out.read_text(encoding="utf-8"))
-        meta["labels"]["q1"]["label"] = "correct"
-        out.write_text(json.dumps(meta), encoding="utf-8")
-        monkeypatch.setattr(ac, "PASS2_PATH", out)
-        ac.guard_blindness(source, json.loads(source.read_text(encoding="utf-8")))
-
-    def open_second(self, tmp_path: Path, source: Path) -> Path:
+        source = prepared(tmp_path, golden, {"q1": "correct", "q2": "correct", "q3": "correct"})
+        ac.flag_exposed(argparse.Namespace(question_id="q1", reason="r", out=source))
         out = tmp_path / "m2.json"
         ac.reaudit_build(
             argparse.Namespace(source=source, out=out, min_days=0, seed=2, force=False)
         )
-        return out
+        meta = json.loads(out.read_text(encoding="utf-8"))
+        for qid, label in {"q1": "correct", "q2": "correct", "q3": "partial"}.items():
+            meta["labels"][qid]["label"] = label
+        out.write_text(json.dumps(meta), encoding="utf-8")
+
+        ac.reaudit_score(argparse.Namespace(out=out))
+        printed = capsys.readouterr().out
+        assert "exact agreement 2/3" in printed
+        assert "excluding 1 exposed row(s): 1/2" in printed
+
+
+def open_second(tmp_path: Path, source: Path, name: str = "m2.json") -> Path:
+    out = tmp_path / name
+    ac.reaudit_build(
+        argparse.Namespace(source=source, out=out, min_days=0, seed=2, force=False)
+    )
+    return out
+
+
+class TestWithholdMarginals:
+    def test_status_hides_the_mix_while_a_second_pass_is_open(
+        self, tmp_path: Path, golden: tuple[Path, Path], capsys
+    ) -> None:
+        # `show` was guarded and `status` was not, which left the aggregate
+        # reachable by a command nobody thinks of as revealing.
+        source = prepared(tmp_path, golden, {"q1": "correct", "q2": "incorrect"})
+        open_second(tmp_path, source)
+        ac.status(argparse.Namespace(out=source))
+        printed = capsys.readouterr().out
+        assert "label mix withheld" in printed
+        assert "incorrect  " not in printed
+
+    def test_status_shows_the_mix_when_no_second_pass_exists(
+        self, tmp_path: Path, golden: tuple[Path, Path], capsys
+    ) -> None:
+        source = prepared(tmp_path, golden, {"q1": "correct", "q2": "incorrect"})
+        ac.status(argparse.Namespace(out=source))
+        assert "label mix withheld" not in capsys.readouterr().out
+
+
+class TestOpenSecondPass:
+    def test_found_by_relationship_not_by_filename(
+        self, tmp_path: Path, golden: tuple[Path, Path]
+    ) -> None:
+        # Tying the guard to one hard-coded path let any pair addressed
+        # through --out slip past it — the guard naming a file instead of
+        # the relationship it protects.
+        source = prepared(tmp_path, golden, {"q1": "correct"})
+        out = open_second(tmp_path, source, name="second-attempt.json")
+        assert ac.open_second_pass(source) == out
+
+    def test_none_once_the_second_pass_is_complete(
+        self, tmp_path: Path, golden: tuple[Path, Path]
+    ) -> None:
+        source = prepared(tmp_path, golden, {"q1": "correct"})
+        out = open_second(tmp_path, source)
+        meta = json.loads(out.read_text(encoding="utf-8"))
+        meta["labels"]["q1"]["label"] = "correct"
+        out.write_text(json.dumps(meta), encoding="utf-8")
+        assert ac.open_second_pass(source) is None
+
+    def test_ignores_a_second_pass_over_a_different_worksheet(
+        self, tmp_path: Path, golden: tuple[Path, Path]
+    ) -> None:
+        source = prepared(tmp_path, golden, {"q1": "correct"})
+        stranger = tmp_path / "unrelated-m2.json"
+        stranger.write_text(
+            json.dumps({"source": str(tmp_path / "other.json"), "labels": {"q1": {"label": ""}}}),
+            encoding="utf-8",
+        )
+        assert ac.open_second_pass(source) is None
+
+    def test_survives_unrelated_json_in_the_directory(
+        self, tmp_path: Path, golden: tuple[Path, Path]
+    ) -> None:
+        source = prepared(tmp_path, golden, {"q1": "correct"})
+        (tmp_path / "notes.json").write_text("[1, 2, 3]", encoding="utf-8")
+        (tmp_path / "broken.json").write_text("{not json", encoding="utf-8")
+        assert ac.open_second_pass(source) is None
+
+
+class TestGuardBlindness:
+    def test_refuses_to_show_pass_one_while_pass_two_is_open(
+        self, tmp_path: Path, golden: tuple[Path, Path]
+    ) -> None:
+        # Blindness is a property of what the tool will display, not a
+        # promise the annotator makes to themself.
+        source = prepared(tmp_path, golden, {"q1": "correct", "q2": "partial"})
+        open_second(tmp_path, source)
+        with pytest.raises(SystemExit, match="unlabelled row"):
+            ac.guard_blindness(source, json.loads(source.read_text(encoding="utf-8")))
+
+    def test_allows_it_once_pass_two_is_complete(
+        self, tmp_path: Path, golden: tuple[Path, Path]
+    ) -> None:
+        source = prepared(tmp_path, golden, {"q1": "correct"})
+        out = open_second(tmp_path, source)
+        meta = json.loads(out.read_text(encoding="utf-8"))
+        meta["labels"]["q1"]["label"] = "correct"
+        out.write_text(json.dumps(meta), encoding="utf-8")
+        ac.guard_blindness(source, json.loads(source.read_text(encoding="utf-8")))

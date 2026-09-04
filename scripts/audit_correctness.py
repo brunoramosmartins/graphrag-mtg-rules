@@ -324,6 +324,45 @@ def require_same_prose(first: dict) -> None:
         )
 
 
+def open_second_pass(source: Path) -> Path | None:
+    """A second pass over ``source`` that still has unlabelled rows, if any.
+
+    Found by reading each worksheet's own `source` field rather than by
+    testing one hard-coded path. Tying the guard to `PASS2_PATH` meant any
+    pair addressed through `--out` slipped past it, which is the same
+    mistake one layer up: the guard named a file instead of the
+    relationship it was protecting.
+    """
+    resolved = source.resolve()
+    for candidate in sorted(source.parent.glob("*.json")):
+        if candidate.resolve() == resolved:
+            continue
+        try:
+            meta = json.loads(candidate.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if not isinstance(meta, dict) or "source" not in meta or "labels" not in meta:
+            continue
+        if Path(meta["source"]).resolve() != resolved:
+            continue
+        if any(not (row.get("label") or "").strip() for row in meta["labels"].values()):
+            return candidate
+    return None
+
+
+def withhold_marginals(path: Path, meta: dict) -> bool:
+    """Whether `status` must hide pass 1's label mix.
+
+    `show` was guarded and `status` was not, which left the aggregate
+    reachable by a command nobody thinks of as revealing. Knowing that the
+    first pass said `correct` nine times pulls the second toward saying it
+    nine times — a weaker leak than per-row labels and the same kind. The
+    guard that named one command rather than the property it protected is
+    the guard that misses the second command.
+    """
+    return meta.get("pass") == "m1" and open_second_pass(path) is not None
+
+
 def guard_blindness(path: Path, meta: dict) -> None:
     """Refuse to reveal pass 1 while pass 2 is still being labelled.
 
@@ -333,14 +372,13 @@ def guard_blindness(path: Path, meta: dict) -> None:
     recall, and the agreement number would no longer describe the
     instrument.
     """
-    if meta.get("pass") != "m1" or not PASS2_PATH.exists():
+    if meta.get("pass") != "m1":
         return
-    second = json.loads(PASS2_PATH.read_text(encoding="utf-8"))
-    pending = [q for q, row in second["labels"].items() if not (row.get("label") or "").strip()]
-    if pending:
+    second = open_second_pass(path)
+    if second is not None:
         raise SystemExit(
-            f"{PASS2_PATH} has {len(pending)} unlabelled row(s). Showing {path} now would "
-            "put the first pass's labels in front of the second's remaining rows."
+            f"{second} still has unlabelled rows. Showing {path} now would put the "
+            "first pass's labels in front of the second's remaining rows."
         )
 
 
@@ -367,10 +405,31 @@ def set_label(args: argparse.Namespace) -> int:
     return 0
 
 
+def flag_exposed(args: argparse.Namespace) -> int:
+    """Record that a row's content was discussed outside the worksheet.
+
+    Allowed on a frozen pass, because it changes no label — it changes what
+    the score is permitted to claim. `reaudit score` then reports the
+    ceiling twice, once over every row and once with these excluded, and
+    both figures are pre-committed here rather than picked after the
+    disagreements are visible.
+    """
+    meta = load_worksheet(args.out)
+    if args.question_id not in meta["labels"]:
+        raise SystemExit(f"{args.question_id} is not in {args.out}.")
+    exposed = dict(meta.get("exposed", {}))
+    exposed[args.question_id] = {"reason": args.reason, "recorded_at": date.today().isoformat()}
+    meta["exposed"] = exposed
+    save_worksheet(args.out, meta)
+    print(f"{args.question_id}: flagged as exposed   [{len(exposed)} of {len(meta['labels'])}]")
+    return 0
+
+
 def status(args: argparse.Namespace) -> int:
     """What is labelled, the mix, and whether the floor is met."""
     meta = load_worksheet(args.out)
     labels = meta["labels"]
+    hide = withhold_marginals(args.out, meta)
     counts: dict[str, int] = {}
     pending: list[str] = []
     # Walk the worksheet's own order, so the ids named here are the ones
@@ -385,15 +444,22 @@ def status(args: argparse.Namespace) -> int:
     print(f"{args.out}   pass {meta['pass']}   rubric {meta['rubric_version']}")
     print(f"drawn {meta['drawn_at']}   frozen {meta.get('frozen_at') or 'no'}")
     print(RULE)
-    for label in LABELS:
-        print(f"  {label:<12} {counts.get(label, 0)}")
+    if hide:
+        print("  label mix withheld: a second pass is open, and knowing the first pass's")
+        print("  marginals biases the second toward reproducing them.")
+    else:
+        for label in LABELS:
+            print(f"  {label:<12} {counts.get(label, 0)}")
     print(f"  {'unlabelled':<12} {len(pending)}")
     print(RULE)
     judged = sum(counts.get(label.value, 0) for label in JUDGED)
-    print(f"judged {judged}   void {counts.get(Correctness.VOID.value, 0)}   "
-          f"refused (excluded at build) {meta['pool']['refused']}")
-    if judged and judged < CEILING_FLOOR:
-        print(f"Below the registered floor of {CEILING_FLOOR} — descriptive only, gates nothing.")
+    if not hide:
+        print(f"judged {judged}   void {counts.get(Correctness.VOID.value, 0)}   "
+              f"refused (excluded at build) {meta['pool']['refused']}")
+        if judged and judged < CEILING_FLOOR:
+            print(f"Below the registered floor of {CEILING_FLOOR} — descriptive only, gates nothing.")
+    if meta.get("exposed"):
+        print(f"exposed rows recorded: {len(meta['exposed'])} — the score reports with and without.")
     if pending:
         print(f"\nnext: {', '.join(pending[:5])}")
     return 0
@@ -483,13 +549,15 @@ def reaudit_score(args: argparse.Namespace) -> int:
     first = load_worksheet(Path(second["source"]))
     require_same_prose(first)
 
-    pairs = [(first["labels"][q]["label"], second["labels"][q]["label"]) for q in second["order"]]
+    pairs = [
+        (q, first["labels"][q]["label"], second["labels"][q]["label"]) for q in second["order"]
+    ]
     # Void is not a judgement about the answer, and E-011 excludes it from
     # every denominator. Declared here rather than discovered later.
-    scored = [(a, b) for a, b in pairs if Correctness.VOID.value not in (a, b)]
+    scored = [(q, a, b) for q, a, b in pairs if Correctness.VOID.value not in (a, b)]
     voided = len(pairs) - len(scored)
 
-    agreed = [a == b for a, b in scored]
+    agreed = [a == b for _, a, b in scored]
     interval = wilson_interval(sum(agreed), len(agreed))
     print(f"rubric {second['rubric_version']} @ {second['rubric_hash'][:12]}")
     print(f"{second['elapsed_days']} day(s) between passes   "
@@ -501,10 +569,36 @@ def reaudit_score(args: argparse.Namespace) -> int:
         print(f"{voided} row(s) excluded: one or both passes called the key void.")
     print(f"refused and excluded at build: {second['pool']['refused']}")
 
-    disagreements = [(q, a, b) for q, (a, b) in zip(second["order"], pairs, strict=True) if a != b]
+    # Pre-committed at flag time, not chosen here: a row whose content was
+    # argued about outside the worksheet may agree for a reason that is not
+    # the annotator's consistency. Both figures print; neither is "the"
+    # number until the registry's rule picks one.
+    exposed = set(first.get("exposed", {}))
+    if exposed:
+        clean = [a == b for q, a, b in scored if q not in exposed]
+        clean_interval = wilson_interval(sum(clean), len(clean))
+        print(f"excluding {len(exposed)} exposed row(s): {sum(clean)}/{len(clean)} = "
+              f"{clean_interval.point:.3f} [{clean_interval.low:.3f}, {clean_interval.high:.3f}]")
+        interval, agreed = clean_interval, clean
+
+    # Void-involving pairs are listed apart from the scored disagreements.
+    # Printing them together reads as a contradiction beside a 7/7, and it
+    # conflates two different events: changing one's mind about the answer,
+    # and changing one's mind about whether the key answers its question.
+    disagreements = [(q, a, b) for q, a, b in scored if a != b]
     if disagreements:
         print("\ndisagreements (pass 1 -> pass 2):")
         for question, before, after in disagreements:
+            mark = "  [exposed]" if question in exposed else ""
+            print(f"  {question}: {before} -> {after}{mark}")
+    void_moves = [
+        (q, a, b)
+        for q, a, b in pairs
+        if a != b and Correctness.VOID.value in (a, b)
+    ]
+    if void_moves:
+        print("\nvoid reassessments, excluded from the denominator:")
+        for question, before, after in void_moves:
             print(f"  {question}: {before} -> {after}")
 
     print(RULE)
@@ -550,6 +644,12 @@ def main() -> int:
     setter.add_argument("--note", default="")
     setter.add_argument("--out", type=Path, default=PASS1_PATH)
     setter.set_defaults(func=set_label)
+
+    flg = sub.add_parser("flag", help="record that a row was discussed outside the worksheet")
+    flg.add_argument("question_id")
+    flg.add_argument("--reason", required=True)
+    flg.add_argument("--out", type=Path, default=PASS1_PATH)
+    flg.set_defaults(func=flag_exposed)
 
     stat = sub.add_parser("status", help="progress, the mix, and the floor")
     stat.add_argument("--out", type=Path, default=PASS1_PATH)

@@ -325,6 +325,35 @@ multiple-comparison correction when strata are tested jointly.
   compared per arm; a material difference means an arm-A serialization
   adapter is built, registered and published **before** the evaluation run.
 
+- **Amendment 2026-09-04 — the error taxonomy is fixed before the run.**
+  The roadmap's DoD requires an error analysis, and an error analysis whose
+  categories are invented after seeing which ones each arm loses on is a
+  story fitted to the data. The categories are therefore fixed now, with no
+  E-001 output in existence. They were drafted by an external LLM asked to
+  read a set of dress-rehearsal answers, and the provenance is recorded
+  because the categories are the usable part of that reading while its
+  conclusion was not: it was built on 9 rows that happened to be visible, a
+  slice containing no `correct` label when the full 36 hold 9 — a
+  composition a random draw would produce about 5% of the time.
+
+  | code | failure |
+  |---|---|
+  | `retrieval-miss` | the governing rule never reached the context |
+  | `linking` | the wrong card, keyword or format was resolved from the question |
+  | `event-order` | the sequence of events is wrong (stack order, resolution order, multiple triggers) |
+  | `state-time` | the right rule read at the wrong moment — state at resolution against state when the ability triggered, delayed triggers |
+  | `layer` | continuous effects composed wrongly (P/T from several effects, ability removal against an effect still applying) |
+  | `verdict-only` | every step right, final answer wrong |
+  | `key-mismatch` | the answer is defensible and the key disagrees |
+
+  Every judged answer in the rehearsal and in the evaluation run gets
+  exactly one code, assigned from the answer and the key alone. The
+  distribution is published **per arm and per stratum** — that is the point:
+  a taxonomy applied to one arm describes a system, and applied to both it
+  says where a graph buys something a passage retriever cannot. `key-mismatch`
+  exists so that disagreeing with the key has somewhere to go other than a
+  category that blames the system.
+
 - **Actual result:** _pending (Phase 8)._
 
 ## E-002 — MetaQA calibration
@@ -2732,6 +2761,60 @@ the number, so the sample is pinned here, before the first label exists.
   vector arm gets its own pass-1 sample as soon as `baseline_vector.py`
   produces dress-rehearsal answers. Until then no correctness figure for
   that arm is gated by this number.
+
+- **Amendment 2026-09-04 (pass 1 frozen the same day, pass 2 not built) —
+  four rows discussed outside the worksheet, and a guard that named a
+  command instead of a property.**
+
+  After freezing pass 1, the annotator asked an external LLM to assess how
+  retrieval was performing on a set of these questions. **No label was
+  shared**; the reply nonetheless named `rg-1702`, `rg-256`, `rg-3859` and
+  `rg-6417` with a written argument for why each answer fails. Read after
+  labelling, that argument can move pass 2 on those rows — and not in a
+  predictable direction: agreeing with the annotator's first call inflates
+  agreement, contradicting it deflates. Four of 36, direction unknown.
+
+  Handled by recording rather than deleting. `audit_correctness.py flag`
+  marks a row as exposed on a frozen pass — it changes no label, it changes
+  what the score may claim — and `reaudit score` now prints the ceiling over
+  every row *and* over the unexposed rows, with the second taken as the
+  reported figure. Both are pre-committed here, before either exists.
+
+  **The instrument gap this exposed is the more useful half.** `show` was
+  guarded against revealing pass 1 while pass 2 was open; `status` was not,
+  and it prints the label mix. Knowing the first pass said `correct` nine
+  times pulls the second toward saying it nine times — a weaker leak than
+  per-row labels and the same kind. The guard named a command instead of the
+  property it protected, which is the same shape as the teardown that named
+  a profile instead of a container. `status` now withholds the mix while a
+  second pass is open.
+
+  Neither guard would have stopped what actually happened: the annotator
+  exporting rows and importing an analysis. That is not a hole to be closed
+  in code — it is a rule that had never been written down, and it is written
+  down now: **while a pass is open, rows from it are not shown to anything
+  that can argue back.**
+
+- **Amendment 2026-09-04 — what this pool cannot support, independent of the
+  above.** The 36 rows carry **no 1-hop question at all**: 21
+  `interaction_multihop`, 14 `negative_temporal`, 1 `keyword_rule_2hop`, and
+  26 two-hop against 10 three-hop. E-007 drew that pool to audit grounding on
+  the hard strata, not to represent the golden set. But E-001 reports
+  correctness across five strata including `definition_1hop` and
+  `legality_1hop`, and self-agreement is not a constant across question
+  difficulty — a clear-cut answer is easier to re-judge consistently than a
+  four-step interaction. A ceiling measured only on the hard half is
+  therefore the wrong gate for the easy strata, and this was true before any
+  external reading happened.
+
+  Registered consequence: the ceiling as it stands is reported **for the
+  multi-hop strata**, and gating correctness on `definition_1hop` or
+  `legality_1hop` requires a batch that contains them. The Phase 4
+  development split — 20 golden questions, outside E-001's evaluation set by
+  construction, spanning all five strata — is the batch, and it is drawn as
+  **batch 2** of the same pass 1 rather than as a second experiment. Frozen
+  the day it is labelled; its own five-day clock then runs. Every reported
+  figure names its batch.
 
 ## E-012 — is long-context generation the bottleneck, and is it size or depth?
 

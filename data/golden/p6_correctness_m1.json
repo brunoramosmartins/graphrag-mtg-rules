@@ -209,5 +209,23 @@
       "label": "incorrect",
       "note": ""
     }
+  },
+  "exposed": {
+    "rg-1702": {
+      "reason": "an external LLM was asked to assess retrieval on this question; the reply named it with a written argument for why the answer fails. Labels were never shared.",
+      "recorded_at": "2026-09-04"
+    },
+    "rg-256": {
+      "reason": "an external LLM was asked to assess retrieval on this question; the reply named it with a written argument for why the answer fails. Labels were never shared.",
+      "recorded_at": "2026-09-04"
+    },
+    "rg-3859": {
+      "reason": "an external LLM was asked to assess retrieval on this question; the reply named it with a written argument for why the answer fails. Labels were never shared.",
+      "recorded_at": "2026-09-04"
+    },
+    "rg-6417": {
+      "reason": "an external LLM was asked to assess retrieval on this question; the reply named it with a written argument for why the answer fails. Labels were never shared.",
+      "recorded_at": "2026-09-04"
+    }
   }
 }
