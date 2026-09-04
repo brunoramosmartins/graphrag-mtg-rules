@@ -90,6 +90,44 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — The run I called arm B was arm C, and the numbers did not say so
+
+Wiring arms A and C into the harness, I found that `run_eval.py` had been
+passing `rule_search` unconditionally. So the run I recorded as "arm B, the
+dress rehearsal" was the shipped hybrid with the TF-IDF text half attached.
+
+**What makes this worth a full entry is why it survived.** Text search fires
+on 2 of the 20 development questions. A graph-only arm and a routed hybrid
+therefore differ on a tenth of the split, and every summary number — 20 of
+20 resolved, 19 answered, 1 refused — looked exactly as a graph-only arm
+would look. The evidence was in `templates_run`, which carried `rule_search`
+on two questions, and I did not read it because nothing prompted me to. The
+mislabel was found by building arm C and asking a different question, not by
+any check I had written.
+
+Re-run properly, arm B gives 18 resolved and **2 `no_seed`** — the correct
+behaviour for an arm defined as having no text half, and a fact the
+mislabelled run concealed. That is the concrete cost: a registered arm's
+most characteristic property was invisible.
+
+**The ceiling's batch 2 is arm C prose.** The 19 labels stand, because the
+prose did not change — only the name for it — and the answers file is
+renamed with the worksheet's `sources` corrected. Following it back: E-007's
+answers ran under "rule_search on", so batch 1 is arm C too. The two batches
+are consistent, and my earlier note that the ceiling is measured on
+"graph-arm prose" should have said **shipped-hybrid prose**. That happens to
+be the arm the README figure quotes, so the ceiling is measured on the right
+prose by accident rather than by design, which is worth saying out loud
+rather than quietly enjoying.
+
+The fix is structural. Arm identity now determines configuration in one
+function, and every run prints the configuration it used —
+`graph only, no text retriever passed` against
+`graph + vector text half, routed (shipped)`. A mislabel would now have to
+be written there on purpose. Correcting the care rather than the code would
+have left the same trap for the evaluation split, where there is no second
+draw.
+
 ## 2026-09-04 — Arm C: pin 12 fixed the wrong half of the problem
 
 Arm C is built, and it took twenty minutes to write because pin 12 was

@@ -444,7 +444,35 @@ multiple-comparison correction when strata are tested jointly.
   `scripts/eval_rule_search.py` and E-006's figures keep measuring what
   they measured.
 
-- **Dress rehearsal, arm B only (2026-09-04, development split, nothing
+- **Correction 2026-09-04 — the run recorded below as "arm B" was arm C.**
+  `run_eval.py` passed `rule_search` unconditionally, so the traversal ran
+  with the TF-IDF text half attached. Text search fires on 2 of the 20
+  development questions, so the numbers looked like a graph-only arm and
+  nothing in the output disagreed; the retrieval dump's `templates_run`
+  carries `rule_search` on `hand-doubling-season-planeswalker` and `rg-30`,
+  which is where it was found. Corrected rather than edited in place:
+
+  - The run below is **arm C, routed, TF-IDF** — the shipped configuration.
+  - Arm B, genuinely graph-only, was re-run on 2026-09-04: 18 of 20
+    `resolved` and **2 `no_seed`**, which is the correct behaviour for an
+    arm defined as having no text half and is a fact the mislabelled run
+    concealed.
+  - **E-011a's batch 2 is arm C prose, not arm B.** Its 19 labels stand —
+    the prose did not change, only the name for it — and the answers file
+    is renamed `runs/e001_C_answers_dev.jsonl` with the worksheet's
+    `sources` corrected. E-007's answers, which are batch 1, ran under
+    "rule_search on" and are therefore **also arm C**, so the two batches
+    are consistent and the earlier note that the ceiling is measured on
+    "graph-arm prose" should read **shipped-hybrid prose**. That is the
+    arm the README figure quotes, so the ceiling is measured on the right
+    prose by accident rather than by design, which is worth saying plainly.
+
+  **The fix is structural, not a correction of care.** Arm identity now
+  determines configuration in one function, `run_eval.py::configure`, and
+  every run prints the configuration it used. A mislabel would now have to
+  be written there on purpose.
+
+- **Dress rehearsal (2026-09-04, development split, nothing
   judged).** `scripts/run_eval.py` exists and runs arm B end to end over the
   20 development questions. Recorded now because the run happened, not
   because it produced a result — **no answer here has been scored**, and the

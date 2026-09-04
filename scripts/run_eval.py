@@ -61,10 +61,16 @@ from graphrag_mtg.evaluation.dense import (
 from graphrag_mtg.extraction.llm import LlmClient, estimate_cost
 from graphrag_mtg.generation.answerer import PROMPT_VERSION, SYSTEM, answer, build_prompt
 from graphrag_mtg.graph.connection import driver_session
+from graphrag_mtg.evaluation.arm_c import VectorRuleSearch
+from graphrag_mtg.evaluation.baseline_vector import build_arm
 from graphrag_mtg.retrieval.pipeline import neo4j_runner, retrieve
 from graphrag_mtg.retrieval.subgraph import (
     DEFAULT_KIND_CAP,
     DEFAULT_TOKEN_BUDGET,
+    Outcome,
+    Subgraph,
+    add_evidence,
+    enforce_budget,
     serialize,
 )
 
@@ -92,10 +98,17 @@ ANSWERS = "runs/e001_{arm}_answers_{split}.jsonl"
 #: rather than buried in a call.
 NOTICE = False
 
-#: Arms this file can retrieve and generate with. C is registered and not
-#: built; naming it here keeps `--arm` from implying B is the experiment.
-ARMS = {"B": "graph-only traversal"}
-UNBUILT = {"C": "hybrid (ADR-007)"}
+#: The three registered arms. A is the control, B is the thesis, C is the
+#: shipped system and the README figure.
+ARMS = {
+    "A": "vector baseline, no graph",
+    "B": "graph-only traversal",
+    "C": "hybrid — graph plus the shared text retriever (shipped)",
+}
+
+#: What remains unbuilt, named so a run does not read as the whole
+#: rehearsal. The rehearsal is binding only when the judge has run too.
+UNBUILT: dict[str, str] = {}
 
 RULINGS_PATH = Path("data/raw/scryfall_rulings.json")
 VECTORS_PATH = Path("data/interim/e001_vectors.bin")
@@ -148,8 +161,83 @@ def guard_side(args: argparse.Namespace) -> str:
     return args.split_side
 
 
+def vector_only_subgraph(
+    question: str, searcher: VectorRuleSearch, token_budget: int, kind_cap: int
+) -> Subgraph:
+    """Arm A's retrieval, in the same container every other arm produces.
+
+    Arm A touches no graph, but it renders through `subgraph.serialize`
+    and reaches the model through the same `build_prompt` as arms B and C.
+    That is pin 1's "one protocol" made structural rather than careful: a
+    second renderer for one arm is a place where the two can drift, and
+    the drift would land on the citation-quality comparison pin 1 runs.
+    """
+    subgraph = Subgraph(question=question, outcome=Outcome.RESOLVED, note="vector retrieval")
+    subgraph.templates_run.append(searcher.template_name)
+    add_evidence(subgraph, searcher.evidence(question), kind_cap=kind_cap)
+    enforce_budget(subgraph, token_budget)
+    if subgraph.is_empty:
+        subgraph.outcome = Outcome.NO_MATCH
+        subgraph.note = "vector retrieval returned nothing"
+    return subgraph
+
+
+def vector_searcher(args: argparse.Namespace) -> VectorRuleSearch:
+    """Arm A's retriever, wrapped in arm B's contract.
+
+    Built with a generous internal budget so it does not pre-trim: the
+    Subgraph's `enforce_budget` is the single budget authority for every
+    arm, and two trims with two token estimates is a drift hazard dressed
+    as belt and braces.
+    """
+    documents = load_corpus(args)
+    vectors = None
+    if args.mode in {"hybrid", "dense"}:
+        vectors = VectorCache(args.vectors).load(
+            corpus_hash=corpus_sha256(documents),
+            encoder=args.embedding_model,
+            count=len(documents),
+        )
+        if vectors is None:
+            raise SystemExit(
+                f"No vectors at {args.vectors} for this corpus and encoder. "
+                "Run `run_eval.py index` first, or pass --mode lexical."
+            )
+    arm = build_arm(
+        documents,
+        mode=args.mode,
+        vectors=vectors,
+        encoder=OpenAiEncoder(model=args.embedding_model) if vectors is not None else None,
+        token_budget=10**9,
+    )
+    return VectorRuleSearch(arm, iterative=args.iterative)
+
+
+def configure(args: argparse.Namespace):
+    """The retrieval configuration for one arm, from the arm alone.
+
+    Returns `(text_searcher, uses_graph, always_text)`.
+
+    This function exists because the harness previously passed
+    `rule_search` unconditionally and labelled the result **arm B**. Text
+    search fires on 2 of the 20 development questions, so the run was arm
+    C routed with TF-IDF wearing arm B's name, and nothing in the output
+    said otherwise. Arm identity now determines configuration in one
+    place, so a mislabel would have to be written here on purpose.
+    """
+    if args.arm == "A":
+        return vector_searcher(args), False, True
+    if args.arm == "B":
+        # Graph-only means graph-only: no text retriever is passed at all,
+        # so a routed question comes back as NO_SEED rather than quietly
+        # reaching for the text half arm B is defined as not having.
+        return None, True, False
+    text = vector_searcher(args) if args.text == "vector" else "tfidf"
+    return text, True, args.always_text
+
+
 def run_retrieval(args: argparse.Namespace) -> int:
-    """Arm B's subgraphs for every question on the side. No LLM, no cost."""
+    """One arm's contexts for every question on the side. No LLM, no cost."""
     side = guard_side(args)
     rows = question_rows(args.golden, args.split, side)
     if not rows:
@@ -157,7 +245,10 @@ def run_retrieval(args: argparse.Namespace) -> int:
     if args.limit:
         rows = rows[: args.limit]
 
-    linker, searcher, oracle_text = build_stack(args.cr)
+    searcher, uses_graph, always_text = configure(args)
+    linker, tfidf, oracle_text = build_stack(args.cr)
+    if searcher == "tfidf":
+        searcher = tfidf
     out = args.out or Path(RETRIEVAL.format(arm=args.arm, split=side))
     out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -166,15 +257,21 @@ def run_retrieval(args: argparse.Namespace) -> int:
         run = neo4j_runner(session)
         for row in rows:
             question = text_of(row, args.cache_dir)
-            subgraph = retrieve(
-                question,
-                linker=linker,
-                run=run,
-                rule_search=searcher,
-                oracle_text=oracle_text,
-                token_budget=args.token_budget,
-                kind_cap=args.kind_cap,
-            )
+            if uses_graph:
+                subgraph = retrieve(
+                    question,
+                    linker=linker,
+                    run=run,
+                    rule_search=searcher,
+                    oracle_text=oracle_text,
+                    token_budget=args.token_budget,
+                    kind_cap=args.kind_cap,
+                    always_text_search=always_text,
+                )
+            else:
+                subgraph = vector_only_subgraph(
+                    question, searcher, args.token_budget, args.kind_cap
+                )
             outcomes[str(subgraph.outcome)] += 1
             handle.write(
                 json.dumps(
@@ -203,13 +300,30 @@ def run_retrieval(args: argparse.Namespace) -> int:
             )
 
     print(f"arm {args.arm} ({ARMS[args.arm]})   split {side}   {len(rows)} question(s)")
-    print(f"budget {args.token_budget} tokens, kind cap {args.kind_cap}, notice {NOTICE}")
+    print(f"  {describe(args)}")
+    print(f"  budget {args.token_budget} tokens, kind cap {args.kind_cap}, notice {NOTICE}")
     print(f"outcomes: {dict(outcomes)}")
     print(f"-> {out}")
     if UNBUILT:
         print(f"\nNot run because not built: {', '.join(f'{k} ({v})' for k, v in UNBUILT.items())}.")
-        print("The dress rehearsal is not complete until all three arms and the judge have.")
+    print("\nThe dress rehearsal is binding only once every arm and the judge have run.")
     return 0
+
+
+def describe(args: argparse.Namespace) -> str:
+    """The configuration, printed on every run so the log names the arm.
+
+    The harness previously passed a text retriever unconditionally and
+    labelled the output arm B. Text search fires on 2 of 20 development
+    questions, so nothing in the numbers looked wrong. A line that spells
+    out the configuration is what makes that visible next time.
+    """
+    if args.arm == "A":
+        return f"vector only, mode {args.mode}, iterative {args.iterative}"
+    if args.arm == "B":
+        return "graph only, no text retriever passed"
+    routing = "always-on" if args.always_text else "routed (shipped)"
+    return f"graph + {args.text} text half, {routing}, mode {args.mode}, iterative {args.iterative}"
 
 
 def run_generation(args: argparse.Namespace) -> int:
@@ -359,7 +473,33 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--arm", choices=sorted(ARMS), default="B")
+    common.add_argument("--arm", choices=sorted(ARMS), default="C")
+    common.add_argument(
+        "--mode",
+        choices=("hybrid", "dense", "lexical"),
+        default="hybrid",
+        help="the vector retriever's mode; dense and lexical are pin 2's ablations",
+    )
+    common.add_argument(
+        "--text",
+        choices=("vector", "tfidf"),
+        default="vector",
+        help="arm C's text half; tfidf is pin 12's registered ablation",
+    )
+    common.add_argument(
+        "--always-text",
+        action="store_true",
+        help="arm C: run text retrieval on every question, not only where routed",
+    )
+    common.add_argument(
+        "--iterative",
+        action="store_true",
+        help="pin 13's protocol variable, offered to every arm that can accept it",
+    )
+    common.add_argument("--vectors", type=Path, default=VECTORS_PATH)
+    common.add_argument("--embedding-model", default=DEFAULT_EMBEDDING_MODEL)
+    common.add_argument("--rulings", type=Path, default=RULINGS_PATH)
+    common.add_argument("--cr", type=Path, default=CR_TXT_PATH)
     common.add_argument("--golden", type=Path, default=GOLDEN_DIR)
     common.add_argument("--split", type=Path, default=SPLIT_PATH)
     common.add_argument("--split-side", choices=("dev", "eval"), default="dev")
@@ -367,8 +507,7 @@ def main() -> int:
     common.add_argument("--cache-dir", type=Path, default=CACHE_DIR)
     common.add_argument("--limit", type=int, default=0, help="run at most N questions")
 
-    ret = sub.add_parser("retrieve", parents=[common], help="arm B subgraphs (no LLM)")
-    ret.add_argument("--cr", type=Path, default=CR_TXT_PATH)
+    ret = sub.add_parser("retrieve", parents=[common], help="one arm's contexts (no LLM)")
     ret.add_argument("--token-budget", type=int, default=DEFAULT_TOKEN_BUDGET)
     ret.add_argument("--kind-cap", type=int, default=DEFAULT_KIND_CAP)
     ret.add_argument("--out", type=Path, default=None)
@@ -382,11 +521,12 @@ def main() -> int:
     gen.add_argument("--dry-run", action="store_true", help="print the estimate, send nothing")
     gen.set_defaults(func=run_generation)
 
-    idx = sub.add_parser("index", help="build arm A's corpus and embed it (costs tokens)")
+    idx = sub.add_parser("index", help="build the shared corpus and embed it (costs tokens)")
     idx.add_argument("--cr", type=Path, default=CR_TXT_PATH)
     idx.add_argument("--rulings", type=Path, default=RULINGS_PATH)
     idx.add_argument("--vectors", type=Path, default=VECTORS_PATH)
     idx.add_argument("--model", default=DEFAULT_EMBEDDING_MODEL)
+    idx.add_argument("--embedding-model", default=DEFAULT_EMBEDDING_MODEL)
     idx.add_argument("--dry-run", action="store_true", help="print the estimate, send nothing")
     idx.set_defaults(func=index)
 

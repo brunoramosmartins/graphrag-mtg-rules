@@ -111,10 +111,81 @@ class TestRegisteredConfiguration:
         # trusted to stay where it was put.
         assert run_eval.NOTICE is False
 
-    def test_the_unbuilt_arms_are_named(self) -> None:
-        # Naming what is missing keeps `--arm` from implying the offered
-        # arms are the experiment, and keeps the rehearsal from reading
-        # complete. Arm A left this set when it was built, and this test
-        # is what noticed.
-        assert set(run_eval.ARMS) == {"B"}
-        assert set(run_eval.UNBUILT) == {"C"}
+    def test_all_three_registered_arms_are_offerable(self) -> None:
+        assert set(run_eval.ARMS) == {"A", "B", "C"}
+        assert run_eval.UNBUILT == {}
+
+
+class TestConfigure:
+    """Arm identity determines configuration, in one place.
+
+    The harness previously passed a text retriever unconditionally and
+    labelled the output arm B. Text search fires on 2 of 20 development
+    questions, so every summary number looked exactly as a graph-only arm
+    would look, and the mislabel survived a full run and a registry entry.
+    """
+
+    def namespace(self, arm: str, **kw) -> argparse.Namespace:
+        defaults = {
+            "arm": arm,
+            "mode": "lexical",
+            "text": "tfidf",
+            "always_text": False,
+            "iterative": False,
+        }
+        return argparse.Namespace(**{**defaults, **kw})
+
+    def test_arm_b_is_handed_no_text_retriever_at_all(self) -> None:
+        # Graph-only means graph-only: a routed question must come back as
+        # NO_SEED rather than quietly reaching for a half arm B is defined
+        # as not having. Re-run properly, arm B gives 2 no_seed of 20 —
+        # the property the mislabelled run concealed.
+        searcher, uses_graph, always_text = run_eval.configure(self.namespace("B"))
+        assert searcher is None and uses_graph and not always_text
+
+    def test_arm_c_gets_a_text_half_and_the_graph(self) -> None:
+        searcher, uses_graph, _ = run_eval.configure(self.namespace("C"))
+        assert searcher == "tfidf" and uses_graph
+
+    def test_arm_c_routing_is_off_by_default(self) -> None:
+        # Off is the shipped behaviour, and always-on is the published
+        # ablation — not the other way round.
+        _, _, always_text = run_eval.configure(self.namespace("C"))
+        assert always_text is False
+        _, _, always_text = run_eval.configure(self.namespace("C", always_text=True))
+        assert always_text is True
+
+    def test_arm_a_touches_no_graph(self) -> None:
+        _, uses_graph, always_text = run_eval.configure(self.namespace("A", mode="lexical"))
+        assert not uses_graph and always_text
+
+
+class TestDescribe:
+    """Every run prints the configuration it used.
+
+    A line spelling out the configuration is what would have made the
+    arm B / arm C mislabel visible on the run that produced it.
+    """
+
+    def namespace(self, arm: str, **kw) -> argparse.Namespace:
+        defaults = {
+            "arm": arm,
+            "mode": "hybrid",
+            "text": "vector",
+            "always_text": False,
+            "iterative": False,
+        }
+        return argparse.Namespace(**{**defaults, **kw})
+
+    def test_arm_b_says_it_has_no_text_retriever(self) -> None:
+        assert "no text retriever" in run_eval.describe(self.namespace("B"))
+
+    def test_arm_c_names_its_text_half_and_its_routing(self) -> None:
+        line = run_eval.describe(self.namespace("C"))
+        assert "vector text half" in line and "routed (shipped)" in line
+
+    def test_arm_c_always_on_says_so(self) -> None:
+        assert "always-on" in run_eval.describe(self.namespace("C", always_text=True))
+
+    def test_arm_a_says_it_uses_no_graph(self) -> None:
+        assert "vector only" in run_eval.describe(self.namespace("A"))
