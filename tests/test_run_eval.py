@@ -166,6 +166,63 @@ class TestPlanArm:
         assert run_eval.plan_arm(self.namespace("A", text="tfidf")).retriever == "vector"
 
 
+class TestConfigSlug:
+    """Run files are named by configuration, because runs/ is gitignored.
+
+    A generated answers file is the only copy of the prose a label
+    describes. E-007 lost ten answers to a shared default path, and
+    E-011a's batch 2 points at one of these files with 19 finished labels
+    behind it.
+    """
+
+    def namespace(self, arm: str, **kw) -> argparse.Namespace:
+        defaults = {
+            "arm": arm,
+            "mode": "hybrid",
+            "text": "vector",
+            "always_text": False,
+            "iterative": False,
+        }
+        return argparse.Namespace(**{**defaults, **kw})
+
+    def test_arm_c_ablations_cannot_collide(self) -> None:
+        # They differ only in flags, so an arm-only name would have let
+        # the vector run overwrite the TF-IDF run the ceiling is measured
+        # on. The overwrite guard would have fired; a name that cannot
+        # collide beats a guard that has to.
+        slugs = {
+            run_eval.config_slug(self.namespace("C")),
+            run_eval.config_slug(self.namespace("C", text="tfidf")),
+            run_eval.config_slug(self.namespace("C", always_text=True)),
+            run_eval.config_slug(self.namespace("C", mode="dense")),
+        }
+        assert len(slugs) == 4
+
+    def test_the_iterative_ablation_is_a_different_file(self) -> None:
+        plain = run_eval.config_slug(self.namespace("A"))
+        iterative = run_eval.config_slug(self.namespace("A", iterative=True))
+        assert plain != iterative and iterative.endswith("-iter")
+
+    def test_arm_b_has_nothing_to_vary(self) -> None:
+        # No text half and no retriever mode, so its slug is just the arm.
+        assert run_eval.config_slug(self.namespace("B", mode="dense", text="tfidf")) == "B"
+
+
+class TestRegisteredGates:
+    def test_the_order_disagreement_gate_is_the_registered_value(self) -> None:
+        # E-011 point 7: above this share the pairwise win rate is not
+        # published as the head-to-head at all. Registered there, not
+        # chosen in the harness.
+        assert run_eval.ORDER_DISAGREEMENT_GATE == 0.20
+
+    def test_a_pair_file_names_both_sides(self) -> None:
+        # Two comparisons sharing a filename would silently overwrite one
+        # another, and both are the only copy of what a judge decided.
+        one = run_eval.PAIRS.format(left="A-hybrid", right="B", split="dev")
+        other = run_eval.PAIRS.format(left="B", right="A-hybrid", split="dev")
+        assert one != other
+
+
 class TestDescribe:
     """Every run prints the configuration it used.
 

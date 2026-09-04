@@ -90,6 +90,46 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — A pre-registered gate fired, and it cost the prettier figure
+
+The pairwise head-to-head runs, and E-011 point 7's gate fired on two of
+three comparisons: order disagreement **0.368** for B vs A and for C vs A,
+against a registered threshold of 0.20. So for those two the pairwise win
+rate is withdrawn as the head-to-head, and the per-stratum correctness
+comparison is the headline instead.
+
+This is what pre-registration is for, and it is worth being honest that I
+would not have liked deciding it afterwards. A win-rate table is the
+figure a portfolio README wants — one number, one direction, easy to read.
+Discovering that the judge answers differently when the two answers swap
+places on 37% of pairs, and *then* choosing which figure to publish, is a
+choice I could have argued either way. Having chosen in advance, there is
+nothing to argue.
+
+C vs B came in at 0.158, under the gate. The two comparisons above it both
+involve arm A, whose contexts hold 55 to 100 documents against the graph
+arms' 8 to 40. Position bias plausibly rises when the answers differ in
+shape — but that is a guess off three numbers, it is untested, and I have
+written it into the registry as a hypothesis precisely so it cannot later
+be quoted as something the experiment showed.
+
+**The rehearsal now runs end to end**: index, retrieve, generate, judge,
+compare, report. Per-stratum correctness has all four configurations
+between 0.40 and 0.50 overall and no McNemar below p = 0.5. Nothing
+separates — which at n = 20 is the expected outcome whatever is true, since
+E-001's own power analysis already said the 57-question evaluation split
+cannot clear the strictest Holm step on `negative_temporal`. I want that
+stated plainly rather than read as encouraging or discouraging: it is a
+fact about the rehearsal's power.
+
+One thing it does establish, and it is the one I care most about:
+`legality_1hop` reads **1.00 for every arm**. That is pin 8 working. Before
+the corpus carried card legality as prose, arm A could not have answered
+that stratum at all, the graph arms would have swept it, and 26% of the
+evaluation split would have produced a "graph wins" reading with nothing to
+do with graphs. The stratum is now uninformative in the good way — every
+arm gets it right — instead of decisive in the bad way.
+
 ## 2026-09-04 — Three arms judged, and an audit that was blind by luck
 
 All three arms generated and judged on the development split — US$ 0.05

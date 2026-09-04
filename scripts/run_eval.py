@@ -76,9 +76,15 @@ from graphrag_mtg.evaluation.dense import (
 from graphrag_mtg.evaluation.judge import (
     CORRECTNESS_SYSTEM,
     JUDGE_PROMPT_VERSION,
+    PREFERENCE_SYSTEM,
+    compare,
     correctness_prompt,
+    order_disagreement_rate,
+    preference_prompt,
+    resolve_pair,
     score,
 )
+from graphrag_mtg.evaluation.metrics import mcnemar, wilson_interval
 from graphrag_mtg.evaluation.rubric import RUBRIC_VERSION, render_for_judgement, rubric_hash
 from graphrag_mtg.extraction.llm import LlmClient, estimate_cost
 from graphrag_mtg.generation.answerer import PROMPT_VERSION, SYSTEM, answer, build_prompt
@@ -113,6 +119,13 @@ CACHE_DIR = Path("data/interim/golden_cache")
 RETRIEVAL = "runs/e001_{slug}_retrieval_{split}.jsonl"
 ANSWERS = "runs/e001_{slug}_answers_{split}.jsonl"
 VERDICTS = "runs/e001_{slug}_verdicts_{split}.jsonl"
+PAIRS = "runs/e001_pairs_{left}_vs_{right}_{split}.jsonl"
+
+#: E-011 point 7. Above this share of order-disagreeing pairs the pairwise
+#: win rate is not published as the head-to-head — the per-stratum
+#: correctness comparison becomes the headline. Registered there, not
+#: chosen here.
+ORDER_DISAGREEMENT_GATE = 0.20
 
 #: Output cap per verdict. Two lines is the required format; this is
 #: generous enough for a model that reasons first and small enough that a
@@ -145,6 +158,8 @@ VECTORS_PATH = Path("data/interim/e001_vectors.bin")
 #: applied quietly — a document silently cut in half is a retrieval miss
 #: with no visible cause.
 MAX_EMBED_CHARS = 24_000
+
+RULE_LINE = "-" * 78
 
 
 def question_rows(golden: Path, split: Path, side: str) -> list[dict]:
@@ -602,6 +617,174 @@ def run_judge(args: argparse.Namespace) -> int:
     return 0
 
 
+def load_answers(path: Path) -> dict[str, dict]:
+    if not path.exists():
+        raise SystemExit(f"No answers at {path}. Run `generate` for that configuration first.")
+    return {
+        row["question_id"]: row
+        for row in (json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
+    }
+
+
+def run_compare(args: argparse.Namespace) -> int:
+    """Pairwise head-to-head between two configurations, in both orders.
+
+    Every pair is judged twice with the two answers swapped, because a
+    model that reads position rather than content answers differently when
+    they trade places. A pair whose orderings disagree is a **tie**,
+    registered in E-011 before any pair existed, and above an overall
+    disagreement rate of 0.20 the pairwise win rate is **not** published as
+    the head-to-head at all — the per-stratum correctness comparison
+    becomes the headline instead.
+    """
+    side = guard_side(args)
+    left_path = args.left_answers or Path(ANSWERS.format(slug=args.left, split=side))
+    right_path = args.right_answers or Path(ANSWERS.format(slug=args.right, split=side))
+    out = args.out or Path(PAIRS.format(left=args.left, right=args.right, split=side))
+    if out.exists() and not args.force and not args.dry_run:
+        raise SystemExit(f"{out} already exists — pass --force only if you mean to replace it.")
+
+    left, right = load_answers(left_path), load_answers(right_path)
+    rows = {r["id"]: r for r in question_rows(args.golden, args.split, side)}
+    shared = [q for q in rows if q in left and q in right]
+    if args.limit:
+        shared = shared[: args.limit]
+    if not shared:
+        raise SystemExit("The two files share no question.")
+
+    def blank(row: dict) -> bool:
+        return bool(row["refused"]) or not render_for_judgement(row["text"]).strip()
+
+    billed = [q for q in shared if not (blank(left[q]) and blank(right[q]))]
+    client = LlmClient(model=args.model, max_tokens=MAX_JUDGE_TOKENS, temperature=0.0)
+    prompts = [
+        preference_prompt(
+            text_of(rows[q], args.cache_dir),
+            left[q]["text"],
+            right[q]["text"],
+            key_for(rows[q], args.cache_dir),
+        )
+        for q in billed
+    ]
+    estimate = estimate_cost(
+        prompts * 2,
+        model=client.model,
+        output_tokens_per_call=MAX_JUDGE_TOKENS,
+        system=PREFERENCE_SYSTEM,
+    )
+    print(f"{args.left}  vs  {args.right}   split {side}   {len(shared)} shared question(s)")
+    print(f"judge {client.model} @ temperature 0, prompt {JUDGE_PROMPT_VERSION}, "
+          f"rubric {RUBRIC_VERSION} @ {rubric_hash()[:12]}")
+    print(f"both orders on {len(billed)}, {len(shared) - len(billed)} tied by rule (both blank)")
+    print(f"estimate: {estimate}")
+    if args.dry_run:
+        print("\nDry run: nothing was sent.")
+        return 0
+
+    generate = lambda system, prompt: client.complete_text(prompt, system=system)  # noqa: E731
+    pairs: list[tuple] = []
+    results: list[dict] = []
+    for qid in shared:
+        question, key = text_of(rows[qid], args.cache_dir), key_for(rows[qid], args.cache_dir)
+        if qid not in billed:
+            results.append({"question_id": qid, "stratum": rows[qid]["stratum"],
+                            "winner": "tie", "by_rule": True, "order_disagreed": False})
+            continue
+        first = compare(qid, question, left[qid]["text"], right[qid]["text"], key, generate,
+                        left_arm=args.left, right_arm=args.right)
+        second = compare(qid, question, right[qid]["text"], left[qid]["text"], key, generate,
+                         left_arm=args.right, right_arm=args.left)
+        pairs.append((first, second))
+        results.append({
+            "question_id": qid,
+            "stratum": rows[qid]["stratum"],
+            "winner": resolve_pair(first, second),
+            "by_rule": False,
+            "order_disagreed": first.choice() != second.choice(),
+            "first": asdict(first),
+            "second": asdict(second),
+        })
+        print(f"  {qid:<52} {results[-1]['winner']}"
+              f"{'  [orders disagreed]' if results[-1]['order_disagreed'] else ''}")
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", encoding="utf-8") as handle:
+        for record in results:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    rate = order_disagreement_rate(pairs)
+    tally = Counter(r["winner"] for r in results)
+    print(f"\n{dict(tally)}   -> {out}")
+    print(f"order disagreement {rate:.3f} over {len(pairs)} judged pair(s)")
+    if rate > ORDER_DISAGREEMENT_GATE:
+        print(f"Above the registered gate of {ORDER_DISAGREEMENT_GATE:.2f}: this win rate is")
+        print("NOT the head-to-head. The per-stratum correctness comparison is the headline.")
+    else:
+        print(f"At or below the registered gate of {ORDER_DISAGREEMENT_GATE:.2f}.")
+    print("\nUnaudited and on the development split. Not a result.")
+    return 0
+
+
+def run_report(args: argparse.Namespace) -> int:
+    """The per-stratum correctness comparison — E-001's registered primary.
+
+    Free: it reads verdicts that already exist. The pairwise win rate is
+    the *secondary* head-to-head and E-011 point 7 can withdraw it; this
+    is what the decision rule was always written against, so it is what
+    runs when the pairwise gate fires and what runs when it does not.
+
+    Unit is judge-scored answer correctness, `correct` against everything
+    else. `partial` counts as not-correct: E-007c found a middle category
+    absorbs uncertainty, and letting it count as a win would let the
+    headline move with how generously it was applied.
+    """
+    side = guard_side(args)
+    rows = {r["id"]: r for r in question_rows(args.golden, args.split, side)}
+    arms = {
+        slug: {
+            r["question_id"]: r["label"]
+            for r in (
+                json.loads(line)
+                for line in Path(VERDICTS.format(slug=slug, split=side))
+                .read_text(encoding="utf-8")
+                .splitlines()
+                if line.strip()
+            )
+        }
+        for slug in args.arms
+    }
+    shared = sorted(set.intersection(*(set(v) for v in arms.values())))
+    print(f"split {side}   {len(shared)} shared question(s)   arms {', '.join(args.arms)}")
+    print(f"unit: judge-scored correctness, `correct` against everything else")
+    print(RULE_LINE)
+
+    strata = sorted({rows[q]["stratum"] for q in shared})
+    header = f"{'stratum':<24}{'n':>4}" + "".join(f"{a:>26}" for a in args.arms)
+    print(header)
+    for stratum in [*strata, "ALL"]:
+        ids = [q for q in shared if stratum in ("ALL", rows[q]["stratum"])]
+        line = f"{stratum:<24}{len(ids):>4}"
+        for slug in args.arms:
+            hits = [arms[slug][q] == "correct" for q in ids]
+            interval = wilson_interval(sum(hits), len(hits))
+            line += f"{f'{interval.point:.2f} [{interval.low:.2f},{interval.high:.2f}]':>26}"
+        print(line)
+
+    print(RULE_LINE)
+    print("paired comparisons (exact McNemar over shared questions, uncorrected):")
+    for i, left in enumerate(args.arms):
+        for right in args.arms[i + 1 :]:
+            before = [arms[right][q] == "correct" for q in shared]
+            after = [arms[left][q] == "correct" for q in shared]
+            result = mcnemar(before, after)
+            print(f"  {left} vs {right:<28} +{result.improved}/-{result.regressed}  "
+                  f"p={result.p_value:.4f}")
+    print("\nUncorrected and unaudited, on the development split. E-001's registered")
+    print("family is Holm-corrected over four strata on the evaluation split, and it")
+    print("cannot run until the judge is audited against the correctness ceiling.")
+    return 0
+
+
 def key_for(row: dict, cache: Path) -> str:
     """A question's answer key, from the row or the gitignored cache."""
     if row.get("answer"):
@@ -699,6 +882,21 @@ def main() -> int:
     jud.add_argument("--force", action="store_true")
     jud.add_argument("--dry-run", action="store_true", help="print the estimate, send nothing")
     jud.set_defaults(func=run_judge)
+
+    cmp_ = sub.add_parser("compare", parents=[common], help="pairwise head-to-head (costs tokens)")
+    cmp_.add_argument("--left", required=True, help="a configuration slug, e.g. A-hybrid")
+    cmp_.add_argument("--right", required=True, help="a configuration slug, e.g. B")
+    cmp_.add_argument("--left-answers", type=Path, default=None)
+    cmp_.add_argument("--right-answers", type=Path, default=None)
+    cmp_.add_argument("--out", type=Path, default=None)
+    cmp_.add_argument("--model", default=None, help="defaults to LLM_MODEL in .env")
+    cmp_.add_argument("--force", action="store_true")
+    cmp_.add_argument("--dry-run", action="store_true", help="print the estimate, send nothing")
+    cmp_.set_defaults(func=run_compare)
+
+    rep = sub.add_parser("report", parents=[common], help="per-stratum correctness (free)")
+    rep.add_argument("--arms", nargs="+", required=True, help="configuration slugs to compare")
+    rep.set_defaults(func=run_report)
 
     cei = sub.add_parser("ceiling", parents=[common], help="hand the answers to E-011a")
     cei.add_argument("--answers", type=Path, default=None)

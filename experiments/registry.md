@@ -509,6 +509,65 @@ multiple-comparison correction when strata are tested jointly.
   on it. It is recorded because it is the first evidence the judge and the
   rubric produce compatible readings at all.
 
+- **Amendment 2026-09-04 — the pairwise gate fired on the rehearsal, and
+  it fired where the arms differ most in context shape.** Registered in
+  E-011 point 7 before any pair existed: order-disagreeing pairs count as
+  ties, and above a disagreement rate of **0.20** the pairwise win rate is
+  not published as the head-to-head. Measured on the 20 development
+  questions, both orders, `gpt-4o-mini` at temperature 0:
+
+  | comparison | order disagreement | resolved |
+  |---|---|---|
+  | B vs A | **0.368** | 17 tie / 3 A |
+  | C-vector vs A | **0.368** | 16 tie / 2 A / 2 C |
+  | C-vector vs B | 0.158 | 15 tie / 2 B / 3 C |
+
+  **Two of three are above the gate**, so for those the pairwise win rate
+  is withdrawn as the head-to-head, exactly as registered. The per-stratum
+  correctness comparison is the headline, which is what the 2026-07-19
+  decision rule always said and what `run_eval.py report` computes.
+
+  **A mechanism worth stating as a hypothesis and not a finding.** The two
+  comparisons above the gate both involve arm A, whose contexts hold 55 to
+  100 documents against the graph arms' 8 to 40; the one below the gate
+  compares two graph-shaped contexts. Position bias plausibly rises when
+  the two answers differ in shape. That is a guess from three numbers on a
+  development split, it is not tested, and it is written here so it cannot
+  later be presented as something the experiment established.
+
+- **Dress rehearsal complete end to end (2026-09-04): index, retrieve,
+  generate, judge, compare, report.** Per-stratum judge-scored correctness,
+  `correct` against everything else — `partial` counts as not-correct,
+  because E-007c found a middle category absorbs uncertainty and letting it
+  count as a win would let the headline move with how generously it was
+  applied.
+
+  | stratum | n | A | B | C-vector | C-tfidf |
+  |---|---|---|---|---|---|
+  | definition_1hop | 4 | 0.25 | 0.25 | 0.25 | 0.25 |
+  | interaction_multihop | 8 | 0.38 | 0.38 | 0.25 | 0.25 |
+  | keyword_rule_2hop | 1 | 0.00 | 0.00 | 0.00 | 0.00 |
+  | legality_1hop | 5 | 1.00 | 1.00 | 1.00 | 1.00 |
+  | negative_temporal | 2 | 0.50 | 0.00 | 0.50 | 0.00 |
+  | **ALL** | 20 | 0.50 | 0.45 | 0.45 | 0.40 |
+
+  No paired McNemar reaches p < 0.5. **Nothing separates.** At n = 20 that
+  is the expected outcome whatever is true — E-001's own power analysis
+  already registered that even the 57-question evaluation split cannot
+  clear the strictest Holm step on `negative_temporal` — so this is a
+  statement about the rehearsal's power and not about the arms.
+
+  Two things it does establish. `legality_1hop` reads **1.00 for every
+  arm**, which is pin 8 working: arm A can answer the stratum it could not
+  have answered before the corpus carried card legality as prose, and the
+  "graph wins" reading that would have produced does not appear. And the
+  machinery runs end to end before the evaluation split is opened, which is
+  what the binding rehearsal clause requires.
+
+  What the rehearsal still lacks, so it is not yet binding: the judge is
+  audited on 19 answers against a floor of 30, and the correctness ceiling
+  that fixes its pass mark has no second pass until 2026-09-09.
+
 - **Judge built 2026-09-04 (`evaluation/judge.py`), nothing judged yet.**
   Implements the E-011 amendment rather than restating it, and four of its
   clauses are properties of the code rather than promises:
