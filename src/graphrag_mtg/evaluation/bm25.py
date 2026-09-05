@@ -150,8 +150,20 @@ class Bm25Index:
             0.0, math.log((total - document_frequency + 0.5) / (document_frequency + 0.5) + 1.0)
         )
 
-    def search(self, query: str, *, k: int = 20) -> list[Hit]:
+    def search(self, query: str, *, k: int = 20, k1: float = K1, b: float = B) -> list[Hit]:
         """The `k` best-scoring documents for `query`.
+
+        Args:
+            query: The question, or the question plus its expansions.
+            k: How many hits to return.
+            k1: Term-frequency saturation. Passed per call rather than
+                read from the module, because pin 7 permits a good-faith
+                tuning sweep on the development split and these two are
+                what a baseline would tune. Scoring parameters do not
+                touch the postings, so a sweep re-scores a single index
+                instead of rebuilding one per cell — the difference
+                between a two-minute sweep and a two-hour one.
+            b: Length normalisation.
 
         Ties are broken by `doc_id`, so a run is reproducible rather than
         dependent on dict ordering.
@@ -163,7 +175,7 @@ class Bm25Index:
                 continue
             for index, count in self._postings[term]:
                 length_ratio = self._lengths[index] / self.average_length
-                denominator = count + K1 * (1 - B + B * length_ratio)
-                scores[index] += query_count * idf * (count * (K1 + 1)) / denominator
+                denominator = count + k1 * (1 - b + b * length_ratio)
+                scores[index] += query_count * idf * (count * (k1 + 1)) / denominator
         ranked = sorted(scores.items(), key=lambda kv: (-kv[1], self.doc_ids[kv[0]]))
         return [Hit(doc_id=self.doc_ids[i], score=score) for i, score in ranked[:k]]

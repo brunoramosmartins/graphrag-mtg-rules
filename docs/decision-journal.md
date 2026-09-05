@@ -90,6 +90,69 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-04 — The sweep found nothing, and finding nothing took four runs
+
+Pin 7's good-faith sweep of arm A ran. 588 cells plus three probes, no LLM
+call, and the verdict is **nothing adopted**. Arm A stays at published
+defaults. Getting to that verdict is the part worth recording, because
+three times in a row the honest reading was the less flattering one.
+
+**First run: adopted at exactly the margin.** Defaults 9/26, best 11/26,
+registered threshold +2, result +2. Had I registered 3, nothing would have
+been adopted. That is not an argument for moving the threshold — it is the
+reason a threshold is fixed in advance — but a decision landing on its own
+boundary is weak, and every top cell sat at `depth=200`, the largest depth
+swept. **A parameter that wins at the edge of its grid has not been swept;
+it has been truncated.**
+
+**Extending was admissible; extending twice would not have been.** The test
+I applied is the one from the encoder deviation: extending depth makes arm A
+*stronger*, and arm A is the control this project predicts losing, so the
+change cannot manufacture the predicted outcome. But that argument licenses
+a declared extension, not a process that stops when the number stops rising.
+When the second grid also put its winner at the boundary, I did not extend
+again. I registered a stopping rule with a refutation branch first.
+
+**And the refutation branch fired.** The depth curve rises to 12,800 — 11%
+of the corpus per query — without saturating. The registered consequence:
+nothing adopted, and the finding is that the objective is degenerate.
+
+**The rule I registered was ambiguous on the curve I got**, and I want that
+on the record rather than quietly resolved. It said "saturation adopts,
+monotone rise refutes", assuming a curve doing one or the other. This one
+plateaus at 1600/3200 *and* rises to the boundary, so both antecedents held
+literally. I applied the branch the rule's stated purpose supports —
+"makes this a test rather than a search" — and not the one I would have
+preferred. Writing a rule that covers the shapes you expect is easy;
+noticing that the shape you got was not one of them is the part that
+requires wanting to notice.
+
+**The last thing to fall was the one real-looking gain.** `b = 0.4`
+dominated every top cell across 588 cells, which reads like a genuine
+tuning finding: less length normalisation, so rulings and cards compete
+with short rules. Tested on its own at depths 50 to 400 it does **nothing**
+— identical scores at every `b`. It only separates inside the degenerate
+regime. So it falls too, along with `k1`, `rrf_k` and `iterative`.
+
+**The result is better for the project than a successful sweep would have
+been.** The roadmap marks a strawman baseline as the critical credibility
+threat, and the standard objection — "you never tuned it" — is now
+answered by an artefact rather than a promise. What it does not license is
+"arm A is optimal": the honest reading is that the registered objective
+cannot tell arm A's configurations apart, which is the same metric defect
+found from a second direction. The informative sweep would be on answer
+correctness, and it costs 15 generations plus 15 judge calls per cell
+against a judge that is not audited yet.
+
+Two script defects surfaced on the way, both worth keeping. The adoption
+rule is defined against the defaults cell, and a narrowed grid dropped the
+defaults out and crashed on `next()` after 405 seconds — the right failure,
+since the alternative is silently baselining against an arbitrary cell; the
+defaults are now always scored. And the tie-break sorted on
+`(-found, not is_default)`, which distinguishes only the exact defaults cell
+and leaves twelve-way ties to dictionary order. The arbitrary winner would
+have been wired into arm A as "the tuned configuration".
+
 ## 2026-09-04 — evaluation.md gets Phase 6, and the header stops promising
 
 Wrote the Phase 6 sections of `docs/evaluation.md` — Act 1's calibration

@@ -875,9 +875,27 @@ suggestive and not confirmation.
   graph-only prose. Both ceiling batches were generated with text retrieval
   attached. That happens to be the arm the README figure quotes, so the
   ceiling is on the right prose **by accident rather than by design**.
-- **No arm-A ablation has been tuned.** Pin 7 permits tuning on the 20
-  development questions with the sweep published; the sweep has not been
-  run, so arm A is currently an untuned hybrid at published defaults
-  (BM25 `k1=1.2`, `b=0.75`; RRF `k=60`). Every one of those is a constant a
-  good-faith baseline would be allowed to move, and not moving them is a
-  limitation of the baseline rather than a virtue of the graph.
+- **Arm A was swept and nothing was adopted, which is a limitation of the
+  objective rather than of the baseline.** Pin 7's good-faith tuning sweep
+  ran across 588 cells plus three follow-up probes, with no LLM call —
+  published in [`sweeps/README.md`](sweeps/README.md). Every apparent gain
+  lives in a degenerate regime: gold-rule recall rises monotonically with
+  candidate depth (11/26 at depth ≤ 200, 16/26 at ≤ 1600, 19/26 at ≤ 12800,
+  by which point the arm reads 11% of the corpus per query), and the one
+  parameter that looked like a real gain, `b = 0.4`, does **nothing** at
+  defensible depths — 7/9/9/10 at depths 50/100/200/400 regardless of `b`.
+  `k1`, `rrf_k` and `iterative` likewise tie everywhere the depth is
+  defensible.
+
+  The mechanism is the same metric defect as the bullet above, reached by a
+  different route: rule recall counts gold numbers surviving the budget, so
+  a bigger candidate pool always helps, and the metric measures recall into
+  a pool rather than retrieval precision.
+
+  So arm A stays at published defaults, and the standard objection to a
+  baseline — "you never tuned it" — does not apply. What this does **not**
+  license is "arm A is at its optimum": the correct reading is that the
+  registered retrieval objective cannot tell arm A's configurations apart.
+  A sweep on **answer correctness** would be the informative one and costs
+  15 generations plus 15 judge calls per cell, against a judge not yet
+  audited above its floor. Named as future work with its cost.

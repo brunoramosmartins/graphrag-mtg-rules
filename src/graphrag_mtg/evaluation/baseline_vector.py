@@ -38,7 +38,9 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
+from graphrag_mtg.evaluation.bm25 import B as BM25_B
 from graphrag_mtg.evaluation.bm25 import Bm25Index
+from graphrag_mtg.evaluation.bm25 import K1 as BM25_K1
 from graphrag_mtg.evaluation.corpus import Document
 from graphrag_mtg.evaluation.dense import DenseIndex, Encoder
 
@@ -191,17 +193,29 @@ class VectorArm:
             return "hybrid"
         return "lexical" if self.lexical is not None else "dense"
 
-    def _rankings(self, query: str, depth: int) -> list[list[str]]:
+    def _rankings(
+        self, query: str, depth: int, *, k1: float, b: float, vector: Sequence[float] | None
+    ) -> list[list[str]]:
         rankings: list[list[str]] = []
         if self.lexical is not None:
-            rankings.append([hit.doc_id for hit in self.lexical.search(query, k=depth)])
+            rankings.append(
+                [hit.doc_id for hit in self.lexical.search(query, k=depth, k1=k1, b=b)]
+            )
         if self.dense is not None and self.encoder is not None:
-            vector = self.encoder.encode([query])[0]
-            rankings.append([hit.doc_id for hit in self.dense.search(vector, k=depth)])
+            embedded = self.encoder.encode([query])[0] if vector is None else vector
+            rankings.append([hit.doc_id for hit in self.dense.search(embedded, k=depth)])
         return rankings
 
     def retrieve(
-        self, question: str, *, depth: int = CANDIDATE_DEPTH, iterative: bool = False
+        self,
+        question: str,
+        *,
+        depth: int = CANDIDATE_DEPTH,
+        iterative: bool = False,
+        k1: float = BM25_K1,
+        b: float = BM25_B,
+        rrf_k: int = RRF_K,
+        query_vector: Sequence[float] | None = None,
     ) -> Retrieved:
         """Retrieve for one question.
 
@@ -213,14 +227,23 @@ class VectorArm:
                 the affordance the hypothesis calls path-walking. Off by
                 default; both states are published, and the graph's margin
                 is reported against the **stronger** of the two.
+            k1: BM25 term-frequency saturation, per call so pin 7's sweep
+                can vary it without rebuilding the index.
+            b: BM25 length normalisation, likewise.
+            rrf_k: The fusion damping constant, likewise.
+            query_vector: A pre-computed embedding of `question`. The
+                sweep varies only scoring and fusion, so re-embedding the
+                same question in every cell would spend money to obtain a
+                vector it already has — and a paid call inside a grid loop
+                is how a sweep quietly becomes unaffordable.
 
         Returns:
             A :class:`Retrieved` carrying the context and the trim record.
         """
-        rankings = self._rankings(question, depth)
+        rankings = self._rankings(question, depth, k1=k1, b=b, vector=query_vector)
         rounds = 1
         if iterative:
-            first = reciprocal_rank_fusion(rankings)[:depth]
+            first = reciprocal_rank_fusion(rankings, k=rrf_k)[:depth]
             seeds = [
                 self._by_id[doc_id].rule_number
                 for doc_id in first
@@ -228,10 +251,12 @@ class VectorArm:
             ]
             if seeds:
                 followup = f"{question} {' '.join(dict.fromkeys(seeds[:10]))}"
-                rankings.extend(self._rankings(followup, depth))
+                # A follow-up query is a different question, so its
+                # embedding is not the cached one.
+                rankings.extend(self._rankings(followup, depth, k1=k1, b=b, vector=None))
                 rounds = 2
 
-        fused = reciprocal_rank_fusion(rankings)
+        fused = reciprocal_rank_fusion(rankings, k=rrf_k)
         documents = [self._by_id[doc_id] for doc_id in fused if doc_id in self._by_id]
         considered = len(documents)
         if self.reranker is not None:

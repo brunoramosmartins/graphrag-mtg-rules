@@ -509,6 +509,181 @@ multiple-comparison correction when strata are tested jointly.
   on it. It is recorded because it is the first evidence the judge and the
   rubric produce compatible readings at all.
 
+- **Amendment 2026-09-04 — arm A's good-faith tuning sweep, registered
+  before it runs.** Pin 7 permits tuning on the 20 development questions
+  and requires the sweep to be published as an artefact `run_eval.py`
+  emits. The claim this experiment may make is not "the graph beat the
+  vector arm" but "the graph beat a vector arm tuned on the development
+  split, and here is the sweep". Arm A currently sits at published
+  defaults, and `docs/evaluation.md` lists that as a limitation of the
+  baseline rather than a virtue of the graph. This closes it.
+
+  **Grid, fixed here.** BM25 `k1` ∈ {0.9, 1.2, 1.6, 2.0}, BM25 `b` ∈
+  {0.4, 0.75, 1.0}, RRF `k` ∈ {10, 30, 60}, fusion depth ∈ {50, 100, 200},
+  retriever mode ∈ {hybrid, dense, lexical}, iterative ∈ {off, on}. The
+  published defaults (1.2 / 0.75 / 60 / 100 / hybrid / off) are a cell in
+  the grid, not the centre it is measured against.
+
+  **Objective, and its known defect.** Gold-rule recall, pin 6's registered
+  retrieval metric, over the **15** development questions carrying a
+  non-empty `gold_cr_rules` — `legality_1hop`'s five are excluded because
+  the metric is undefined there, and pin 9 gives that stratum its own.
+  The defect is already recorded above: rule recall is close to blind on
+  `interaction_multihop`, where the answer-bearing evidence is a ruling
+  carrying no CR number. So this sweep is driven mostly by the other
+  strata, and that is stated rather than discovered. **No second objective
+  is invented to fix it** — choosing a metric after watching the registered
+  one read low is what pin 7 forbids, and it would be the same move whether
+  it favours arm A or not.
+
+  **Adoption rule, fixed before any cell is scored.** The adopted
+  configuration is the one maximising the objective; **ties break toward
+  the published defaults**, because 15 questions cannot separate two cells
+  that differ by one gold rule and drifting away from a default on noise is
+  overfitting with extra steps. If the best cell beats the defaults by
+  **fewer than 2 gold rules of 26**, the defaults are kept and the sweep is
+  published as having found nothing — a sweep that must produce a change to
+  count is not a sweep.
+
+  **What the sweep costs, and why it is free.** BM25's `k1`/`b` and RRF's
+  `k` are scoring parameters: they do not touch the postings, so one index
+  is built and re-scored. Query embeddings are computed once for the 15
+  questions and passed into every cell. No LLM call, no spend.
+
+  **Grid size, corrected before the run.** 4 × 3 × 3 × 3 × 3 × 2 = 648 raw
+  combinations, of which **294 are distinct**: `k1` and `b` do nothing in
+  `dense` mode, and `rrf_k` does nothing when only one ranking exists.
+  Those cells are collapsed rather than left in — an inflated grid is
+  cosmetic, but a duplicate cell could win a tie against the defaults on
+  nothing, which is not.
+
+- **Sweep result (2026-09-04, 294 cells, 48 min, no spend).** Artefact:
+  [../docs/sweeps/e001-arm-a.md](../docs/sweeps/e001-arm-a.md).
+
+      published defaults   9/26
+      best cell           11/26   k1=1.6 b=1.0 rrf_k=10 depth=200 mode=hybrid iterative=True
+      margin              +2
+
+  **Adopted, and the margin is exactly the registered threshold.** The rule
+  said adopt at ≥ 2 and the sweep returned 2. Had 3 been registered,
+  nothing would have been adopted. That is not an argument for changing the
+  threshold — it is the reason a threshold is fixed in advance — but a
+  decision that lands on its own boundary is weaker evidence than one that
+  clears it, and it is reported as such.
+
+  **What actually won.** Every cell at 11/26 has `depth=200` and
+  `iterative=True`; `rrf_k` at 10, 30 and 60 all tie at the top, so fusion
+  damping does nothing measurable here, and `k1`/`b` move the result by at
+  most one rule. The gain is **structural — read deeper, run a second
+  round — not a BM25 tuning gain.** Reporting the winning cell as "tuned
+  BM25 parameters" would be reading a table wrong.
+
+  **Best cell per mode:** hybrid 11/26, dense 10/26, lexical 8/26. Pin 2's
+  hybrid claim survives its own ablations, which is the first evidence for
+  it that is not an argument from the corpus's properties.
+
+- **Sweep adjudication (2026-09-04) — nothing is adopted, and the finding
+  is about the objective.** Index and full argument:
+  [../docs/sweeps/README.md](../docs/sweeps/README.md).
+
+      depth <= 200      11/26
+      depth <= 1600     16/26
+      depth <= 12800    19/26
+
+  The curve does not saturate. At 12,800 candidates arm A reads **11% of a
+  115,547-document corpus per query**. The stopping rule registered before
+  the curve existed therefore fires on its second branch: nothing is
+  adopted and the objective is degenerate.
+
+  **The registered rule was ambiguous on this curve's shape, and that is
+  recorded rather than resolved in whichever direction suited.** It said
+  "saturation adopts, monotone rise to 12800 refutes", assuming a curve
+  that does one or the other. This one plateaus (1600 and 3200 both 16)
+  **and** rises to the boundary, so both antecedents hold literally. The
+  rule's stated purpose — "makes this a test rather than a search" — picks
+  the second branch: a curve whose maximum sits at the largest value swept
+  has not been swept.
+
+  **`b = 0.4` looked like the one real tuning gain and is not.** It
+  dominates every top cell of the 588-cell sweep, so it was tested at
+  defensible depths on its own:
+
+  | depth | b=0.4 | b=0.75 | b=1.0 |
+  |---|---|---|---|
+  | 50 | 7/26 | 7/26 | 7/26 |
+  | 100 | 9/26 | 9/26 | 9/26 |
+  | 200 | 9/26 | 9/26 | 9/26 |
+  | 400 | 10/26 | 10/26 | 10/26 |
+
+  Identical at every depth. `b` separates only inside the degenerate
+  regime and falls with it, and so do `k1`, `rrf_k` and `iterative`.
+  **Nothing in the classical BM25 or fusion tuning space moves this
+  objective.**
+
+  **Mechanism, so this is not left as a mystery.** Rule recall counts gold
+  CR numbers present *after* the budget trims. A larger candidate pool
+  feeds fusion more documents, the budget keeps whichever ~80 rank highest,
+  and among a bigger pool more of those carry a gold rule number. The
+  metric rewards **recall into a pool**, which reading deeper always
+  improves, not retrieval precision, which it does not measure. This is the
+  **second** pathology found in pin 6's metric by an independent route; the
+  first is its blindness on `interaction_multihop`.
+
+  **Consequence for E-001, which is the opposite of what it looks like.**
+  Arm A stays at published defaults, and the standard objection to a
+  baseline — "you never tuned it" — no longer applies: it was swept across
+  588 cells plus three probes and the sweep declined to move it. The claim
+  E-001 may make is precise: *the graph was compared against a vector arm
+  swept on the development split, and the sweep found no configuration
+  better than the published defaults on the registered retrieval
+  objective.* What it does **not** license is "arm A is at its optimum" —
+  the correct reading is that the registered objective cannot tell arm A's
+  configurations apart. A sweep on **answer correctness** would be the
+  informative one and is not free: 15 generations plus 15 judge calls per
+  cell, and the judge is not audited above its floor. Named as future work
+  with its cost, not folded in.
+
+- **Amendment 2026-09-04 — the edge recurred, so the next probe gets a
+  stopping rule instead of another extension.** Extending `depth` to 1600
+  moved arm A to 16/26 and put the winner **at the boundary again**.
+  Extending a second time because the result improved is the shopping this
+  registry named and refused two amendments ago: "extend until arm A stops
+  improving and call that tuned" is not admissible, and the argument that
+  it strengthens the control does not license an unbounded search.
+
+  So the next probe is a **depth curve with its reading fixed in advance**,
+  at the winning `b` and mode: depth ∈ {1600, 3200, 6400, 12800}, and
+
+  - if the curve **saturates** — two consecutive depths within one gold
+    rule — the saturation point is adopted and depth has been swept;
+  - if it **keeps rising to 12800**, nothing is adopted from it, and the
+    finding is that **the objective is degenerate**: a metric that rewards
+    reading a larger and larger share of a 115,547-document corpus is not
+    measuring retrieval quality, and that is published as a limitation of
+    pin 6's rule recall rather than as a configuration.
+
+  The second branch is the one that makes this a test rather than a search.
+  It is written before the curve exists.
+
+- **Amendment 2026-09-04 — the winner sat at the edge of the grid, so the
+  grid was extended.** Every top cell has `depth=200`, the **largest depth
+  swept**. A parameter that wins at the boundary of its range has not been
+  swept; it has been truncated, and adopting that value as "tuned" would
+  publish a grid artefact as a result.
+
+  Registered before the probe ran: `depth` extended to {200, 400, 800,
+  1600} at the winning `k1=1.6`, `b=1.0`, across all modes, both iterative
+  states, all `rrf_k`. Same objective, same code path, same adoption rule.
+
+  **Why extending after seeing the result is admissible here**, by the same
+  test applied to the encoder deviation: extending the depth grid makes
+  **arm A stronger**, and arm A is the control this experiment predicts
+  losing. A change that strengthens the control cannot manufacture the
+  predicted outcome. The move that would *not* be admissible is extending
+  until arm A stops improving and calling that tuned — so the extension is
+  bounded to `depth` alone, declared here, and the artefact is published
+  whether it moves the number or not.
+
 - **Amendment 2026-09-04 — the pairwise gate fired on the rehearsal, and
   it fired where the arms differ most in context shape.** Registered in
   E-011 point 7 before any pair existed: order-disagreeing pairs count as
