@@ -90,6 +90,35 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-09 — The reading notes stay open, deliberately, and the count is recorded
+
+A sweep of `notes/` found **no "My take" filled in any lit-note**: 50 prompts
+across twelve notes, seven from Phase 6's own reading list and five carried
+from earlier phases. The author's decision, recorded rather than left
+implicit: they are resumed in parallel and completed before the project
+ends, and no phase gate blocks on them.
+
+That is a legitimate call and it is written down because the alternative —
+an indefinite open state nobody named — is the only bad option. Two things
+about it are worth keeping.
+
+**The synthesis notes were written without the per-prompt step.**
+`phase6-synthesis.md` has ten Lessons Learned and ten Failed Attempts and
+zero "My take", so the cross-source conclusions exist while the individual
+misconception arcs do not. The conclusions turned out good — the phase
+tested several of them and confirmed most. But the arc is what the format
+exists for: "I thought X, after reading I realised Y" is the part nobody
+else has, and a synthesis preserves the conclusion while losing the route.
+Skipping it was a decision taken in practice before it was taken on
+purpose; it is now taken on purpose.
+
+**Two Phase 6 notes have their answers already.** `neural-hype-yang-2019`
+and `graphrag-eval-bias-zeng-2025` ask about weak baselines and about LLM
+judges as evaluators, and this phase produced direct evidence on both — a
+588-cell sweep that adopted nothing, and a judge that could not be gated
+because no label reached its floor. Those two are cheaper to write now than
+they will ever be again.
+
 ## 2026-09-09 — Phase 6 closes with four carry-overs and two honest drops
 
 The deliverable audit does not come out clean, and closing it as though it
