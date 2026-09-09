@@ -216,7 +216,12 @@ def score(args: argparse.Namespace) -> int:
     ]
     if thin:
         print(f"below the registered floor of {AUDIT_FLOOR}: {', '.join(thin)}")
-        print("Those labels are descriptive and gate nothing.")
+        # The consequence, not just the status. An earlier rewrite kept the
+        # "descriptive" half and dropped "no correctness figure may be
+        # published as validated on them", which is the only part that
+        # tells a reader what they may not do with the number above.
+        print("Those labels are descriptive and gate nothing, and no correctness figure")
+        print("may be published as validated on them.")
 
     if args.ceiling_low is None:
         print("\nNo ceiling supplied, so nothing is gated. Pass --ceiling-low with the lower")

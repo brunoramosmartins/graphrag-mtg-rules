@@ -121,9 +121,13 @@ class TestScoring:
         human = worksheet(tmp_path, {f"q{i}": "correct" for i in range(5)})
         judged = verdicts(tmp_path, {f"q{i}": "correct" for i in range(5)})
         audit_judge.score(namespace(human, judged))
-        printed = capsys.readouterr().out
+        printed = " ".join(capsys.readouterr().out.split())
         assert "below the registered floor" in printed
-        assert "gates nothing" in printed
+        # The status *and* its consequence. A message that says a label is
+        # descriptive without saying what may not be published from it
+        # leaves the reader with a number and no instruction.
+        assert "gate nothing" in printed
+        assert "may be published as validated" in printed
 
     def test_a_labelled_answer_with_no_verdict_is_named(self, tmp_path: Path, capsys) -> None:
         # Silently dropping it would shrink the denominator without saying
