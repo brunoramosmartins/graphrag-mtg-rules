@@ -203,13 +203,29 @@ def score(args: argparse.Namespace) -> int:
     per_label(pooled_pairs)
 
     print(RULE)
+    # The sample-size status prints whether or not a ceiling was supplied.
+    # The restructure that split this function moved it inside the gating
+    # branch, so a run without a ceiling said nothing about how thin its
+    # sample was — and a reader seeing 0.895 with no floor warning is a
+    # reader being invited to believe it. Size is a fact about the audit,
+    # not a step in the gate.
+    thin = [
+        label.value
+        for label in JUDGED
+        if len([1 for _, h, _ in pooled_pairs if h == label.value]) < AUDIT_FLOOR
+    ]
+    if thin:
+        print(f"below the registered floor of {AUDIT_FLOOR}: {', '.join(thin)}")
+        print("Those labels are descriptive and gate nothing.")
+
     if args.ceiling_low is None:
-        print("No ceiling supplied, so nothing is gated. Pass --ceiling-low with the lower")
+        print("\nNo ceiling supplied, so nothing is gated. Pass --ceiling-low with the lower")
         print("bound printed by `audit_correctness.py reaudit score` — E-011 permits no")
         print("other mapping from a ceiling to a threshold.")
+        reference_band()
         return 0
 
-    print(f"ceiling lower bound (the registered threshold): {args.ceiling_low:.3f}")
+    print(f"\nceiling lower bound (the registered threshold): {args.ceiling_low:.3f}")
     gated = 0
     for label in JUDGED:
         rows = [(h, j) for _, h, j in pooled_pairs if h == label.value]
@@ -221,9 +237,26 @@ def score(args: argparse.Namespace) -> int:
         verdict = "PASS" if cell.low >= args.ceiling_low else "FAIL"
         print(f"  {label.value:<12} lower bound {cell.low:.3f} vs {args.ceiling_low:.3f}  {verdict}")
     if not gated:
-        print("\nNo label reaches the registered floor, so the judge is neither passed nor")
-        print("failed. That is a fact about the audit's size, not about the judge.")
+        print("\nNo label reaches the registered floor, so the judge is neither passed nor "
+              "failed.")
+        print("That is a fact about the audit's size, not about the judge.")
+    reference_band()
     return 0
+
+
+def reference_band() -> None:
+    """The intra-rater ceilings, each labelled with where it came from.
+
+    E-011 point 8 corrected an earlier claim that a judge *cannot* exceed a
+    human's self-agreement — judge-vs-human is inter-rater and these are
+    intra-rater, and a judge sharing the first pass's bias can exceed it.
+    Printed on every path: the restructure that split `score` dropped it
+    from the no-ceiling branch, and a band that appears only sometimes is
+    a band a reader cannot rely on.
+    """
+    print("\nreference band — other labels' intra-rater ceilings, not bounds on this:")
+    for name, (value, note) in CEILINGS.items():
+        print(f"  {name:<28} {value:.3f}   {note}")
 
 
 def main() -> int:

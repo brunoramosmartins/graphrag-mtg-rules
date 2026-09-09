@@ -39,6 +39,7 @@ def worksheet(tmp_path: Path, labels: dict[str, str], **kw) -> Path:
 
 def verdicts(tmp_path: Path, labels: dict[str, str], *, rubric_hash: str = HASH) -> Path:
     path = tmp_path / "verdicts.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         "\n".join(
             json.dumps({"question_id": qid, "label": label, "rubric_hash": rubric_hash})
@@ -190,7 +191,10 @@ class TestGate:
         human = worksheet(tmp_path, {"q1": "correct"})
         audit_judge.score(namespace(human, verdicts(tmp_path, {"q1": "correct"}),
                                     ceiling_low=0.72))
-        printed = capsys.readouterr().out
+        # Whitespace-normalised: the message wraps across two print calls,
+        # and an assertion that breaks when a line is rewrapped is testing
+        # the formatter rather than the behaviour.
+        printed = " ".join(capsys.readouterr().out.split())
         assert "not gated, descriptive" in printed
         assert "neither passed nor failed" in printed
 
