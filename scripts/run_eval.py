@@ -101,13 +101,18 @@ from graphrag_mtg.retrieval.subgraph import (
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+# `CACHE_DIR` here is the golden-set cache; E-007's is a different directory
+# and lives in `audit_correctness`. Imported under an alias rather than
+# written out again, because the judge and the human worksheet must look in
+# the same places — a second copy of the path is a second thing to update.
+from audit_correctness import CACHE_DIR as E007_CACHE_DIR
+from audit_correctness import question_and_key
 from run_e007 import (  # sibling scripts; the sys.path line above enables them
     MAX_ANSWER_TOKENS,
     build_stack,
     evidence_fingerprint,
     rebuild,
 )
-from audit_correctness import GOLDEN_CACHE, question_and_key
 from split_golden import QUESTION_FILES, load_questions
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -882,9 +887,7 @@ def main() -> int:
 
     jud = sub.add_parser("judge", parents=[common], help="score an arm's answers (costs tokens)")
     jud.add_argument("--answers", type=Path, default=None)
-    jud.add_argument(
-        "--caches", type=Path, nargs="+", default=[CACHE_DIR, Path("data/interim/e007_cache")]
-    )
+    jud.add_argument("--caches", type=Path, nargs="+", default=[CACHE_DIR, E007_CACHE_DIR])
     jud.add_argument("--out", type=Path, default=None)
     jud.add_argument("--model", default=None, help="defaults to LLM_MODEL in .env")
     jud.add_argument("--force", action="store_true")
