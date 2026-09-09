@@ -93,9 +93,17 @@ depends on what might be missing, say so in the answer.
 """
 
 
-def build_prompt(question: str, subgraph: Subgraph) -> str:
-    """Assemble the user-side prompt: the context, then the question."""
-    return f"## CONTEXT\n{serialize(subgraph)}\n\n## QUESTION\n{question}\n"
+def build_prompt(question: str, subgraph: Subgraph, *, notice: bool = True) -> str:
+    """Assemble the user-side prompt: the context, then the question.
+
+    Args:
+        question: The question, verbatim.
+        subgraph: What retrieval produced.
+        notice: Passed to `serialize`. E-001 suppresses the incompleteness
+            notice on every arm so that no arm is handed an invitation to
+            hedge that another cannot receive.
+    """
+    return f"## CONTEXT\n{serialize(subgraph, notice=notice)}\n\n## QUESTION\n{question}\n"
 
 
 @dataclass
@@ -153,6 +161,7 @@ def answer(
     generate: Callable[[str, str], str],
     *,
     system: str = SYSTEM,
+    notice: bool = True,
 ) -> Answer:
     """Generate one grounded answer, or refuse.
 
@@ -163,6 +172,9 @@ def answer(
             subgraph carries nothing to answer from.
         system: The grounding prompt. Overridable so an iteration round can
             be run and recorded without editing this module.
+        notice: Whether the context may carry the incompleteness notice.
+            E-001 suppresses it on every arm; `context_incomplete` is
+            recorded either way, so the rate is still reported.
 
     Returns:
         An :class:`Answer`. ``refused`` with ``generated=False`` means
@@ -183,7 +195,7 @@ def answer(
             context_incomplete=incomplete,
         )
 
-    text = generate(system, build_prompt(question, subgraph)).strip()
+    text = generate(system, build_prompt(question, subgraph, notice=notice)).strip()
     rendered, unknown = expand(text, subgraph)
     return Answer(
         question=question,

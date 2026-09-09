@@ -20,6 +20,12 @@ dependencies = [
     "pydantic-settings>=2.2",
     "python-dotenv>=1.0",
     "httpx>=0.27",
+    # E-001's dense index holds 115,547 x 1,536 float32 vectors: 710 MB as
+    # an array against 5.7 GB as nested Python lists, and one query is 177M
+    # multiply-adds. Core rather than optional because `evaluation/dense.py`
+    # cannot run without it, and a light dependency that is required is not
+    # made lighter by being declared optional.
+    "numpy>=1.26",
 ]
 
 [project.optional-dependencies]

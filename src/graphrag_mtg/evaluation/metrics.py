@@ -18,6 +18,7 @@ import math
 import random
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from statistics import NormalDist
 
 DEFAULT_RESAMPLES = 2000
 DEFAULT_SEED = 13
@@ -195,6 +196,48 @@ def rule_of_three_upper(n_clusters: int) -> float:
     resample documents.
     """
     return 3.0 / n_clusters if n_clusters else 1.0
+
+
+def wilson_interval(successes: int, n: int, *, alpha: float = 0.05) -> Interval:
+    """Wilson score interval for a proportion of independent trials.
+
+    The other intervals in this module resample clusters, because MTG
+    predictions within one ruling or one question are correlated. E-002 has
+    no such structure to respect: each MetaQA question is drawn
+    independently from the test split and scored on its own, so the binomial
+    model applies directly and the registration asks for a cluster-free
+    interval.
+
+    Wilson rather than the normal approximation because the proportions here
+    sit near 1.0, where a Wald interval runs past it and reports an upper
+    bound above certainty.
+
+    Args:
+        successes: Trials scored correct.
+        n: Trials.
+        alpha: Two-sided miss probability (0.05 -> 95% interval).
+
+    Returns:
+        The observed proportion with its interval, clamped to [0, 1].
+    """
+    if n <= 0:
+        return Interval(point=0.0, low=0.0, high=0.0, n_docs=0)
+    z = NormalDist().inv_cdf(1 - alpha / 2)
+    p = successes / n
+    denominator = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / denominator
+    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denominator
+    # The endpoints at the extremes are exact, and floating point does not
+    # quite reach them: with no successes the algebra cancels to zero and
+    # returns 7e-18 instead. Printed it rounds away, but a reader — or a
+    # later comparison — reading `low > 0` would conclude the true rate is
+    # bounded away from zero on evidence that says no such thing.
+    return Interval(
+        point=p,
+        low=0.0 if successes == 0 else max(0.0, centre - half),
+        high=1.0 if successes == n else min(1.0, centre + half),
+        n_docs=n,
+    )
 
 
 @dataclass(frozen=True)

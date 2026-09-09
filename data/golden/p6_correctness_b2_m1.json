@@ -1,0 +1,131 @@
+{
+  "pass": "m1",
+  "batch": "b2",
+  "frozen": true,
+  "rubric_version": "p6-c1",
+  "rubric_hash": "dfcfb0851c8ca0810b10acb318d8ac01f418ad527415a1c45b749d89025ef3fe",
+  "seed": 20260904,
+  "drawn_at": "2026-09-04",
+  "frozen_at": "2026-09-04",
+  "sources": [
+    "runs/e001_C-tfidf-routed_answers_dev.jsonl"
+  ],
+  "caches": [
+    "data\\interim\\e007_cache",
+    "data\\interim\\golden_cache"
+  ],
+  "golden": "data\\golden",
+  "answers_sha256": "c738a6d9c7c4058207c0f72c847862d0cffdd0fd20329f92c6ca263cf90bec8d",
+  "model": "gpt-4o-mini",
+  "prompt_version": "p5-a3",
+  "notice": false,
+  "pool": {
+    "total": 20,
+    "refused": 1,
+    "eligible": 19
+  },
+  "refused_ids": [
+    "rg-2569"
+  ],
+  "order": [
+    "rg-30",
+    "hand-def-defender",
+    "scry-leg-54866c25-b332-46c8-a2c5-1a71b702ddc0-pauper",
+    "scry-leg-b1a3b2ab-d9f8-4a0a-b2e2-aaa9989b2e41-modern",
+    "rg-539",
+    "rg-2333",
+    "hand-humility-plus-counter",
+    "hand-doubling-season-planeswalker",
+    "hand-def-deathtouch",
+    "hand-def-indestructible",
+    "rg-1951",
+    "scry-leg-6c0c5832-416f-405f-bb44-c24be6f9d081-pioneer",
+    "scry-leg-c6a606af-ea08-4cd9-bfd9-60d76e232e85-modern",
+    "scry-leg-65a9f643-063f-406a-8d5a-5ebbe0f04c3d-legacy",
+    "rg-7749",
+    "rg-2066",
+    "rg-705",
+    "hand-indestructible-zero-toughness",
+    "hand-def-trample"
+  ],
+  "labels": {
+    "hand-def-deathtouch": {
+      "label": "correct",
+      "note": ""
+    },
+    "hand-def-defender": {
+      "label": "partial",
+      "note": ""
+    },
+    "hand-def-indestructible": {
+      "label": "partial",
+      "note": ""
+    },
+    "hand-def-trample": {
+      "label": "partial",
+      "note": ""
+    },
+    "hand-doubling-season-planeswalker": {
+      "label": "correct",
+      "note": ""
+    },
+    "hand-humility-plus-counter": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "hand-indestructible-zero-toughness": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "rg-1951": {
+      "label": "correct",
+      "note": ""
+    },
+    "rg-2066": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "rg-2333": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "rg-30": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "rg-539": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "rg-705": {
+      "label": "correct",
+      "note": ""
+    },
+    "rg-7749": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "scry-leg-54866c25-b332-46c8-a2c5-1a71b702ddc0-pauper": {
+      "label": "correct",
+      "note": ""
+    },
+    "scry-leg-65a9f643-063f-406a-8d5a-5ebbe0f04c3d-legacy": {
+      "label": "correct",
+      "note": ""
+    },
+    "scry-leg-6c0c5832-416f-405f-bb44-c24be6f9d081-pioneer": {
+      "label": "correct",
+      "note": ""
+    },
+    "scry-leg-b1a3b2ab-d9f8-4a0a-b2e2-aaa9989b2e41-modern": {
+      "label": "correct",
+      "note": ""
+    },
+    "scry-leg-c6a606af-ea08-4cd9-bfd9-60d76e232e85-modern": {
+      "label": "correct",
+      "note": ""
+    }
+  },
+  "arm": "C",
+  "arm_note": "Arm C, routed, TF-IDF text half — pin 12's registered ablation of the shipped system, not its default. The run was originally labelled arm B; the file is now named for the configuration so no other ablation can overwrite it."
+}

@@ -27,6 +27,50 @@ services:
       retries: 15
       start_period: 30s
 
+  # ── E-002 only: the MetaQA calibration instance ────────────────────────────
+  # A separate *server*, not a separate database. Neo4j Community serves
+  # exactly one user database, and the alternative — a namespace inside the
+  # Magic graph — is what E-008's teardown used when it deleted three real CR
+  # rules. Different port, different password, different process.
+  #
+  # Deliberately volume-less. The 135k MetaQA triples live in the container's
+  # writable layer, so teardown is destroying the container and there is no
+  # DELETE query anywhere near the corpus:
+  #
+  #   docker compose --profile metaqa up -d --wait
+  #   docker rm -f graphrag-mtg-neo4j-metaqa      # this is the teardown
+  #
+  # Teardown names the CONTAINER, not the profile. `--profile metaqa` *adds*
+  # this service to the default set rather than restricting to it, so
+  # `docker compose --profile metaqa rm -sf` removes the corpus container
+  # too — it did, on 2026-09-03. The corpus survived only because its data
+  # lives in a named volume; this one has none, by design, which is exactly
+  # why the two must never be targeted by the same command.
+  #
+  # No APOC: the loader is plain UNWIND/MERGE Cypher.
+  neo4j-metaqa:
+    profiles: ["metaqa"]
+    image: neo4j:5-community
+    container_name: graphrag-mtg-neo4j-metaqa
+    # Not `unless-stopped`: a disposable instance must not come back after a
+    # reboot, or it stops being disposable.
+    restart: "no"
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    environment:
+      NEO4J_AUTH: "neo4j/${METAQA_NEO4J_PASSWORD:-metaqa-throwaway}"
+      # Smaller than the corpus instance: one untyped KB, no text properties.
+      NEO4J_server_memory_heap_initial__size: "512m"
+      NEO4J_server_memory_heap_max__size: "512m"
+      NEO4J_server_memory_pagecache_size: "256m"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
 volumes:
   neo4j_data:
   neo4j_logs:

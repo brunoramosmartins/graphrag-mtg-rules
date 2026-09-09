@@ -17,9 +17,19 @@ class Settings(BaseSettings):
     """Runtime configuration for the GraphRAG MTG pipeline.
 
     Attributes:
-        neo4j_uri: Bolt URI of the Neo4j instance.
+        neo4j_uri: Bolt URI of the Neo4j instance holding the Magic corpus.
         neo4j_user: Neo4j username.
         neo4j_password: Neo4j password (also consumed by docker-compose).
+        metaqa_neo4j_uri: Bolt URI of the disposable second instance E-002
+            loads the MetaQA KB into. It is a separate *server*, not a
+            separate database: Neo4j Community serves exactly one user
+            database. Defaults to the port the ``metaqa`` compose profile
+            publishes.
+        metaqa_neo4j_user: Username on that instance.
+        metaqa_neo4j_password: Password on that instance. The default is a
+            throwaway because the instance is a throwaway — it holds a
+            public academic KB, keeps no volume, and is destroyed with the
+            container.
         llm_provider: Which API serves extraction/generation calls —
             ``"anthropic"`` (default, ADR-003) or ``"openai"``.
         llm_model: Default LLM model id for extraction/generation phases.
@@ -37,6 +47,10 @@ class Settings(BaseSettings):
     neo4j_uri: str = Field(default="bolt://localhost:7687")
     neo4j_user: str = Field(default="neo4j")
     neo4j_password: str = Field(default="please-change-me")
+
+    metaqa_neo4j_uri: str = Field(default="bolt://localhost:7688")
+    metaqa_neo4j_user: str = Field(default="neo4j")
+    metaqa_neo4j_password: str = Field(default="metaqa-throwaway")
 
     llm_provider: str = Field(default="anthropic")
     llm_model: str = Field(default="claude-opus-4-8")

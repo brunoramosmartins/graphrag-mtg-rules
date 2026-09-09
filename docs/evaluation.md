@@ -4,8 +4,18 @@ Source of truth for how this project is measured. Written **before any
 retrieval or generation exists**, which is the point: predictions recorded
 after seeing results are not predictions.
 
-Results land here in Phase 6. Until then this document fixes what will be
-measured, on which questions, and what each stratum is expected to show.
+Results land here as each phase closes. The pre-registration below is
+**unedited**: where a result contradicts a prediction, the analysis is
+written in the results section and the prediction stays as it was recorded.
+
+**Status, 2026-09-04.** Phases 3, 4 and 5 are reported. Phase 6 Act 1
+(calibration) is reported and **failed its registered floor**; the failure
+analysis is the section that matters. Phase 6 Act 2 has completed its dress
+rehearsal on the 20 development questions — **no number in it is a result
+about the arms.** The 57 evaluation questions are opened once, in Phase 8,
+and the judge that would score them is not yet audited above its registered
+floor. What is pending, and what each pending item blocks, is tabulated at
+the end of the Act 2 section.
 
 ## The claim being tested
 
@@ -551,3 +561,399 @@ not.
   125-ruling intervals above are the ones to read.
 - **The three prompt iterations are unattributable** and are not claimed as
   improvements — they ran before temperature was pinned.
+
+---
+
+# Results — Phase 6, Act 1: calibration on MetaQA (E-002, 2026-09-02 → 03)
+
+Act 1 asks a single question: does the retrieval-plus-generation machinery
+work at all, measured on a benchmark with a published answer key, before it
+is pointed at Magic. The registered pass/fail was one clause — **Hits@1 ≥
+0.90 on 1-hop** — because MetaQA 1-hop is a single typed edge lookup against
+a KB with no ambiguity and no rules text. A spine that cannot reach it is
+broken, whatever the literature reports.
+
+**Configuration.** 500 questions per hop from a frozen subset at seed
+`20260815`, `gpt-4o-mini` at temperature 0, prompt `e002-a3`, one run. The
+MetaQA KB was loaded into a **separate Neo4j instance** — Community serves
+one user database, and a namespace inside the Magic graph is what E-008's
+teardown deleted three real CR rules from.
+
+| hop | Hits@1 | shown-reach ceiling | literature band | reading |
+|---|---|---|---|---|
+| 1-hop | **0.884** [0.853, 0.909] | 1.000 | [0.970, 0.975] | below the band |
+| 2-hop | **0.570** [0.526, 0.613] | 0.842 | [0.988, 1.000] | below the band |
+| 3-hop | **0.156** [0.127, 0.190] | 0.448 | [0.914, 1.000] | below the band |
+
+## Verdict: FAIL, and the failure is the useful part
+
+1-hop 0.884 < 0.90. Below the floor the registered rule requires the
+divergence be chased before anything else is claimed, and the chase produced
+five defects that a passing run would have hidden:
+
+1. `subgraph.serialize()` looped over the five Magic evidence kinds, so
+   MetaQA's 206 `triple` items per subgraph were **dropped silently** —
+   retrieved, budgeted, never rendered. Caught by a cost estimate that came
+   in too small, not by a test.
+2. `kind_cap` was inherited from the Magic configuration and truncated the
+   benchmark's evidence.
+3. Reach was being measured over **walked** entities rather than **shown**
+   ones. Only what the model receives can bound Hits@1.
+4. The HTTP client had no retry, and a 429 killed a 500-question pass 163
+   answers in.
+5. Prompt `e002-a1` was missing one of the grounding contract's four
+   sections, which produced 542 refusals out of 1,000.
+
+**A ceiling correction was computed and explicitly refused.** Ten of the 58
+one-hop misses are correct by the edge and outside MetaQA's gold set;
+crediting them reads 0.904, above the floor. That number is not the result.
+It is a post-hoc adjustment on a criterion invented after seeing the
+verdict, and letting it overturn a pre-registered threshold is the move this
+whole apparatus exists to prevent. The floor is measured as registered:
+**0.884, FAIL.**
+
+## The finding: generation, not retrieval
+
+The registered prediction "grounded generation is not the bottleneck at any
+hop" is **falsified**, and that is the transferable result. Conditional on
+the answer entity being present in the evidence the model actually received:
+
+| hop | correct given the answer was shown |
+|---|---|
+| 1-hop | 0.884 [0.853, 0.909] |
+| 2-hop | 0.677 [0.631, 0.720] |
+| 3-hop | **0.339** [0.280, 0.404] |
+
+At three hops the model uses **one third** of what retrieval hands it.
+
+## E-012 — is it size or depth? (confirmatory, 2026-09-03)
+
+E-002 could not separate the two: its 3-hop subgraphs are simultaneously
+deeper *and* far larger (median 206 evidence items against 17 at 2-hop). So
+E-012 ran questions at **matched context sizes** across hops with the
+answer-bearing chain guaranteed present, on a frozen confirmatory draw of
+300 per hop taken from the complement of E-002's subset.
+
+| *k* | 1-hop | 2-hop | 3-hop |
+|---|---|---|---|
+| 8 | 0.883 [0.842, 0.915] | 0.660 [0.599, 0.716] | 0.489 [0.407, 0.572] |
+| 16 | 0.890 | 0.672 | 0.511 |
+| 64 | 0.890 | 0.656 | 0.591 |
+| 256 | 0.897 | 0.628 | 0.518 |
+| untrimmed | 0.893 | 0.628 | 0.533 |
+
+**Depth at matched size: every row separated, spread 0.30 to 0.39.** Holding
+the context at 8 items, accuracy still falls 0.883 to 0.660 to 0.489.
+
+**Size at fixed depth: nothing.** 1-hop moves between 0.883 and 0.897 across
+a 32x change in context. Paired within question, untrimmed against *k*=8:
+2-hop p=0.382, 3-hop p=0.451, 1-hop p=0.648 — none near its Holm threshold.
+
+Three predictions were registered; **all three were wrong**, including the
+one this experiment was built to confirm. The registered consequence stands:
+context reduction is **not** adopted, `enforce_budget`'s distance-first trim
+**stays**, and E-001's multi-hop stratum carries the compositional limit as
+a named bound.
+
+## What Act 1 transfers, and what it does not
+
+- **Transfers.** The bottleneck at depth is compositional reasoning, not
+  context size and not retrieval volume. MetaQA questions are templated and
+  their chains uniform, so the depth effect measured here is a **floor** on
+  the depth effect in judge-level Magic questions, not an estimate of it.
+- **Does not transfer.** No number in Act 1 is a Magic number. The budget
+  does not currently fire on the Magic corpus at all — `dropped` is 0 across
+  all 42 E-007 questions, all 18 E-008 probes, and all 20 Phase 6
+  development questions — so every conclusion about trimming is a design
+  constraint carried forward, not a repair of an observed defect.
+
+---
+
+# Results — Phase 6, Act 2: the domain head-to-head (E-001)
+
+**Status: the dress rehearsal is complete; the evaluation split is not
+open.** Everything below ran on the 20 frozen **development** questions. The
+57 evaluation questions are opened once, in Phase 8, and no number here is a
+result about the arms.
+
+## What is being compared
+
+| arm | what it is | what it tests |
+|---|---|---|
+| **A** | vector baseline over the same corpus, no graph | control |
+| **B** | graph-only traversal | the thesis in [`hypothesis.md`](hypothesis.md) |
+| **C** | hybrid: graph plus the same text retriever arm A uses | the shipped system |
+
+Registered ablations, each published on and off: retriever mode
+(hybrid / dense / lexical), arm C's text half (vector / TF-IDF), arm C's
+routing (shipped / always-on), and iterative retrieval.
+
+## Corpus parity, and why it decided more than the retriever did
+
+Every fact any arm may cite is in every arm's index: 115,547 documents —
+3,308 CR rules and subrules, 739 glossary entries, 34,236 cards, 77,264
+rulings.
+
+The clause that mattered is the card document, and it exists because of an
+asymmetry that would otherwise have decided the experiment. All 20
+`legality_1hop` questions carry an **empty `gold_cr_rules`**: their answer
+lives in Scryfall's structured legality field and in **no document** of
+CR + rulings + MTR. Fifteen of them are in the evaluation split — **26% of
+the 57**. A vector arm indexing only prose could not have answered one of
+them, the graph arms would have swept the stratum, and the per-stratum table
+would have read "graph wins" for a reason with nothing to do with graphs.
+
+So each card document carries its oracle text **and its legality as prose**:
+"Mindsparker is not legal in Pauper." A fact only counts as indexed if the
+arm can retrieve it, and an enum is not retrievable by a sentence.
+
+Parity runs the other way too. The Scryfall bulk holds 38,262 card records
+and the graph loads 34,236 — `etl/cards.py` filters tokens, art series and
+non-playable layouts. Indexed naively, arm A would have held 4,026 documents
+no other arm can cite. The corpus builder reuses the same predicate; the
+counts now match exactly.
+
+## Registered deviation: the dense encoder
+
+The roadmap names BGE-M3 as reuse from Project 1. Arm A uses OpenAI
+`text-embedding-3-small`. The practical reason is 8.6M tokens — hours of CPU
+and a 2.5 GB dependency against US$ 0.17 and twenty minutes.
+
+The reason it is **admissible** is the direction it moves the result:
+`text-embedding-3-small` is the stronger English retrieval model, so the
+substitution makes **arm A stronger**, and arm A is the control this project
+predicts losing to the graph. A change that strengthens the control cannot
+manufacture the predicted outcome. Had it weakened arm A it would have been
+refused at any price. What it costs is a sentence in the README: arm A is
+not "the Project 1 pipeline", it is the same protocol with a current
+embedding model.
+
+## The dress rehearsal (development split, n = 20, nothing gated)
+
+Generator parity was checked before any comparison, as registered — `p5-a3`
+was iterated against *graph* serializations, so a materially different
+malformed-citation rate, refusal rate or answer length per arm would have
+required an arm-A serialization adapter built and published first.
+
+| configuration | answered | refused | unknown handles | mean chars |
+|---|---|---|---|---|
+| A, hybrid | 18 | 2 | 1 | 838 |
+| B | 17 | 3 | 1 | 819 |
+| C, vector, routed | 17 | 3 | 0 | 964 |
+| C, TF-IDF, routed | 19 | 1 | 1 | 947 |
+
+**No material difference; the adapter is not built.** Recorded as a check
+that passed, not a step nobody took.
+
+Per-stratum judge-scored correctness (`correct` against everything else;
+`partial` counts as not-correct, because E-007c found a middle category
+absorbs uncertainty and letting it count as a win would let the headline
+move with how generously it was applied):
+
+| stratum | n | A | B | C-vector | C-TF-IDF |
+|---|---|---|---|---|---|
+| definition_1hop | 4 | 0.25 | 0.25 | 0.25 | 0.25 |
+| interaction_multihop | 8 | 0.38 | 0.38 | 0.25 | 0.25 |
+| keyword_rule_2hop | 1 | 0.00 | 0.00 | 0.00 | 0.00 |
+| legality_1hop | 5 | 1.00 | 1.00 | 1.00 | 1.00 |
+| negative_temporal | 2 | 0.50 | 0.00 | 0.50 | 0.00 |
+| **ALL** | 20 | 0.50 | 0.45 | 0.45 | 0.40 |
+
+No paired McNemar reaches p < 0.5. **Nothing separates** — which at n = 20
+is the expected outcome whatever is true, since E-001's own power analysis
+already registered that even the 57-question evaluation split cannot clear
+the strictest Holm step on `negative_temporal`. This is a statement about
+the rehearsal's power, not about the arms.
+
+One thing it does establish: **`legality_1hop` reads 1.00 for every arm.**
+That is corpus parity working. The stratum is now uninformative in the good
+way instead of decisive in the bad way.
+
+## The pairwise gate fired
+
+The pairwise head-to-head judges every pair **twice**, with the two answers
+swapped. Registered before any pair existed: an order-disagreeing pair is a
+**tie**, and above a disagreement rate of **0.20** the pairwise win rate is
+not published as the head-to-head at all.
+
+| comparison | order disagreement | resolved |
+|---|---|---|
+| B vs A | **0.368** | 17 tie / 3 A |
+| C-vector vs A | **0.368** | 16 tie / 2 A / 2 C |
+| C-vector vs B | 0.158 | 15 tie / 2 B / 3 C |
+
+Two of three are above the gate, so for those the pairwise win rate is
+**withdrawn** and the per-stratum correctness comparison above is the
+headline — which is what the 2026-07-19 decision rule always said.
+
+A win-rate table is the figure a portfolio README wants: one number, one
+direction, easy to read. Discovering that the judge answers differently when
+the answers swap places on 37% of pairs and *then* choosing which figure to
+publish is a choice that could be argued either way. Having chosen in
+advance, there is nothing to argue.
+
+Both comparisons above the gate involve arm A, whose contexts hold 55 to 100
+documents against the graph arms' 8 to 40. Position bias plausibly rises
+when the two answers differ in shape — that is a **hypothesis from three
+numbers**, it is untested, and it is written here so it cannot later be read
+as something the experiment established.
+
+## The judge, and what its numbers are worth so far
+
+The judge is built from the same hashed rubric constant the human annotator
+reads, so "the judge uses the same rubric" is a property of there being one
+object rather than a promise. Every verdict carries the rubric hash, the
+prompt version and the model.
+
+### The ceiling (E-011a, both passes complete 2026-09-09)
+
+Two blind human passes, five days apart as registered.
+
+| batch | agreement | interval |
+|---|---|---|
+| b1 (36 rows) | 29/36 = 0.806 | [0.650, 0.902] |
+| b1 excluding 4 externally-discussed rows | 26/32 = 0.812 | [0.647, 0.911] |
+| b2 (19 rows) | 17/19 = 0.895 | [0.686, 0.971] |
+| **pooled** | **43/51 = 0.843** | **[0.720, 0.918]** |
+
+**The judge's threshold is therefore 0.720**, mechanically, with no other
+mapping permitted. The four exposed rows cost 0.006 — reported because a
+pre-committed sensitivity check is worth something only if its result is
+published when it turns out to be negligible.
+
+The registered prediction — "0.75 to 0.90, disagreements concentrating on
+the `correct`/`partial` boundary" — got the magnitude right and the location
+wrong: five of nine disagreements are `partial` → `incorrect`. E-007c made
+the same error in the same direction, naming the boundary adjacent to
+"good" while the movement happened at the boundary adjacent to "bad".
+
+### The judge, audited against it
+
+Pooled over both batches, 55 answers, both human passes blind by
+construction because both predate `judge.py`.
+
+| | agreement | interval |
+|---|---|---|
+| b1 (36) | 23/36 = 0.639 | [0.476, 0.775] |
+| b2 (19) | 17/19 = 0.895 | [0.686, 0.971] |
+| **pooled** | **40/55 = 0.727** | **[0.598, 0.827]** |
+
+Per label, human's label as the denominator:
+
+    correct     13/18 = 0.722 [0.491, 0.875]
+    partial      4/14 = 0.286 [0.117, 0.546]
+    incorrect   23/23 = 1.000 [0.857, 1.000]
+
+**Verdict: neither passed nor failed.** E-011 gates per label at n ≥ 30 and
+no label reaches it — 18, 14, 23 — so every figure here is descriptive and
+**no correctness number may be published as validated**. Reaching the floor
+on the thinnest label needs roughly 90 audited answers at this label mix,
+which is a fact about the registered audit design.
+
+What would have happened is stated deliberately: the judge's pooled lower
+bound is **0.598** against a threshold of **0.720**, so it would have
+**failed**. The verdict is "not measured", and the difference between that
+and "measured and passed" is the whole reason the floor exists.
+
+### The finding: `partial` is where both readers break
+
+The judge agrees with the human on **23 of 23** `incorrect` answers and
+**4 of 14** `partial` ones. The human's own second pass moved almost
+entirely on `partial` as well — seven of nine disagreements start there.
+
+This is E-007c's result arriving in a new label set: a middle category
+absorbs uncertainty. `rubric.py` carries six tie-breaks written before any
+label existed, citing E-007c explicitly and designed to prevent this, and
+**they were not enough**. Being principled in advance is not the same as
+being right in advance.
+
+Nothing is re-labelled. The consequence is carried into Phase 8: the
+headline `run_eval.py report` computes is `correct` against everything else,
+a two-way collapse that does not depend on the unreliable label. That was
+chosen for a different reason — E-007c's warning that a middle category
+counting as a win lets the headline move with how generously it is applied
+— and it is now robust for a measured reason as well.
+
+## Pending, and what each one blocks
+
+| pending | blocks |
+|---|---|
+| ~~Correctness ceiling, second blind pass~~ — **done 2026-09-09: 0.843, threshold 0.720** | — |
+| Judge audit at n >= 30 **per label** — currently 18 / 14 / 23 of 55 | any correctness figure being called validated |
+| Key-fidelity fixtures (perturbed keys, hand-written) | the domain-blindness rate published beside agreement |
+| Evaluation split, 57 questions, opened once in Phase 8 | every claim about the arms |
+
+The judge audit needs roughly **90 audited answers** at the observed label
+mix to put 30 behind the thinnest label. That is a larger commitment than
+the registered "20% of judged answers" implied, and it follows from gating
+**per label** rather than in aggregate — a choice E-011 made for a good
+reason (a judge perfect on `incorrect` and hopeless on `partial` passes an
+aggregate and should not) whose sample-size cost was never computed when it
+was registered.
+
+## Limitations, stated because they bound every number above
+
+- **The retrieval metric cannot see the evidence the arms retrieve on the
+  stratum that carries the hypothesis.** Pin 6 grades at rule-number
+  granularity against `gold_cr_rules`. All 8 development
+  `interaction_multihop` questions retrieve between 2 and 17 Scryfall
+  rulings belonging to a card the answer key names, while 7 of 8 score
+  **zero**, because a ruling carries no CR number. This shows rule recall
+  does not measure whether answer-bearing evidence was retrieved when that
+  evidence is a ruling; it does **not** show those rulings answer the
+  questions, which is a judgement. No new metric was invented — proposing
+  one after watching the registered one read zero is exactly what the
+  pre-registration forbids — and **Context Sufficiency**, already registered
+  and judged, carries the retrieval-layer claim on that stratum. The
+  blindness is symmetric across arms.
+- **Token parity buys an item-count disparity of roughly an order of
+  magnitude.** At the shared 6,000-token budget arm A keeps 55 to 100
+  documents per question against a median of 8 evidence items for the graph
+  arms. Matching on tokens was registered in advance as the constraint both
+  arms face at generation, and the item-count ablation is therefore
+  load-bearing rather than a formality: it is what stops the choice of
+  parity from silently deciding which arm looks precise.
+- **Arm C's text half fires on 2 of 20 development questions.** The router
+  sends a question to text retrieval only when the graph cannot seed it, so
+  arm C differs from arm B on a tenth of the split and "C vs B isolates the
+  text contribution" is close to a null comparison by construction. The
+  router was **not** changed — arm C is the shipped system, and quietly
+  making the shipped system retrieve more so a comparison looks better is
+  the move this apparatus exists to prevent. Arm C runs in two published
+  states instead, and the README quotes the shipped one.
+- **Arm B is single-shot by construction.** Iterative retrieval is offered
+  to every arm that can accept it; arm B cannot today. The multi-hop claim
+  is bounded in writing naming which arms had the affordance.
+- **The incompleteness notice is suppressed on every arm**, so no arm is
+  handed an invitation to hedge that another cannot receive. It changed
+  nothing observable here — `context_incomplete` is 0 of 20 — so it is a
+  parity guarantee against a case that has not occurred, not an intervention
+  with a measured effect.
+- **The correctness ceiling is measured on shipped-hybrid prose**, not on
+  graph-only prose. Both ceiling batches were generated with text retrieval
+  attached. That happens to be the arm the README figure quotes, so the
+  ceiling is on the right prose **by accident rather than by design**.
+- **Arm A was swept and nothing was adopted, which is a limitation of the
+  objective rather than of the baseline.** Pin 7's good-faith tuning sweep
+  ran across 588 cells plus three follow-up probes, with no LLM call —
+  published in [`sweeps/README.md`](sweeps/README.md). Every apparent gain
+  lives in a degenerate regime: gold-rule recall rises monotonically with
+  candidate depth (11/26 at depth ≤ 200, 16/26 at ≤ 1600, 19/26 at ≤ 12800,
+  by which point the arm reads 11% of the corpus per query), and the one
+  parameter that looked like a real gain, `b = 0.4`, does **nothing** at
+  defensible depths — 7/9/9/10 at depths 50/100/200/400 regardless of `b`.
+  `k1`, `rrf_k` and `iterative` likewise tie everywhere the depth is
+  defensible.
+
+  The mechanism is the same metric defect as the bullet above, reached by a
+  different route: rule recall counts gold numbers surviving the budget, so
+  a bigger candidate pool always helps, and the metric measures recall into
+  a pool rather than retrieval precision.
+
+  So arm A stays at published defaults, and the standard objection to a
+  baseline — "you never tuned it" — does not apply. What this does **not**
+  license is "arm A is at its optimum": the correct reading is that the
+  registered retrieval objective cannot tell arm A's configurations apart.
+  A sweep on **answer correctness** would be the informative one and costs
+  15 generations plus 15 judge calls per cell, against a judge not yet
+  audited above its floor. Named as future work with its cost.
