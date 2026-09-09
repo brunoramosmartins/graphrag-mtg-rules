@@ -90,6 +90,73 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-09 — The ceiling exists, and it says the middle label is the problem
+
+Both second passes are done, five days after the first as registered. The
+ceiling is **0.843 [0.720, 0.918]** pooled over 51 rows, so the judge's
+threshold is **0.720** — mechanically, no other mapping.
+
+**The four exposed rows cost 0.006.** Removing them moves batch 1 from 0.806
+to 0.812. I am recording that precisely because it is negligible: a
+pre-committed sensitivity check is only worth something if its result gets
+published when it turns out not to matter. Had I only reported it when it
+looked bad, it would have been a rhetorical device rather than a check.
+
+**My prediction got the magnitude and missed the location, for the second
+time in the same direction.** I predicted 0.75–0.90 and disagreements
+concentrating on the `correct`/`partial` boundary. The number landed at
+0.843 — right — and five of nine disagreements are `partial` → `incorrect`,
+the boundary I did not name.
+
+E-007c did this too: I predicted the `sufficient`/`partial` boundary and the
+movement was entirely on `insufficient`. Both times I named the boundary
+next to "good" and the annotator moved at the boundary next to "bad". Two
+samples is not a law, but it is the same mistake twice by the same person,
+and it is in the registry so that a third prediction of this shape has to
+argue against a record instead of sounding fresh.
+
+**The judge is neither passed nor failed, and I want that stated as a
+non-result rather than dressed up.** Pooled over 55 answers it agrees with
+the human 40 times, 0.727 [0.598, 0.827]. E-011 gates per label at n ≥ 30
+and no label reaches it — 18, 14, 23. So nothing is validated. Reaching the
+floor on the thinnest label needs roughly 90 audited answers at this mix,
+which is a fact about the audit design I registered and did not check the
+arithmetic of at the time.
+
+I am also writing down what would have happened, because the difference
+matters: the judge's lower bound is 0.598 against a threshold of 0.720. It
+would have **failed**. The verdict is "not measured", but "not measured" and
+"measured and passed" are not interchangeable, and only one of them licenses
+publishing a judged figure.
+
+**The finding is that `partial` is where both readers break.** The judge
+agrees with the human on 23 of 23 `incorrect` answers and 4 of 14 `partial`
+ones. The human's own second pass moved almost entirely on `partial`.
+
+This is E-007c's result in a new label set. What stings slightly is that I
+wrote six tie-breaks into `rubric.py` *before any label existed*, explicitly
+citing E-007c, precisely to stop the middle category absorbing uncertainty —
+and they were not enough. Being principled in advance is not the same as
+being right in advance, and the honest reading is that the rubric bought
+less than I expected it to.
+
+The consequence is carried rather than fixed: nothing is re-labelled, and
+the headline `run_eval.py report` already computes is `correct` against
+everything else, a two-way collapse that sidesteps the unreliable label.
+That was chosen for a different reason — E-007c's warning about a middle
+category counting as a win — and it turns out to be robust for a measured
+reason now, which is luck landing on the right side of a decision I would
+rather have made on evidence.
+
+Two harness defects fixed to get here, both the same shape. `run_eval.py
+judge` derived its questions and keys from the golden split, so it could not
+judge E-007's 42 answers at all — the ones batch 1 labelled — and now uses
+the same resolver the human worksheet uses. And `audit_judge.py` scored one
+worksheet against one verdicts file, while a batch's answers can live in two
+files and the ceiling it is read against is pooled; comparing a per-batch
+judge figure to a pooled human ceiling would have put two different samples
+on the two sides of one inequality.
+
 ## 2026-09-04 — The sweep found nothing, and finding nothing took four runs
 
 Pin 7's good-faith sweep of arm A ran. 588 cells plus three probes, no LLM

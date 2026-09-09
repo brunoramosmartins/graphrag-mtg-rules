@@ -258,6 +258,54 @@ class TestReauditBuild:
         assert meta["source_frozen_at"] == date.today().isoformat()
 
 
+class TestCarriedFromPassOne:
+    """A second pass inherits what describes the material, by name.
+
+    `reaudit_build` listed the carried fields one at a time, and when
+    `caches` and `golden` were added to `build` it silently did not carry
+    them. `show` on a second pass over golden-set questions then looked
+    only in E-007's cache and could not find the answer key. It failed
+    loudly, which is the design — the defect is two constructors of one
+    object drifting apart.
+    """
+
+    def test_the_carried_list_covers_what_build_writes(
+        self, tmp_path: Path, golden: tuple[Path, Path]
+    ) -> None:
+        path = write_jsonl(tmp_path / "a.jsonl", [answer("q1")])
+        args = build_args(tmp_path, golden, [path])
+        ac.build(args)
+        first = json.loads(args.out.read_text(encoding="utf-8"))
+        # Everything in pass 1 is either carried, or is about the pass
+        # itself rather than about the material under judgement.
+        about_the_pass = {
+            "pass", "frozen", "seed", "drawn_at", "frozen_at", "order", "labels",
+            "exposed", "source", "source_frozen_at", "elapsed_days",
+        }
+        uncovered = set(first) - set(ac.CARRIED_FROM_PASS_1) - about_the_pass
+        assert not uncovered, f"pass 1 writes {uncovered}, which pass 2 would not inherit"
+
+    def test_the_cache_locations_reach_the_second_pass(
+        self, tmp_path: Path, golden: tuple[Path, Path]
+    ) -> None:
+        # The concrete failure: without `caches`, a second pass over
+        # golden-set questions cannot resolve a key and stops.
+        source = prepared(tmp_path, golden, {"q1": "correct"})
+        out = open_second(tmp_path, source)
+        first = json.loads(source.read_text(encoding="utf-8"))
+        second = json.loads(out.read_text(encoding="utf-8"))
+        assert second["caches"] == first["caches"]
+        assert second["golden"] == first["golden"]
+
+    def test_nothing_about_the_judgement_is_carried(
+        self, tmp_path: Path, golden: tuple[Path, Path]
+    ) -> None:
+        # A worksheet carrying pass 1's labels is not a blind pass, so the
+        # carried list must describe the material and never the verdicts.
+        assert "labels" not in ac.CARRIED_FROM_PASS_1
+        assert "exposed" not in ac.CARRIED_FROM_PASS_1
+
+
 class TestReauditScore:
     def second_pass(self, tmp_path: Path, source: Path, labels: dict[str, str]) -> Path:
         out = tmp_path / "m2.json"

@@ -58,7 +58,15 @@ from graphrag_mtg.evaluation.corpus import build_corpus, corpus_sha256
 from graphrag_mtg.evaluation.dense import DEFAULT_EMBEDDING_MODEL, OpenAiEncoder, VectorCache
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from run_eval import CACHE_DIR, GOLDEN_DIR, RULINGS_PATH, SPLIT_PATH, VECTORS_PATH, question_rows, text_of
+from run_eval import (
+    CACHE_DIR,
+    GOLDEN_DIR,
+    RULINGS_PATH,
+    SPLIT_PATH,
+    VECTORS_PATH,
+    question_rows,
+    text_of,
+)
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")

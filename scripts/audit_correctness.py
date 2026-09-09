@@ -86,6 +86,28 @@ GATE_FLOOR = 0.70
 
 LABELS = tuple(label.value for label in Correctness)
 
+#: What a second pass inherits from the first: everything describing the
+#: material under judgement, and nothing describing the judgement. Kept as
+#: a list so that adding a field to `build` carries it forward instead of
+#: quietly not doing so — which is exactly how `caches` went missing and
+#: left `show` unable to find a golden-set answer key.
+CARRIED_FROM_PASS_1 = (
+    "batch",
+    "rubric_version",
+    "rubric_hash",
+    "sources",
+    "caches",
+    "golden",
+    "answers_sha256",
+    "model",
+    "prompt_version",
+    "notice",
+    "pool",
+    "refused_ids",
+    "arm",
+    "arm_note",
+)
+
 
 def wrap(text: str, indent: str = "  ") -> str:
     out = []
@@ -544,22 +566,22 @@ def reaudit_build(args: argparse.Namespace) -> int:
     random.Random(args.seed).shuffle(order)
     meta = {
         "pass": "m2",
-        "batch": first.get("batch", "b1"),
         "frozen": False,
-        "rubric_version": first["rubric_version"],
-        "rubric_hash": first["rubric_hash"],
         "seed": args.seed,
         "drawn_at": date.today().isoformat(),
         "frozen_at": None,
         "source": str(args.source),
         "source_frozen_at": first["frozen_at"],
         "elapsed_days": elapsed,
-        "sources": first["sources"],
-        "answers_sha256": first["answers_sha256"],
-        "model": first["model"],
-        "prompt_version": first["prompt_version"],
-        "pool": first["pool"],
-        "refused_ids": first["refused_ids"],
+        # Everything describing *what is being judged* comes from pass 1
+        # by name rather than by enumeration. The first version listed the
+        # fields one at a time and silently omitted `caches` and `golden`
+        # when they were added to `build`, so `show` on a second pass over
+        # golden-set questions looked only in E-007's cache and could not
+        # find the key. It failed loudly, which is the design — but the
+        # two constructors drifting is the defect, and a named list is
+        # what stops the next field from drifting the same way.
+        **{key: first[key] for key in CARRIED_FROM_PASS_1 if key in first},
         "order": order,
         "labels": {qid: {"label": "", "note": ""} for qid in order},
     }

@@ -80,16 +80,24 @@ def load_verdicts(path: Path) -> dict[str, dict]:
     return out
 
 
-def score(args: argparse.Namespace) -> int:
-    """Agreement between the judge and the frozen human pass."""
-    human = load_worksheet(args.worksheet)
-    if not human.get("frozen") and not args.allow_unfrozen:
+def collect(worksheet: Path, verdict_paths: list[Path], allow_unfrozen: bool) -> tuple[dict, list, list]:
+    """One batch's (human, judge) label pairs, after its guards.
+
+    `verdict_paths` is a list because a batch's answers can be split
+    across files — E-011a's batch 1 is E-007's audit side and dev side,
+    generated separately — and a batch scored on only one of them would
+    silently shrink its own denominator.
+    """
+    human = load_worksheet(worksheet)
+    if not human.get("frozen") and not allow_unfrozen:
         raise SystemExit(
-            f"{args.worksheet} is not frozen. A human pass finished with the judge's "
+            f"{worksheet} is not frozen. A human pass finished with the judge's "
             "verdicts available is not a blind pass, and freezing is what makes the "
             "ordering checkable afterwards."
         )
-    verdicts = load_verdicts(args.verdicts)
+    verdicts: dict[str, dict] = {}
+    for path in verdict_paths:
+        verdicts.update(load_verdicts(path))
     if verdicts and human.get("rubric_hash"):
         first = next(iter(verdicts.values()))
         if first.get("rubric_hash") and first["rubric_hash"] != human["rubric_hash"]:
@@ -103,19 +111,43 @@ def score(args: argparse.Namespace) -> int:
     for qid, row in human["labels"].items():
         label = (row.get("label") or "").strip()
         if not label:
-            raise SystemExit(f"{qid} is unlabelled in {args.worksheet}.")
+            raise SystemExit(f"{qid} is unlabelled in {worksheet}.")
         if qid not in verdicts:
             missing.append(qid)
             continue
         pairs.append((qid, label, verdicts[qid]["label"]))
 
-    print(f"human   {args.worksheet}   batch {human.get('batch', '?')}   "
-          f"arm {human.get('arm', '?')}")
-    print(f"judge   {args.verdicts}")
-    print(f"rubric  {human.get('rubric_version')} @ {str(human.get('rubric_hash'))[:12]}")
+    return human, pairs, missing
+
+
+def per_label(pairs: list) -> None:
+    """Agreement broken down by the human's label.
+
+    E-011 gates per label rather than in aggregate: a judge perfect on
+    `incorrect` and hopeless on `partial` passes an aggregate and should
+    not. The floor applies per label too, which is why each row says
+    whether it is gated or descriptive.
+    """
+    print("  per label (human's label is the denominator):")
+    for label in JUDGED:
+        rows = [(h, j) for _, h, j in pairs if h == label.value]
+        if not rows:
+            continue
+        hits = [h == j for h, j in rows]
+        cell = wilson_interval(sum(hits), len(hits))
+        gate = "gated" if len(rows) >= AUDIT_FLOOR else "descriptive"
+        print(f"    {label.value:<12} {sum(hits):>3}/{len(rows):<3} = {cell.point:.3f} "
+              f"[{cell.low:.3f}, {cell.high:.3f}]   {gate}")
+
+
+def report(human: dict, pairs: list, missing: list, verdict_paths: list[Path]) -> list[bool]:
+    """Print one batch's figures; return the hits the pool should carry."""
+    print(f"\nbatch {human.get('batch', '?')}   arm {human.get('arm', '?')}   "
+          f"{len(pairs)} pair(s)")
+    print(f"  judge   {', '.join(path.name for path in verdict_paths)}")
     if missing:
-        print(f"{len(missing)} labelled answer(s) have no verdict: {', '.join(missing[:5])}")
-    print(RULE)
+        print(f"  {len(missing)} labelled answer(s) have no verdict: "
+              f"{', '.join(missing[:5])}")
 
     # One answer is one question is one cluster for correctness, unlike the
     # claim-level labels where several claims share a question. Printed
@@ -124,47 +156,96 @@ def score(args: argparse.Namespace) -> int:
     clusters = len({qid for qid, _, _ in pairs})
     agreed = [h == j for _, h, j in pairs]
     interval = wilson_interval(sum(agreed), len(agreed))
-    print(f"exact agreement {sum(agreed)}/{len(agreed)} = {interval.point:.3f} "
+    print(f"  exact agreement {sum(agreed)}/{len(agreed)} = {interval.point:.3f} "
           f"[{interval.low:.3f}, {interval.high:.3f}]   n_clusters {clusters}")
+    per_label(pairs)
 
-    print("\nper label (human's label is the denominator):")
-    for label in JUDGED:
-        rows = [(h, j) for _, h, j in pairs if h == label.value]
-        if not rows:
-            continue
-        hits = [h == j for h, j in rows]
-        cell = wilson_interval(sum(hits), len(hits))
-        gate = "gated" if len(rows) >= AUDIT_FLOOR else "descriptive"
-        print(f"  {label.value:<12} {sum(hits):>3}/{len(rows):<3} = {cell.point:.3f} "
-              f"[{cell.low:.3f}, {cell.high:.3f}]   {gate}")
-
-    print("\nconfusion (human -> judge), disagreements only:")
     confusion = Counter((h, j) for _, h, j in pairs if h != j)
-    for (h, j), count in confusion.most_common():
-        print(f"  {h:<10} -> {j:<10} {count}")
+    if confusion:
+        print("  confusion (human -> judge), disagreements only:")
+        for (h, j), count in confusion.most_common():
+            print(f"    {h:<10} -> {j:<10} {count}")
+    return agreed
+
+
+def score(args: argparse.Namespace) -> int:
+    """Every batch's agreement, then the pool, then the gate.
+
+    Batches are pooled because the ceiling they are read against is
+    pooled: E-011a's rule reads one interval over both, and comparing a
+    per-batch judge figure to a pooled human ceiling would put two
+    different samples on the two sides of the same inequality.
+    """
+    batches = [
+        collect(worksheet, verdicts, args.allow_unfrozen)
+        for worksheet, verdicts in zip(args.worksheet, args.verdicts, strict=True)
+    ]
+    rubrics = {human.get("rubric_hash") for human, _, _ in batches}
+    if len(rubrics) > 1:
+        raise SystemExit(
+            "The batches were labelled under different rubrics. Pooling them would "
+            "average two instruments."
+        )
+    print(f"rubric  {batches[0][0].get('rubric_version')} @ {str(next(iter(rubrics)))[:12]}")
+    print(RULE)
+
+    agreed: list[bool] = []
+    pooled_pairs: list = []
+    for (human, pairs, missing), verdicts in zip(batches, args.verdicts, strict=True):
+        agreed.extend(report(human, pairs, missing, verdicts))
+        pooled_pairs.extend(pairs)
 
     print(RULE)
-    if len(pairs) < AUDIT_FLOOR or clusters < AUDIT_FLOOR:
-        print(f"{len(pairs)} answers and {clusters} clusters, below the registered floor of "
-              f"{AUDIT_FLOOR}.")
-        print("Reported descriptively. This gates nothing, and no correctness figure may")
-        print("be published as validated on it.")
-    else:
-        print("The gate is the correctness ceiling's lower bound, once that ceiling exists.")
-        print("E-011 permits no other mapping, and the ceiling's second pass is not due yet.")
+    interval = wilson_interval(sum(agreed), len(agreed))
+    names = ", ".join(human.get("batch", "?") for human, _, _ in batches)
+    print(f"pooled over {len(batches)} batch(es) ({names}): {sum(agreed)}/{len(agreed)} = "
+          f"{interval.point:.3f} [{interval.low:.3f}, {interval.high:.3f}]")
+    per_label(pooled_pairs)
 
-    print("\nreference band — other labels' intra-rater ceilings, not bounds on this:")
-    for name, (value, note) in CEILINGS.items():
-        print(f"  {name:<28} {value:.3f}   {note}")
+    print(RULE)
+    if args.ceiling_low is None:
+        print("No ceiling supplied, so nothing is gated. Pass --ceiling-low with the lower")
+        print("bound printed by `audit_correctness.py reaudit score` — E-011 permits no")
+        print("other mapping from a ceiling to a threshold.")
+        return 0
+
+    print(f"ceiling lower bound (the registered threshold): {args.ceiling_low:.3f}")
+    gated = 0
+    for label in JUDGED:
+        rows = [(h, j) for _, h, j in pooled_pairs if h == label.value]
+        if len(rows) < AUDIT_FLOOR:
+            print(f"  {label.value:<12} n={len(rows)} < {AUDIT_FLOOR} — not gated, descriptive")
+            continue
+        gated += 1
+        cell = wilson_interval(sum(h == j for h, j in rows), len(rows))
+        verdict = "PASS" if cell.low >= args.ceiling_low else "FAIL"
+        print(f"  {label.value:<12} lower bound {cell.low:.3f} vs {args.ceiling_low:.3f}  {verdict}")
+    if not gated:
+        print("\nNo label reaches the registered floor, so the judge is neither passed nor")
+        print("failed. That is a fact about the audit's size, not about the judge.")
     return 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    scorer = sub.add_parser("score", help="judge against a frozen human pass")
-    scorer.add_argument("--worksheet", type=Path, required=True)
-    scorer.add_argument("--verdicts", type=Path, required=True)
+    scorer = sub.add_parser("score", help="judge against frozen human passes")
+    scorer.add_argument("--worksheet", type=Path, nargs="+", required=True)
+    scorer.add_argument(
+        "--verdicts",
+        type=Path,
+        nargs="+",
+        action="append",
+        required=True,
+        help="one --verdicts per --worksheet; repeat the flag, listing that batch's files",
+    )
+    scorer.add_argument(
+        "--ceiling-low",
+        type=float,
+        default=None,
+        help="the lower bound from `audit_correctness.py reaudit score`; without it "
+        "nothing is gated",
+    )
     scorer.add_argument(
         "--allow-unfrozen",
         action="store_true",

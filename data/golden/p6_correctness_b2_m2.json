@@ -1,0 +1,134 @@
+{
+  "pass": "m2",
+  "batch": "b2",
+  "frozen": false,
+  "rubric_version": "p6-c1",
+  "rubric_hash": "dfcfb0851c8ca0810b10acb318d8ac01f418ad527415a1c45b749d89025ef3fe",
+  "seed": 20260909,
+  "drawn_at": "2026-09-09",
+  "frozen_at": null,
+  "source": "data\\golden\\p6_correctness_b2_m1.json",
+  "source_frozen_at": "2026-09-04",
+  "elapsed_days": 5,
+  "sources": [
+    "runs/e001_C-tfidf-routed_answers_dev.jsonl"
+  ],
+  "answers_sha256": "c738a6d9c7c4058207c0f72c847862d0cffdd0fd20329f92c6ca263cf90bec8d",
+  "model": "gpt-4o-mini",
+  "prompt_version": "p5-a3",
+  "pool": {
+    "total": 20,
+    "refused": 1,
+    "eligible": 19
+  },
+  "refused_ids": [
+    "rg-2569"
+  ],
+  "order": [
+    "rg-539",
+    "rg-2066",
+    "rg-705",
+    "scry-leg-b1a3b2ab-d9f8-4a0a-b2e2-aaa9989b2e41-modern",
+    "scry-leg-6c0c5832-416f-405f-bb44-c24be6f9d081-pioneer",
+    "hand-def-defender",
+    "rg-2333",
+    "hand-indestructible-zero-toughness",
+    "scry-leg-54866c25-b332-46c8-a2c5-1a71b702ddc0-pauper",
+    "scry-leg-65a9f643-063f-406a-8d5a-5ebbe0f04c3d-legacy",
+    "rg-7749",
+    "rg-30",
+    "hand-doubling-season-planeswalker",
+    "hand-def-deathtouch",
+    "rg-1951",
+    "hand-def-trample",
+    "hand-humility-plus-counter",
+    "scry-leg-c6a606af-ea08-4cd9-bfd9-60d76e232e85-modern",
+    "hand-def-indestructible"
+  ],
+  "labels": {
+    "rg-539": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "rg-2066": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "rg-705": {
+      "label": "partial",
+      "note": ""
+    },
+    "scry-leg-b1a3b2ab-d9f8-4a0a-b2e2-aaa9989b2e41-modern": {
+      "label": "correct",
+      "note": ""
+    },
+    "scry-leg-6c0c5832-416f-405f-bb44-c24be6f9d081-pioneer": {
+      "label": "correct",
+      "note": ""
+    },
+    "hand-def-defender": {
+      "label": "partial",
+      "note": ""
+    },
+    "rg-2333": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "hand-indestructible-zero-toughness": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "scry-leg-54866c25-b332-46c8-a2c5-1a71b702ddc0-pauper": {
+      "label": "correct",
+      "note": ""
+    },
+    "scry-leg-65a9f643-063f-406a-8d5a-5ebbe0f04c3d-legacy": {
+      "label": "correct",
+      "note": ""
+    },
+    "rg-7749": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "rg-30": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "hand-doubling-season-planeswalker": {
+      "label": "correct",
+      "note": ""
+    },
+    "hand-def-deathtouch": {
+      "label": "partial",
+      "note": ""
+    },
+    "rg-1951": {
+      "label": "correct",
+      "note": ""
+    },
+    "hand-def-trample": {
+      "label": "partial",
+      "note": ""
+    },
+    "hand-humility-plus-counter": {
+      "label": "incorrect",
+      "note": ""
+    },
+    "scry-leg-c6a606af-ea08-4cd9-bfd9-60d76e232e85-modern": {
+      "label": "correct",
+      "note": ""
+    },
+    "hand-def-indestructible": {
+      "label": "partial",
+      "note": ""
+    }
+  },
+  "caches": [
+    "data\\interim\\e007_cache",
+    "data\\interim\\golden_cache"
+  ],
+  "golden": "data\\golden",
+  "notice": false,
+  "arm": "C",
+  "arm_note": "Arm C, routed, TF-IDF text half — pin 12's registered ablation of the shipped system, not its default. The run was originally labelled arm B; the file is now named for the configuration so no other ablation can overwrite it."
+}

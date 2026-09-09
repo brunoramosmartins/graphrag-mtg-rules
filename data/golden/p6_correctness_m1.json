@@ -227,5 +227,8 @@
       "reason": "an external LLM was asked to assess retrieval on this question; the reply named it with a written argument for why the answer fails. Labels were never shared.",
       "recorded_at": "2026-09-04"
     }
-  }
+  },
+  "batch": "b1",
+  "arm": "C",
+  "arm_note": "E-007's answers: graph traversal plus routed TF-IDF text search, the shipped hybrid. Built before `build` had a --batch flag, so the field is backfilled."
 }

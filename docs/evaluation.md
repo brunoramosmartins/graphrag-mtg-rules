@@ -805,33 +805,91 @@ reads, so "the judge uses the same rubric" is a property of there being one
 object rather than a promise. Every verdict carries the rubric hash, the
 prompt version and the model.
 
-First judge-versus-human agreement, on the 19 answers of E-011a's batch 2:
+### The ceiling (E-011a, both passes complete 2026-09-09)
 
-    exact agreement 17/19 = 0.895 [0.686, 0.971]   n_clusters 19
-    correct 8/9 = 0.889    partial 2/3 = 0.667    incorrect 7/7 = 1.000
-    disagreements: partial -> incorrect, correct -> partial
+Two blind human passes, five days apart as registered.
 
-**Below the registered floor of 30 answers and 30 clusters, so this gates
-nothing** and no correctness figure may be published as validated on it.
+| batch | agreement | interval |
+|---|---|---|
+| b1 (36 rows) | 29/36 = 0.806 | [0.650, 0.902] |
+| b1 excluding 4 externally-discussed rows | 26/32 = 0.812 | [0.647, 0.911] |
+| b2 (19 rows) | 17/19 = 0.895 | [0.686, 0.971] |
+| **pooled** | **43/51 = 0.843** | **[0.720, 0.918]** |
 
-The blindness E-011 requires — the human's pass finished before the judge's
-verdict is visible — holds here **structurally rather than by design**:
-batch 2 was labelled before `judge.py` existed. That is luck, and it is
-recorded as luck, because the next audit will not have it.
+**The judge's threshold is therefore 0.720**, mechanically, with no other
+mapping permitted. The four exposed rows cost 0.006 — reported because a
+pre-committed sensitivity check is worth something only if its result is
+published when it turns out to be negligible.
 
-Both disagreements sit on the `partial` boundary, which is where E-011a's
-registered prediction places the *human's own* second-pass disagreements.
-That is a different comparison — inter-rater against intra-rater — so it is
-suggestive and not confirmation.
+The registered prediction — "0.75 to 0.90, disagreements concentrating on
+the `correct`/`partial` boundary" — got the magnitude right and the location
+wrong: five of nine disagreements are `partial` → `incorrect`. E-007c made
+the same error in the same direction, naming the boundary adjacent to
+"good" while the movement happened at the boundary adjacent to "bad".
+
+### The judge, audited against it
+
+Pooled over both batches, 55 answers, both human passes blind by
+construction because both predate `judge.py`.
+
+| | agreement | interval |
+|---|---|---|
+| b1 (36) | 23/36 = 0.639 | [0.476, 0.775] |
+| b2 (19) | 17/19 = 0.895 | [0.686, 0.971] |
+| **pooled** | **40/55 = 0.727** | **[0.598, 0.827]** |
+
+Per label, human's label as the denominator:
+
+    correct     13/18 = 0.722 [0.491, 0.875]
+    partial      4/14 = 0.286 [0.117, 0.546]
+    incorrect   23/23 = 1.000 [0.857, 1.000]
+
+**Verdict: neither passed nor failed.** E-011 gates per label at n ≥ 30 and
+no label reaches it — 18, 14, 23 — so every figure here is descriptive and
+**no correctness number may be published as validated**. Reaching the floor
+on the thinnest label needs roughly 90 audited answers at this label mix,
+which is a fact about the registered audit design.
+
+What would have happened is stated deliberately: the judge's pooled lower
+bound is **0.598** against a threshold of **0.720**, so it would have
+**failed**. The verdict is "not measured", and the difference between that
+and "measured and passed" is the whole reason the floor exists.
+
+### The finding: `partial` is where both readers break
+
+The judge agrees with the human on **23 of 23** `incorrect` answers and
+**4 of 14** `partial` ones. The human's own second pass moved almost
+entirely on `partial` as well — seven of nine disagreements start there.
+
+This is E-007c's result arriving in a new label set: a middle category
+absorbs uncertainty. `rubric.py` carries six tie-breaks written before any
+label existed, citing E-007c explicitly and designed to prevent this, and
+**they were not enough**. Being principled in advance is not the same as
+being right in advance.
+
+Nothing is re-labelled. The consequence is carried into Phase 8: the
+headline `run_eval.py report` computes is `correct` against everything else,
+a two-way collapse that does not depend on the unreliable label. That was
+chosen for a different reason — E-007c's warning that a middle category
+counting as a win lets the headline move with how generously it is applied
+— and it is now robust for a measured reason as well.
 
 ## Pending, and what each one blocks
 
 | pending | blocks |
 |---|---|
-| Correctness ceiling, second blind human pass (due 2026-09-09) | the judge's pass mark; E-011 permits no other mapping |
-| Judge audit at n >= 30 with >= 30 clusters | any correctness figure being called validated |
+| ~~Correctness ceiling, second blind pass~~ — **done 2026-09-09: 0.843, threshold 0.720** | — |
+| Judge audit at n >= 30 **per label** — currently 18 / 14 / 23 of 55 | any correctness figure being called validated |
 | Key-fidelity fixtures (perturbed keys, hand-written) | the domain-blindness rate published beside agreement |
 | Evaluation split, 57 questions, opened once in Phase 8 | every claim about the arms |
+
+The judge audit needs roughly **90 audited answers** at the observed label
+mix to put 30 behind the thinnest label. That is a larger commitment than
+the registered "20% of judged answers" implied, and it follows from gating
+**per label** rather than in aggregate — a choice E-011 made for a good
+reason (a judge perfect on `incorrect` and hopeless on `partial` passes an
+aggregate and should not) whose sample-size cost was never computed when it
+was registered.
 
 ## Limitations, stated because they bound every number above
 

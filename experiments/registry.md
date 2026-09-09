@@ -3360,6 +3360,100 @@ the number, so the sample is pinned here, before the first label exists.
   produces dress-rehearsal answers. Until then no correctness figure for
   that arm is gated by this number.
 
+- **Actual result (2026-09-09, both passes complete, 5 days apart): the
+  ceiling is 0.843 and the judge's threshold is 0.720.**
+
+  | batch | agreement | interval |
+  |---|---|---|
+  | b1 (36 rows, notice on) | 29/36 = 0.806 | [0.650, 0.902] |
+  | b1 excluding the 4 exposed rows | 26/32 = 0.812 | [0.647, 0.911] |
+  | b2 (19 rows, notice suppressed) | 17/19 = 0.895 | [0.686, 0.971] |
+  | **pooled** | **43/51 = 0.843** | **[0.720, 0.918]** |
+
+  **The registered threshold is therefore 0.720**, mechanically, with no
+  other mapping permitted.
+
+  **The exposure cost 0.006.** The four rows discussed with an external LLM
+  move the batch from 0.806 to 0.812 when removed. One of them (`rg-1702`)
+  did disagree. Recorded because the pre-committed sensitivity check is
+  only worth anything if its result is published when it turns out to be
+  negligible.
+
+  ### Prediction, scored
+
+  Registered before pass 1 was labelled: *"exact agreement lands between
+  0.75 and 0.90 … the disagreements concentrate on the `correct` /
+  `partial` boundary — tie-break 3 — and not on `incorrect`."*
+
+  1. **Magnitude: correct.** 0.843, inside [0.75, 0.90], and nearer
+     E-007c's 0.800 than E-003a's 0.990, as the reasoning said it would be.
+  2. **Location: wrong, and wrong in a way that has now happened twice.**
+     Of nine disagreements, **five are `partial` → `incorrect`**, two are
+     `partial` → `correct`, and two are `correct` → `partial`. The majority
+     sits on the boundary the prediction did not name.
+
+     E-007c predicted disagreement on the `sufficient`/`partial` boundary
+     and found it entirely on `insufficient`. This predicted
+     `correct`/`partial` and found the majority on `partial`/`incorrect`.
+     **Both times the boundary adjacent to "good" was named and the
+     movement happened at the boundary adjacent to "bad".** Two samples is
+     not a law, but it is the same error twice by the same annotator, and
+     it is written here so a third prediction of this shape has to argue
+     against a record.
+
+  ### The judge, audited against that ceiling
+
+  `scripts/audit_judge.py`, pooled over both batches — 55 answers, the
+  human passes blind by construction in both cases, since batch 1's labels
+  predate `judge.py` as batch 2's do.
+
+  | | agreement | interval |
+  |---|---|---|
+  | b1 (36) | 23/36 = 0.639 | [0.476, 0.775] |
+  | b2 (19) | 17/19 = 0.895 | [0.686, 0.971] |
+  | **pooled** | **40/55 = 0.727** | **[0.598, 0.827]** |
+
+  Per label, pooled, with the human's label as the denominator:
+
+      correct     13/18 = 0.722 [0.491, 0.875]
+      partial      4/14 = 0.286 [0.117, 0.546]
+      incorrect   23/23 = 1.000 [0.857, 1.000]
+
+  ### Gating verdict: **neither passed nor failed**
+
+  E-011 gates **per label**, with ≥ 30 answers and ≥ 30 clusters each. At
+  55 answers no label reaches it — `correct` 18, `partial` 14, `incorrect`
+  23 — so every figure above is descriptive and **no correctness number may
+  be published as validated**. Reaching the floor on the thinnest label
+  would need roughly 90 audited answers at this label mix, which is a fact
+  about the registered audit design and is recorded as one.
+
+  **What would have happened if the gate had fired is stated deliberately.**
+  The judge's pooled lower bound is **0.598** against a threshold of
+  **0.720**: it would have **failed**. That is not the verdict — the
+  verdict is "not measured" — but the difference between *not measured* and
+  *measured and passed* has to stay visible, because only one of them is an
+  argument for publishing a judged figure.
+
+  ### The finding: `partial` is the instrument's weak point, for both readers
+
+  The judge agrees with the human on **23 of 23 `incorrect`** answers and
+  on **4 of 14 `partial`** ones. The human's own second pass moved almost
+  entirely on `partial` too — seven of nine disagreements start there.
+
+  This is E-007c's result arriving in a new label set: a middle category
+  absorbs uncertainty. The six tie-breaks written into `rubric.py` before
+  any label existed were an attempt to pre-empt exactly this, and they were
+  **not enough**. That is worth stating plainly rather than treating the
+  tie-breaks as having worked because they were principled.
+
+  Consequence carried into Phase 8 rather than fixed by re-labelling
+  anything: the correctness figures E-001 reports are read against an
+  instrument whose middle label is unreliable, and a two-way collapse
+  (`correct` against everything else) is what `run_eval.py report` already
+  uses for the headline — which happens to be the robust choice, and is now
+  robust for a measured reason instead of an argued one.
+
 - **Amendment 2026-09-04 (pass 1 frozen the same day, pass 2 not built) —
   four rows discussed outside the worksheet, and a guard that named a
   command instead of a property.**

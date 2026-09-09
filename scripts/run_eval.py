@@ -107,6 +107,7 @@ from run_e007 import (  # sibling scripts; the sys.path line above enables them
     evidence_fingerprint,
     rebuild,
 )
+from audit_correctness import GOLDEN_CACHE, question_and_key
 from split_golden import QUESTION_FILES, load_questions
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -565,11 +566,15 @@ def run_judge(args: argparse.Namespace) -> int:
     ]
     if args.limit:
         rows = rows[: args.limit]
-    keys = {r["id"]: key_for(r, args.cache_dir) for r in question_rows(args.golden, args.split, side)}
-    questions = {
-        r["id"]: text_of(r, args.cache_dir)
-        for r in question_rows(args.golden, args.split, side)
-    }
+    # Looked up through the same resolver the human worksheet uses, rather
+    # than from the golden split. The judge has to score whatever answers
+    # it is pointed at — E-007's 42 are what E-011a's batch 1 labelled, and
+    # they are not golden rows — and two lookups for one thing is how a
+    # blank key reaches a judge that then scores prose against nothing.
+    caches = [Path(c) for c in args.caches]
+    pairs = {qid: question_and_key(qid, caches, args.golden) for qid in {r["question_id"] for r in rows}}
+    questions = {qid: pair[0] for qid, pair in pairs.items()}
+    keys = {qid: pair[1] for qid, pair in pairs.items()}
 
     billed = [r for r in rows if not r["refused"] and render_for_judgement(r["text"]).strip()]
     client = LlmClient(model=args.model, max_tokens=MAX_JUDGE_TOKENS, temperature=0.0)
@@ -877,6 +882,9 @@ def main() -> int:
 
     jud = sub.add_parser("judge", parents=[common], help="score an arm's answers (costs tokens)")
     jud.add_argument("--answers", type=Path, default=None)
+    jud.add_argument(
+        "--caches", type=Path, nargs="+", default=[CACHE_DIR, Path("data/interim/e007_cache")]
+    )
     jud.add_argument("--out", type=Path, default=None)
     jud.add_argument("--model", default=None, help="defaults to LLM_MODEL in .env")
     jud.add_argument("--force", action="store_true")

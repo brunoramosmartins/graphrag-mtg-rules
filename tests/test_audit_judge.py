@@ -51,9 +51,11 @@ def verdicts(tmp_path: Path, labels: dict[str, str], *, rubric_hash: str = HASH)
 
 
 def namespace(worksheet_path: Path, verdicts_path: Path, **kw) -> argparse.Namespace:
+    """One batch, one verdicts file — the common case, in list shape."""
     return argparse.Namespace(
-        worksheet=worksheet_path,
-        verdicts=verdicts_path,
+        worksheet=[worksheet_path],
+        verdicts=[[verdicts_path]],
+        ceiling_low=kw.pop("ceiling_low", None),
         allow_unfrozen=kw.pop("allow_unfrozen", False),
         **kw,
     )
@@ -130,6 +132,67 @@ class TestScoring:
         printed = capsys.readouterr().out
         assert "1 labelled answer(s) have no verdict" in printed
         assert "exact agreement 1/1" in printed
+
+
+class TestPooling:
+    """Batches are pooled because the ceiling they are read against is.
+
+    Comparing a per-batch judge figure to a pooled human ceiling would put
+    two different samples on the two sides of one inequality.
+    """
+
+    def test_a_batch_can_span_two_verdict_files(self, tmp_path: Path, capsys) -> None:
+        # E-011a's batch 1 is E-007's audit side and dev side, generated
+        # separately. Scoring it on one file would silently shrink its own
+        # denominator.
+        human = worksheet(tmp_path, {"q1": "correct", "q2": "partial"})
+        one = tmp_path / "v1.jsonl"
+        one.write_text(json.dumps({"question_id": "q1", "label": "correct",
+                                   "rubric_hash": HASH}) + "\n", encoding="utf-8")
+        two = tmp_path / "v2.jsonl"
+        two.write_text(json.dumps({"question_id": "q2", "label": "partial",
+                                   "rubric_hash": HASH}) + "\n", encoding="utf-8")
+        args = argparse.Namespace(
+            worksheet=[human], verdicts=[[one, two]], ceiling_low=None, allow_unfrozen=False
+        )
+        audit_judge.score(args)
+        assert "exact agreement 2/2" in capsys.readouterr().out
+
+    def test_pools_across_batches(self, tmp_path: Path, capsys) -> None:
+        first = worksheet(tmp_path, {"q1": "correct"})
+        second = tmp_path / "m1b.json"
+        second.write_text(json.dumps({
+            "batch": "b2", "frozen": True, "rubric_version": "p6-c1", "rubric_hash": HASH,
+            "labels": {"q2": {"label": "partial"}},
+        }), encoding="utf-8")
+        args = argparse.Namespace(
+            worksheet=[first, second],
+            verdicts=[[verdicts(tmp_path, {"q1": "correct"})],
+                      [verdicts(tmp_path / "b", {"q2": "incorrect"})]],
+            ceiling_low=None,
+            allow_unfrozen=False,
+        )
+        audit_judge.score(args)
+        assert "pooled over 2 batch(es)" in capsys.readouterr().out
+
+
+class TestGate:
+    def test_without_a_ceiling_nothing_is_gated(self, tmp_path: Path, capsys) -> None:
+        # E-011 permits exactly one mapping from a ceiling to a threshold,
+        # so a run with no ceiling must decline rather than invent one.
+        human = worksheet(tmp_path, {"q1": "correct"})
+        audit_judge.score(namespace(human, verdicts(tmp_path, {"q1": "correct"})))
+        assert "No ceiling supplied" in capsys.readouterr().out
+
+    def test_a_label_below_the_floor_is_not_gated(self, tmp_path: Path, capsys) -> None:
+        # 55 answers gave 18 / 14 / 23 and gated nothing. The floor is per
+        # label, and that is a fact about the audit's size.
+        human = worksheet(tmp_path, {"q1": "correct"})
+        audit_judge.score(namespace(human, verdicts(tmp_path, {"q1": "correct"}),
+                                    ceiling_low=0.72))
+        printed = capsys.readouterr().out
+        assert "not gated, descriptive" in printed
+        assert "neither passed nor failed" in printed
 
 
 class TestReferenceBand:

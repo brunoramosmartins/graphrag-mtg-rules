@@ -38,9 +38,9 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
+from graphrag_mtg.evaluation.bm25 import K1 as BM25_K1
 from graphrag_mtg.evaluation.bm25 import B as BM25_B
 from graphrag_mtg.evaluation.bm25 import Bm25Index
-from graphrag_mtg.evaluation.bm25 import K1 as BM25_K1
 from graphrag_mtg.evaluation.corpus import Document
 from graphrag_mtg.evaluation.dense import DenseIndex, Encoder
 
