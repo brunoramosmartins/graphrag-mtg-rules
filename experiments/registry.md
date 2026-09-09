@@ -1955,7 +1955,17 @@ historical document.
   to E-003: that split is spent, its figure stands as reported, and this
   belongs to E-005 with a fresh sample.
 
-### E-005 — linking precision (registered 2026-08-09, not yet run)
+### E-005 — linking precision (registered 2026-08-09, **dropped 2026-09-09, never run**)
+
+> **Dropped at the Phase 6 close, not silently abandoned.** It was
+> registered to decompose E-003's linking failure, and Phase 4 replaced the
+> linker it would have measured: `QueryLinker` resolves *question* mentions
+> against a card lexicon, which is a different object from the extraction
+> linker E-003 scored. Running it now would measure a component that no
+> longer sits where the failure was. Dropping it costs the decomposition of
+> a Phase 3 number that is already published with its interval and its
+> ceiling beside it. If linking precision matters again it is a new
+> registration against the current linker, not this one revived.
 
 - **Objective:** E-003 measured linking F1 0.634 [0.491, 0.750] against a 0.90
   threshold — fail — with precision 0.500 and 16 of 26 false positives in the
@@ -2389,7 +2399,18 @@ judge who accepts any plausible-looking citation, and does not rule out a
 judge who remembers giving this sentence a different verdict earlier. A
 second annotator would fix it and this project has one.
 
-### E-007d — does the claim unit survive a list? (registered 2026-08-10, not yet run)
+### E-007d — does the claim unit survive a list? (registered 2026-08-10, **dropped 2026-09-09, never run**)
+
+> **Dropped at the Phase 6 close, not silently abandoned.** It asked whether
+> the claim segmentation unit survives list formatting, prompted by 49 of
+> 411 worksheet rows being a bare list marker. E-007's coverage and support
+> figures are already published with that exclusion stated, and Phase 6's
+> correctness rubric does not segment at all — it scores whole answers
+> against a key, so the unit E-007d would have tested is not the unit any
+> current figure depends on. What is lost is a bound on how much E-007's
+> exclusion rate moved its own numbers; that limitation stays in
+> `docs/evaluation.md` unquantified rather than being quietly dropped with
+> the experiment.
 
 - **Registered mid-labelling of E-007's audit side, before its exclusion
   rate is final**, and prompted by a row count rather than by a result: 49
@@ -3562,7 +3583,7 @@ it.** Its job is to generate the hypothesis and to choose the size buckets
 12b will use, and it is labelled exploratory wherever it is quoted. It is
 free, it is re-analysable, and it is not evidence for a claim.
 
-**Result (2026-09-03, `scripts/run_e012.py explore`, exploratory).** Hits@1
+**Actual result (2026-09-03, `scripts/run_e012.py explore`, exploratory).** Hits@1
 by context size and depth, restricted to questions whose answer was in the
 evidence shown:
 

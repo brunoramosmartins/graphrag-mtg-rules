@@ -90,6 +90,52 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-09 — Phase 6 closes with four carry-overs and two honest drops
+
+The deliverable audit does not come out clean, and closing it as though it
+did would be the one move this phase spent two weeks not making.
+
+**Carried, with the reason each is not a failure of the phase:**
+
+- `run_eval.py` as **one command with `--smoke` and figures**. Today it is
+  five subcommands and no figures. This is the reproducibility DoD and it is
+  cheap; it goes to Phase 7 with the rest of the infrastructure work.
+- The **README head-to-head table**. It cannot exist yet: the order-
+  disagreement gate withdrew the pairwise win rate for two of three
+  comparisons, and correctness is unvalidated. Phase 8.
+- **E-009** (does the model refuse when the evidence is absent) and **E-010**
+  (the precision side of retrieval). E-010 in particular feeds the
+  head-to-head directly — the item-count disparity between arm A's 55-100
+  documents and the graph's 8 is exactly what its precision metric reads.
+- **The judge audit to n ≥ 30 per label**, roughly 35 more audited answers.
+  Without it no correctness figure is publishable as validated.
+
+**Dropped, each with what the drop costs:**
+
+- **E-005**, linking precision. Phase 4 replaced the object it would have
+  measured: `QueryLinker` resolves question mentions against a card lexicon,
+  which is not the extraction linker E-003 scored. Running it would measure
+  a component that no longer sits where the failure was. The cost is that
+  E-003's linking failure stays undecomposed — published with its interval
+  and its ceiling, but not explained.
+- **E-007d**, whether the claim unit survives a list. Phase 6's correctness
+  rubric does not segment at all; it scores whole answers against a key. The
+  unit E-007d would have tested is not the unit any current figure depends
+  on. The cost is that E-007's exclusion rate stays an unquantified
+  limitation rather than a bounded one, and it stays in `evaluation.md`
+  saying so.
+
+**One DoD criterion is superseded rather than failed**, and it needs a
+roadmap revision rather than an edited number. The roadmap asks for
+judge-human agreement ≥ 85%. E-011 withdrew that threshold — and the 0.90
+beside it — because a hand-picked pass mark for an instrument whose ceiling
+is measurable is a number chosen before the evidence and defended after.
+The replacement is mechanical: the judge passes if the lower bound of its
+agreement reaches the lower bound of the human ceiling. Measured, that is
+0.720, and the judge is not gated at all because no label reaches n ≥ 30.
+Writing "85%" as met or unmet would be answering a question the project
+stopped asking.
+
 ## 2026-09-09 — The ceiling exists, and it says the middle label is the problem
 
 Both second passes are done, five days after the first as registered. The
