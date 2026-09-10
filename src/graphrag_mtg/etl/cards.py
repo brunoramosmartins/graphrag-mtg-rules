@@ -31,6 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
 from graphrag_mtg.etl.normalize import normalize_name
 
+
 def oracle_cards_path() -> Path:
     """The oracle bulk to read, resolved **now**.
 

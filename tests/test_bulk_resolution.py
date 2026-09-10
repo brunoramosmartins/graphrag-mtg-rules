@@ -92,7 +92,7 @@ class TestOneCorpusNotTwo:
         # nobody anything is wrong. Both halves go through `bulk_path`.
         import run_eval
 
-        assert run_eval.RULINGS_PATH == bulk_path(RULINGS_STEM)
+        assert bulk_path(RULINGS_STEM) == run_eval.RULINGS_PATH
 
     def test_the_graph_and_the_index_read_the_same_card_file(self) -> None:
         # The loader fills the graph arms retrieve from; `run_eval` builds
