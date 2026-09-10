@@ -135,7 +135,7 @@ def step_download(args: argparse.Namespace) -> str:
     """
     if args.no_download:
         return "skipped (--no-download)"
-    download_main(["--force"] if args.force else [])
+    code = download_main(["--force"] if args.force else [])
 
     # `bulk_path` returns the path a fresh download *would* write when
     # nothing is there, so existence is the only test that means anything.
@@ -143,10 +143,17 @@ def step_download(args: argparse.Namespace) -> str:
     if missing:
         raise SystemExit(
             f"The download left {', '.join(missing)} absent, and the graph cannot be "
-            "built without them. The Comprehensive Rules URL is the usual cause: the "
-            "rules page is JS-rendered, so it is not auto-discoverable and CR_TXT_URL "
-            "must be set in .env. See .env.example for where to find the current one."
+            "built without them. See the message above for why. The Comprehensive "
+            "Rules are the usual one: WotC's rules page is JS-rendered, so the link "
+            "cannot be resolved automatically, and the file is replaced every release "
+            "so an old URL 404s rather than redirecting. Set CR_TXT_URL in .env."
         )
+    if code != 0:
+        # Every file the graph needs is here, so the failure was an optional
+        # source (MTR/IPG). Named rather than swallowed: a run that reports
+        # nothing amiss when something did not download is how a corpus ends
+        # up quietly missing a document nobody looks for.
+        return "sources present; an optional source did not download (see above)"
     return "sources present and current"
 
 
@@ -154,10 +161,33 @@ def step_schema(args: argparse.Namespace) -> str:
     return f"{apply_schema()} constraint/index statement(s) applied"
 
 
+#: Edges no deterministic loader produces. `CITES_RULE` and `MENTIONS` come
+#: from `extraction.pipeline`, which sends every ruling through an LLM and a
+#: gate. A graph without them is not broken, it is unextracted — and Neo4j
+#: warns once per traversal that touches a relationship type it has never
+#: seen, which on a first run is a wall of red about a step nobody skipped
+#: by mistake.
+EXTRACTED_EDGES = ("CITES_RULE", "MENTIONS")
+
+
 def step_graph(args: argparse.Namespace) -> str:
     reports = load_all(force=args.force)
     loaded = [r.source for r in reports if not r.skipped]
     skipped = [r.source for r in reports if r.skipped]
+
+    with driver_session() as session:
+        present = {
+            row["relationshipType"]
+            for row in session.run("CALL db.relationshipTypes() YIELD relationshipType")
+        }
+    absent = [edge for edge in EXTRACTED_EDGES if edge not in present]
+    if absent:
+        print(f"  note: {', '.join(absent)} not in the graph.")
+        print("        These are the LLM-extracted edges, and building them is a")
+        print("        separate paid step: `python -m graphrag_mtg.extraction.pipeline`.")
+        print("        Until then Neo4j warns on every traversal that mentions one.")
+        print("        Retrieval still works; it reaches fewer rules from a ruling.")
+
     if not loaded:
         return f"already loaded: {', '.join(skipped)}"
     return f"loaded {', '.join(loaded)}" + (f"; skipped {', '.join(skipped)}" if skipped else "")

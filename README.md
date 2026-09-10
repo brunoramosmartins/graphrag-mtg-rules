@@ -51,28 +51,63 @@ was chosen because it lets us *measure the truth*. Full rationale in
 
 ## Quickstart
 
+Docker and nothing else. Timings are measured, not aspirational — see
+[`docs/onboarding.md`](docs/onboarding.md).
+
 ```bash
-# 1. Environment
+cp .env.example .env
+# Set NEO4J_PASSWORD, and CR_TXT_URL to the TXT link on
+# https://magic.wizards.com/en/rules — that page is JS-rendered, so the
+# link cannot be resolved automatically, and WotC replaces the file every
+# release without a redirect, so an old URL 404s.
+
+docker compose --profile app up -d --wait
+docker compose exec app python scripts/bootstrap.py
+```
+
+**~2 min 54 s** from an empty database to a cited answer, plus about a
+minute to build the image. Running it again is **~27 s**: every step is
+idempotent, so the first run is the cold path and the rest are warm.
+
+That builds the **graph**, which is what the shipped system retrieves
+from. The vector baseline it is compared against is a separate index that
+costs an embedding call per document — `python scripts/run_eval.py index`,
+which prints its estimate before spending anything.
+
+<details>
+<summary>Working from a host venv instead</summary>
+
+```bash
 py -3.11 -m venv .venv        # any Python >= 3.11
 source .venv/Scripts/activate # Windows Git Bash; use .venv/bin/activate on *nix
 pip install -e ".[dev]"
 
-# 2. Configuration
 cp .env.example .env          # set NEO4J_PASSWORD
-
-# 3. Database
-docker compose up -d --wait   # Neo4j on bolt://localhost:7687 (Browser: :7474)
+docker compose up -d --wait   # Neo4j alone on bolt://localhost:7687 (Browser: :7474)
                               # --wait blocks until healthy; Bolt needs ~30s and
                               # connecting sooner fails the handshake, not the config
 python scripts/smoke_neo4j.py # verifies the driver can reach Neo4j
+python scripts/bootstrap.py   # same four steps, ~11s warm
 
-# 4. Checks
 ruff check .
 pytest -m "not integration"
-
-# 5. Licensing-gate sanity (confirms sources still resolve)
-python scripts/fetch_samples.py
+python scripts/fetch_samples.py   # licensing-gate sanity
 ```
+
+</details>
+
+<details>
+<summary>Traces</summary>
+
+```bash
+docker compose --profile observability up -d --wait   # Phoenix on :6006
+python scripts/run_eval.py run --arm C --limit 1 --trace
+```
+
+`run` is the only command whose trace covers a whole question; every other
+one is a single stage.
+
+</details>
 
 ## Repository layout
 
@@ -89,6 +124,7 @@ Dockerfile           the application container (ETL, retrieval, evaluation)
 
 ## Documentation
 
+- [Onboarding](docs/onboarding.md) — the cold and warm paths, timed, and what each covers
 - [Hypothesis](docs/hypothesis.md) — the v0.2 thesis and a-priori predictions
 - [Evaluation](docs/evaluation.md) — metrics, results, and every limitation that bounds them
 - [Annotation methodology](docs/annotation-methodology.md) — how a score against a

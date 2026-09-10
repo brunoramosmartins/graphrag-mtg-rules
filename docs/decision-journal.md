@@ -90,6 +90,60 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-10 — The graph claimed a provenance it did not have
+
+Timing the onboarding required an empty database and an empty `data/`, so
+the cold path was measured in a container against a throwaway Neo4j. It
+came out at **173.7 s** — download 3.7, schema 2.7, graph load 136.1,
+first answer 31.2 — plus 68.8 s to build the image with no layer cache.
+The warm path is 26.7 s in the container and 11.2 s from a host venv.
+Published in [onboarding.md](onboarding.md), with no ceiling attached and
+with network-bound figures separated from compute-bound ones, because a
+download time is a fact about the connection it was measured on.
+
+**The measurement found a bug that the measurement was not looking for.**
+The fresh graph held 34,937 cards. The development graph, reloaded from
+the same bulk hours earlier, held 34,236. Same code, same file — I checked
+the file, and it has 34,937 playable records today.
+
+The 34,236 came from `scryfall_oracle_cards.json`, a 179 MB legacy array
+downloaded in July and still sitting beside the current `.jsonl.gz`.
+`bulk_path` prefers `.jsonl.gz` and would have returned it — but
+`etl/cards.py` held `ORACLE_CARDS_PATH = bulk_path(...)` as a **module
+constant**, and a constant binds at import. `scripts/bootstrap.py` imports,
+then downloads, then loads. So the load read July's array while
+`_record_source_load` stamped it with the SHA-256 of the file just
+downloaded.
+
+Nothing failed. No exception, no warning, no count that looked wrong on
+its own. The graph simply asserted a provenance it did not have, and it
+would have kept asserting it: the recorded hash matches the manifest, so
+every future `load_all` skips the source as current.
+
+Three instances of one shape, all fixed:
+
+- `etl/cards.py` — `ORACLE_CARDS_PATH` is now `oracle_cards_path()`, and
+  `load_oracle_cards`'s default is `None` rather than a `Path`.
+- `graph/loader.py` — same, for `RULINGS_PATH`.
+- `scripts/run_eval.py` — `RULINGS_PATH` was the literal
+  `data/raw/scryfall_rulings.json` while the card half of the same corpus
+  went through `bulk_path`. Arm A was indexing today's cards beside
+  rulings from a legacy array, and `corpus_sha256` covered both halves and
+  described the mixture perfectly.
+
+The lesson is not "don't cache paths". It is that **which file is the
+corpus was being decided in three places**, and a hash computed over the
+result cannot tell you the inputs disagreed — it hashes whatever it was
+handed and reports a clean, stable, wrong answer. The test that now guards
+it asserts the default is not a `Path`, which is the defect stated
+directly rather than a symptom of it.
+
+Phase 6's figures are unaffected. Everything in that phase resolved to the
+same legacy array, so its runs were internally consistent, and
+`docs/evaluation.md` records the CR and card versions it used. The
+development graph is inconsistent with its own manifest and wants
+`bootstrap.py --force`.
+
 ## 2026-09-10 — "Cold once, warm thereafter" is false, and Scryfall is why
 
 The full stack lands — a `Dockerfile`, an `app` service behind a compose

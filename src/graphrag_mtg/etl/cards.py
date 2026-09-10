@@ -31,7 +31,19 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
 from graphrag_mtg.etl.normalize import normalize_name
 
-ORACLE_CARDS_PATH = bulk_path(ORACLE_CARDS_STEM)
+def oracle_cards_path() -> Path:
+    """The oracle bulk to read, resolved **now**.
+
+    Deliberately a function. This used to be a module constant, and a
+    constant binds at import: a process that imports this module, then
+    downloads, then loads still reads whatever file existed at import.
+    That is not hypothetical — `scripts/bootstrap.py` does exactly those
+    three things in that order, and on 2026-09-10 it loaded 34,236 cards
+    from a legacy `.json` array left over from July while recording the
+    hash of the `.jsonl.gz` it had just downloaded. The graph then claimed
+    a provenance it did not have, which is worse than being out of date.
+    """
+    return bulk_path(ORACLE_CARDS_STEM)
 
 # Layouts that are not deck-legal objects: tokens, emblems, and the assorted
 # oversized/supplementary card types. Canonical definition — scripts import
@@ -151,7 +163,7 @@ def parse_card(raw: dict[str, Any]) -> Card:
 
 
 def load_oracle_cards(
-    path: Path = ORACLE_CARDS_PATH,
+    path: Path | None = None,
     *,
     playable_only: bool = True,
     limit: int | None = None,
@@ -165,6 +177,9 @@ def load_oracle_cards(
 
     Args:
         path: The downloaded oracle bulk, in any format `iter_bulk` accepts.
+            Defaults to :func:`oracle_cards_path`, resolved on each call
+            rather than at import — see that function for what a constant
+            here cost.
         playable_only: Skip tokens, emblems and other non-deck objects.
         limit: Stop after this many cards — cost discipline for dry runs.
 
@@ -172,7 +187,7 @@ def load_oracle_cards(
         One validated :class:`Card` per record.
     """
     yielded = 0
-    for raw in iter_bulk(path):
+    for raw in iter_bulk(path if path is not None else oracle_cards_path()):
         if playable_only and not is_playable(raw):
             continue
         yield parse_card(raw)

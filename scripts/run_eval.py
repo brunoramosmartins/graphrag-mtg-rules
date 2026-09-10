@@ -81,7 +81,7 @@ from contextlib import ExitStack
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, RULINGS_STEM, bulk_path, iter_bulk
 from graphrag_mtg.etl.cr_parser import CR_TXT_PATH, parse_cr
 from graphrag_mtg.evaluation.arm_c import VectorRuleSearch
 from graphrag_mtg.evaluation.baseline_vector import build_arm
@@ -176,7 +176,13 @@ ARMS = {
 #: rehearsal. The rehearsal is binding only when the judge has run too.
 UNBUILT: dict[str, str] = {}
 
-RULINGS_PATH = Path("data/raw/scryfall_rulings.json")
+#: Resolved through `bulk_path`, not spelled out. It used to be the literal
+#: `data/raw/scryfall_rulings.json` — the legacy array format — while the
+#: card half of the same corpus went through `bulk_path` and got the
+#: current `.jsonl.gz`. Arm A was therefore indexing today's cards beside
+#: rulings from whenever the last array download happened, and nothing said
+#: so: `corpus_sha256` covered both halves and simply described the mixture.
+RULINGS_PATH = bulk_path(RULINGS_STEM)
 VECTORS_PATH = Path("data/interim/e001_vectors.bin")
 
 #: Characters a document may contribute to one embedding request. The

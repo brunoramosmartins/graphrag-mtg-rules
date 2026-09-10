@@ -44,7 +44,17 @@ from graphrag_mtg.etl.normalize import normalize_name
 from graphrag_mtg.graph.connection import driver_session
 
 DEFAULT_BATCH_SIZE = 1_000
-RULINGS_PATH = bulk_path(RULINGS_STEM)
+
+
+def rulings_path() -> Path:
+    """The rulings bulk to read, resolved **now**, not at import.
+
+    Same defect as `etl.cards.oracle_cards_path` and for the same reason:
+    a module constant binds when the module is imported, so a process that
+    imports, downloads and then loads reads the file that was there
+    before the download. See that function for what it cost.
+    """
+    return bulk_path(RULINGS_STEM)
 
 # CR chapters that define keywords: 701 keyword actions, 702 keyword abilities.
 # A glossary entry citing anything else is a general definition, not a keyword.
@@ -522,7 +532,7 @@ def load_all(
         if not force and limit is None and _source_is_current(session, RULINGS_SOURCE, sha):
             reports.append(LoadReport(RULINGS_SOURCE, skipped=True, reason="unchanged"))
         else:
-            raw = load_bulk(RULINGS_PATH)
+            raw = load_bulk(rulings_path())
             counts = load_rulings(session, raw, sha, size=batch_size)
             if limit is None:
                 _record_source_load(session, RULINGS_SOURCE, sha, counts["Ruling"].rows)
