@@ -158,8 +158,14 @@ def retrieve(
                     # The traversal in readable form. This is the claim the
                     # README makes — an answer is a path — and until now it
                     # was the one thing a trace of a traversal did not show.
+                    #
+                    # Index-aligned with `evidence.keys` and therefore not
+                    # filtered: a reader pairs `paths.2` with `keys.2`, and
+                    # dropping an empty path would shift every entry after
+                    # it onto the wrong key. Two lists that look aligned and
+                    # are not is worse than one list with a gap in it.
                     spans.PATHS: spans.first_n(
-                        item.path for item in added if item.path
+                        item.path or "(no path recorded)" for item in added
                     ),
                 },
             )

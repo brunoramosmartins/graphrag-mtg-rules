@@ -501,3 +501,25 @@ def test_every_registered_arm_can_open_a_trace(recorded, arm: str) -> None:
         pass
     (root,) = by_name(recorded, spans.QUERY)
     assert root.attributes[spans.ARM] == arm
+
+
+class TestKeysAndPathsLineUp:
+    """`paths.2` is only readable if it belongs to `evidence.keys.2`.
+
+    Phoenix renders a list attribute as indexed rows, so the two lists are
+    read side by side whether or not they were meant to be. Filtering one
+    of them and not the other produces two lists that look aligned and are
+    not — which is a worse failure than a visible gap, because nothing
+    about the display says the pairing is wrong.
+    """
+
+    def test_the_two_lists_have_the_same_length(self, recorded) -> None:
+        retrieve("What does Flying do?", linker=linker(), run=runner())
+        for span in by_name(recorded, spans.TRAVERSAL):
+            keys = span.attributes.get(spans.EVIDENCE_KEYS, ())
+            paths = span.attributes.get(spans.PATHS, ())
+            assert len(keys) == len(paths)
+
+    def test_an_empty_path_holds_its_place(self) -> None:
+        # The alignment cannot depend on every template filling in a path.
+        assert spans.first_n(["a", "", "c"]) == ["a", "", "c"]
