@@ -44,10 +44,19 @@ extraction = ["anthropic>=0.40"]
 # vector baseline.
 embeddings = ["sentence-transformers>=3.0", "FlagEmbedding>=1.2"]
 
-# Phase 7 — OpenTelemetry tracing + Arize Phoenix viewer (reused from Project 1).
-observability = [
+# Phase 7 — everything needed to *emit* spans to a collector. This is all an
+# application needs: the viewer is a service, not a library. The application
+# container installs this and nothing more, which is the difference between a
+# 1.5 GB image and a 700 MB one.
+tracing = [
     "opentelemetry-sdk>=1.25",
     "opentelemetry-exporter-otlp>=1.25",
+]
+
+# The above plus the Arize Phoenix *viewer*, for running it from a host venv
+# instead of the compose service.
+observability = [
+    "graphrag-mtg-rules[tracing]",
     "arize-phoenix>=4.0",
 ]
 

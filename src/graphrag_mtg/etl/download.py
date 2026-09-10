@@ -263,7 +263,14 @@ def resolve_all(client: httpx.Client, groups: list[str], args: argparse.Namespac
     return resolved
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    """Download every selected source group.
+
+    Args:
+        argv: Command-line arguments. Defaults to `sys.argv[1:]`; passed
+            explicitly by `scripts/bootstrap.py`, which calls this as a
+            function rather than reaching for `sys.argv` around it.
+    """
     load_dotenv()  # pick up CR_TXT_URL / MTR_PDF_URL / IPG_PDF_URL from .env
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", choices=SOURCE_GROUPS, help="download only one source group")
@@ -271,7 +278,7 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="ignore the manifest and re-download")
     parser.add_argument("--mtr-url", help="URL of the current MTR PDF (optional)")
     parser.add_argument("--ipg-url", help="URL of the current IPG PDF (optional)")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     groups = [args.source] if args.source else list(SOURCE_GROUPS)
     manifest = load_manifest()

@@ -1,9 +1,13 @@
 .git/
+.github/
 .claude/
 notes/
 roadmap-*.md
-data/raw/
-data/interim/
+# `data/` and `runs/` are bind-mounted at run time, so copying them into
+# the image would add hundreds of megabytes that the mount then hides.
+data/
+runs/
+docs/
 .venv/
 venv/
 __pycache__/

@@ -10,8 +10,10 @@ the library's contract rather than anything built here:
   nothing, and there is no `if tracing_enabled` branch anywhere in the
   retrieval code to get out of step with reality.
 - **The SDK is what costs something.** `opentelemetry-sdk` and the OTLP
-  exporter live in the `observability` extra, and only :func:`configure`
-  touches them.
+  exporter live in the `tracing` extra, and only :func:`configure` touches
+  them. (`observability` is `tracing` plus the Phoenix *viewer*; an
+  application that exports spans does not need a web server to look at
+  them, which is why the application container installs the smaller one.)
 
 Hence the dependency split: `opentelemetry-api` is a **core** dependency
 and is imported at the top of this file unguarded. A guarded import
@@ -165,7 +167,10 @@ def configure(endpoint: str | None = None, *, service_name: str = SERVICE_NAME) 
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
     except ImportError as error:  # pragma: no cover - depends on the install
         raise RuntimeError(
-            "tracing export needs the observability extra: pip install -e '.[observability]'"
+            "tracing export needs the SDK and the OTLP exporter: "
+            "pip install -e '.[tracing]' — or '.[observability]', which adds the "
+            "Phoenix viewer for running it from a host venv rather than the "
+            "compose service"
         ) from error
 
     provider = TracerProvider(resource=Resource.create({"service.name": service_name}))

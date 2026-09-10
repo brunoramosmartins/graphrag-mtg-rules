@@ -71,6 +71,55 @@ services:
       retries: 15
       start_period: 30s
 
+  # ── Phase 7: the application container ─────────────────────────────────────
+  # The Python runtime the ETL, retrieval and evaluation commands run in, so a
+  # clean machine needs Docker and nothing else. The whole stack:
+  #
+  #   docker compose --profile app --profile observability up -d --wait
+  #   docker compose exec app python scripts/bootstrap.py
+  #
+  # Teardown names the CONTAINER, for the reason spelled out below the corpus
+  # database: `--profile` *adds* a service to the default set rather than
+  # restricting to it.
+  #
+  #   docker rm -f graphrag-mtg-app
+  #
+  # Behind a profile so that `docker compose up` stays the database alone —
+  # which is what every command run from a host venv actually needs, and what
+  # the README's quickstart has always meant.
+  app:
+    profiles: ["app"]
+    build: .
+    image: graphrag-mtg-rules:local
+    container_name: graphrag-mtg-app
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    # Configuration arrives as **environment variables**, not by mounting
+    # `.env`. Two of that file's values are written for a process on the host
+    # and are wrong inside a container: `bolt://localhost:7687` would be this
+    # container, and the Phoenix endpoint likewise. Compose still reads `.env`
+    # for the substitutions below, so the password and the API key come from
+    # the same single file the host venv uses.
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-please-change-me}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://phoenix:6006/v1/traces}
+      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+      LLM_MODEL: ${LLM_MODEL:-claude-opus-4-8}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Not auto-discoverable: the rules page is JS-rendered. Empty here means
+      # `etl/download.py` will say so rather than guess a URL.
+      CR_TXT_URL: ${CR_TXT_URL:-}
+    volumes:
+      # The downloaded sources and the generated runs live on the host, so
+      # they survive `docker compose down` and are the same bytes the host
+      # venv reads. Nobody downloads 196 MB twice to have it in two places.
+      - ./data:/app/data
+      - ./runs:/app/runs
+
   # ── Phase 7: the trace viewer ──────────────────────────────────────────────
   # Behind a profile so `docker compose up` stays the database alone, which is
   # what every ETL and evaluation script actually needs. Bring it up only when

@@ -83,7 +83,8 @@ scripts/       smoke_neo4j.py · fetch_samples.py · setup_github.sh · git_boot
 tests/         unit tests (+ @integration against Neo4j)
 data/          raw/ & interim/ gitignored; golden/ versioned per license
 .github/       issue/PR templates, CI, remote-setup scripts
-docker-compose.yml   Neo4j (app + Phoenix added in Phase 7)
+docker-compose.yml   Neo4j by default; `app` and `phoenix` behind compose profiles
+Dockerfile           the application container (ETL, retrieval, evaluation)
 ```
 
 ## Documentation

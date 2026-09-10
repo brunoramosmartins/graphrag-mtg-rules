@@ -90,6 +90,55 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-10 — "Cold once, warm thereafter" is false, and Scryfall is why
+
+The full stack lands — a `Dockerfile`, an `app` service behind a compose
+profile, and `scripts/bootstrap.py` taking a clean machine from nothing to
+a cited answer with every step timed. Measured warm path: **11.2 seconds**,
+almost all of it the Scryfall bulk read that builds the linker's lexicon.
+Against a 2-minute criterion that is not close.
+
+**The DoD taken on 2026-09-09 is still wrong, in a new way.** It replaced
+"< 20 min to first answer" with "cold once, warm thereafter". Running the
+bootstrap proved that the second half does not hold either: **Scryfall
+regenerates its bulk daily**, so the second run on the second day fetches
+~30 MB, the card hash changes, the loader reloads all three sources
+(~130 s), and any vector index built over the old corpus stops matching.
+The honest statement is *"cold once, warm until Scryfall publishes, then
+partly cold again"* — and the interval is a day, not a quarter.
+
+This is the loader behaving exactly as designed; a graph quietly serving
+yesterday's cards would be worse, and the project's own standard has said
+since Phase 0 that reloads must be idempotent and hash-driven. What was
+missing is that nothing *said* the cost, so an unattended run could spend
+twenty minutes of re-embedding nobody asked for. `bootstrap.py` now says
+it before the first step and takes `--no-download`.
+
+I found this by causing it. Running the bootstrap on the live corpus
+instance re-downloaded the bulk, took the corpus from 115,547 to 116,248
+documents, and invalidated the 709 MB vector cache — `run_eval.py index`
+now reports a miss, and rebuilding is ~20 minutes and ~$0.17. Nothing
+already measured moved: Phase 6's figures are written, and the retrieval
+dumps carry `evidence_sha256`, so `rebuild()` still refuses to generate
+over evidence that has changed. The cost is entirely forward-looking, and
+it is the price of learning that the warm path has a shelf life.
+
+**The extras split into `tracing` and `observability`.** The first image
+came out at 1.49 GB, because `observability` pulls in Arize Phoenix —
+which is the *viewer*, a server this stack already runs as its own compose
+service. An image whose job is to export spans over HTTP does not need a
+web application, pandas and SQLAlchemy inside it. `tracing` is now the SDK
+and the OTLP exporter; `observability` is that plus Phoenix, for running
+the viewer from a host venv. The container installs the smaller one.
+
+**A second thing the run surfaced.** `etl/download.py` prints a message
+and returns 0 when it cannot resolve the Comprehensive Rules link, which
+is right for a page WotC keeps re-rendering — but it means a missing CR
+surfaces two steps later as a `FileNotFoundError` from the parser, naming
+the file and not the reason. The bootstrap now checks the three files the
+graph load needs by name, immediately after the download, and says which
+one is absent and why that usually happens.
+
 ## 2026-09-10 — Arm C's smoke was arm B's smoke, and nothing said so
 
 CI now runs the evaluation smoke on all three arms with no API key: arm A
