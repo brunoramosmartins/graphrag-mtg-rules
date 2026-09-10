@@ -43,6 +43,8 @@ from graphrag_mtg.evaluation.bm25 import B as BM25_B
 from graphrag_mtg.evaluation.bm25 import Bm25Index
 from graphrag_mtg.evaluation.corpus import Document
 from graphrag_mtg.evaluation.dense import DenseIndex, Encoder
+from graphrag_mtg.observability import spans
+from graphrag_mtg.observability.tracing import annotate, stage
 
 #: RRF's damping constant, at its published default. Untuned, and pin 7
 #: governs any change: a tuned value arrives as a swept artefact with the
@@ -198,12 +200,23 @@ class VectorArm:
     ) -> list[list[str]]:
         rankings: list[list[str]] = []
         if self.lexical is not None:
-            rankings.append(
-                [hit.doc_id for hit in self.lexical.search(query, k=depth, k1=k1, b=b)]
-            )
+            with stage(
+                spans.LEXICAL,
+                **{spans.DEPTH: depth, spans.BM25_K1: k1, spans.BM25_B: b},
+            ) as span:
+                ranked = [hit.doc_id for hit in self.lexical.search(query, k=depth, k1=k1, b=b)]
+                annotate(span, **{spans.HITS: len(ranked)})
+                rankings.append(ranked)
         if self.dense is not None and self.encoder is not None:
-            embedded = self.encoder.encode([query])[0] if vector is None else vector
-            rankings.append([hit.doc_id for hit in self.dense.search(embedded, k=depth)])
+            with stage(spans.DENSE, **{spans.DEPTH: depth}) as span:
+                embedded = self.encoder.encode([query])[0] if vector is None else vector
+                ranked = [hit.doc_id for hit in self.dense.search(embedded, k=depth)]
+                # Whether this call paid for an embedding. The sweep hands
+                # in a cached vector precisely so 588 cells do not re-embed
+                # the same question, and a trace that cannot tell the two
+                # apart cannot be used to account for spend.
+                annotate(span, **{spans.HITS: len(ranked), spans.EMBEDDED: vector is None})
+                rankings.append(ranked)
         return rankings
 
     def retrieve(
@@ -256,12 +269,38 @@ class VectorArm:
                 rankings.extend(self._rankings(followup, depth, k1=k1, b=b, vector=None))
                 rounds = 2
 
-        fused = reciprocal_rank_fusion(rankings, k=rrf_k)
-        documents = [self._by_id[doc_id] for doc_id in fused if doc_id in self._by_id]
-        considered = len(documents)
-        if self.reranker is not None:
-            documents = self.reranker.rerank(question, documents)
-        kept, tokens, truncated = enforce_budget(documents, self.token_budget)
+        with stage(
+            spans.FUSION,
+            **{spans.MODE: self.mode, spans.RRF_K: rrf_k, spans.ROUNDS: rounds},
+        ) as span:
+            fused = reciprocal_rank_fusion(rankings, k=rrf_k)
+            documents = [self._by_id[doc_id] for doc_id in fused if doc_id in self._by_id]
+            considered = len(documents)
+            if self.reranker is not None:
+                documents = self.reranker.rerank(question, documents)
+            annotate(
+                span,
+                **{spans.CONSIDERED: considered, spans.RERANKED: self.reranker is not None},
+            )
+
+        with stage(spans.BUDGET, **{spans.TOKEN_BUDGET: self.token_budget}) as span:
+            kept, tokens, truncated = enforce_budget(documents, self.token_budget)
+            annotate(
+                span,
+                **{
+                    spans.TOKENS: tokens,
+                    spans.EVIDENCE_TOTAL: len(kept),
+                    spans.EVIDENCE_DROPPED: len(documents) - len(kept),
+                    # Handle form, so the families read the same here as on
+                    # the graph arms' budget span. Comparing two arms means
+                    # comparing the same attribute, not two spellings of it.
+                    spans.RULE_FAMILIES: spans.rule_families(
+                        f"rule:{document.rule_number}"
+                        for document in kept
+                        if document.rule_number
+                    ),
+                },
+            )
         return Retrieved(
             documents=kept,
             mode=self.mode,

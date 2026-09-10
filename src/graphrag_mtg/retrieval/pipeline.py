@@ -32,6 +32,8 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
+from graphrag_mtg.observability import spans
+from graphrag_mtg.observability.tracing import annotate, stage
 from graphrag_mtg.retrieval.linking import QueryEntities, QueryLinker
 from graphrag_mtg.retrieval.router import Plan, plan
 from graphrag_mtg.retrieval.rows import to_evidence
@@ -96,8 +98,35 @@ def retrieve(
         A :class:`Subgraph`. Its ``outcome`` is ``RESOLVED`` only when
         evidence was actually found.
     """
-    entities = linker.link(question)
-    chosen = plan(entities, oracle_text=dict(oracle_text or {}))
+    with stage(spans.LINKING) as span:
+        entities = linker.link(question)
+        annotate(
+            span,
+            **{
+                spans.ENTITIES_RESOLVED: len(entities.resolved),
+                spans.ENTITIES_AMBIGUOUS: len(entities.ambiguous),
+                spans.ENTITIES_KINDS: [entity.kind for entity in entities.resolved],
+                spans.CARDS_LINKED: [card.surface for card in entities.cards],
+                # ADR-007's routing signal, and the one attribute that
+                # explains an otherwise puzzling trace: a question naming
+                # only keyword-less cards cannot be walked at any depth.
+                spans.HAS_GRAPH_SEED: entities.has_graph_seed,
+            },
+        )
+
+    with stage(spans.ROUTING) as span:
+        chosen = plan(entities, oracle_text=dict(oracle_text or {}))
+        annotate(
+            span,
+            **{
+                spans.PLAN_TEMPLATES: [call.template for call in chosen.calls],
+                spans.PLAN_TEXT_SEARCH: chosen.text_search,
+                spans.PLAN_EXPANSIONS: len(chosen.expansions),
+                spans.OUTCOME: chosen.outcome,
+                spans.NOTE: chosen.reason,
+            },
+        )
+
     subgraph = Subgraph(question=question, outcome=chosen.outcome, note=chosen.reason)
 
     if chosen.outcome is not Outcome.RESOLVED:
@@ -105,9 +134,19 @@ def retrieve(
 
     for call in chosen.calls:
         template = BY_NAME[call.template]
-        rows = list(run(template.cypher, call.params))
-        subgraph.templates_run.append(call.template)
-        add_evidence(subgraph, to_evidence(template, rows), kind_cap=kind_cap)
+        with stage(spans.TRAVERSAL, **{spans.TEMPLATE: call.template}) as span:
+            rows = list(run(template.cypher, call.params))
+            subgraph.templates_run.append(call.template)
+            before = len(subgraph.evidence)
+            add_evidence(subgraph, to_evidence(template, rows), kind_cap=kind_cap)
+            annotate(
+                span,
+                **{
+                    spans.ROWS: len(rows),
+                    spans.EVIDENCE_ADDED: len(subgraph.evidence) - before,
+                    spans.EVIDENCE_CAPPED: sum(subgraph.capped.values()),
+                },
+            )
 
     if chosen.text_search or always_text_search:
         if rule_search is None:
@@ -116,7 +155,7 @@ def retrieve(
                 # The routed branch would have failed loudly; this one has
                 # a graph result to fall back on, so it continues rather
                 # than discarding it.
-                enforce_budget(subgraph, token_budget)
+                _budget(subgraph, token_budget)
                 return subgraph
             subgraph.outcome = Outcome.NO_SEED
             subgraph.note = f"{chosen.reason}; no text retrieval configured"
@@ -124,15 +163,26 @@ def retrieve(
         # Named by the retriever rather than hardcoded: arm C swaps in a
         # different searcher behind the same contract, and a run log
         # saying `rule_search` when `vector_search` ran is a record that
-        # disagrees with what happened.
-        subgraph.templates_run.append(getattr(rule_search, "template_name", "rule_search"))
-        add_evidence(
-            subgraph,
-            rule_search.evidence(question, chosen.expansions),
-            kind_cap=kind_cap,
-        )
+        # disagrees with what happened. The span carries the same name for
+        # the same reason — a viewer is a log with pictures.
+        name = getattr(rule_search, "template_name", "rule_search")
+        with stage(spans.TEXT_SEARCH, **{spans.RETRIEVER: name}) as span:
+            subgraph.templates_run.append(name)
+            before = len(subgraph.evidence)
+            add_evidence(
+                subgraph,
+                rule_search.evidence(question, chosen.expansions),
+                kind_cap=kind_cap,
+            )
+            annotate(
+                span,
+                **{
+                    spans.PLAN_EXPANSIONS: len(chosen.expansions),
+                    spans.EVIDENCE_ADDED: len(subgraph.evidence) - before,
+                },
+            )
 
-    enforce_budget(subgraph, token_budget)
+    _budget(subgraph, token_budget)
 
     if subgraph.is_empty:
         # Traversals ran and matched nothing. Distinct from NO_ENTITIES:
@@ -144,6 +194,31 @@ def retrieve(
 
     subgraph.note = "; ".join([chosen.reason, *chosen.notes])
     return subgraph
+
+
+def _budget(subgraph: Subgraph, token_budget: int) -> None:
+    """Enforce the token ceiling, and record what it cost.
+
+    A span rather than a bare call because the trim is the one step whose
+    effect is invisible in the answer: evidence that was retrieved and
+    then evicted leaves no trace in the prose, and "the model never saw
+    the rule" and "the model saw it and ignored it" are different bugs.
+    """
+    with stage(spans.BUDGET, **{spans.TOKEN_BUDGET: token_budget}) as span:
+        before = subgraph.tokens
+        enforce_budget(subgraph, token_budget)
+        annotate(
+            span,
+            **{
+                spans.TOKENS_BEFORE: before,
+                spans.TOKENS: subgraph.tokens,
+                spans.EVIDENCE_TOTAL: len(subgraph.evidence),
+                spans.EVIDENCE_DROPPED: sum(subgraph.dropped.values()),
+                spans.EVIDENCE_CAPPED: sum(subgraph.capped.values()),
+                spans.RULE_FAMILIES: spans.rule_families(subgraph.citations()),
+                spans.CITATIONS: len(subgraph.citations()),
+            },
+        )
 
 
 def _last_resort(
@@ -163,15 +238,27 @@ def _last_resort(
     """
     if text2cypher is None:
         return subgraph
-    found, why = text2cypher.evidence(question, run)
-    subgraph.templates_run.append("text2cypher")
-    if not found:
-        subgraph.note = f"{subgraph.note}; text2cypher: {why}"
+    with stage(spans.TEXT2CYPHER, **{spans.OUTCOME: subgraph.outcome}) as span:
+        found, why = text2cypher.evidence(question, run)
+        subgraph.templates_run.append("text2cypher")
+        annotate(
+            span,
+            **{
+                spans.VALID: bool(found),
+                spans.EVIDENCE_ADDED: len(found),
+                # `why` carries the validator's refusal — the reason a
+                # generated query was rejected is the whole point of
+                # tracing this layer, and it is otherwise only in a note.
+                spans.REFUSAL: None if found else why,
+            },
+        )
+        if not found:
+            subgraph.note = f"{subgraph.note}; text2cypher: {why}"
+            return subgraph
+        add_evidence(subgraph, found, kind_cap=kind_cap)
+        subgraph.outcome = Outcome.RESOLVED
+        subgraph.note = f"{subgraph.note}; answered by generated Cypher (validated read-only)"
         return subgraph
-    add_evidence(subgraph, found, kind_cap=kind_cap)
-    subgraph.outcome = Outcome.RESOLVED
-    subgraph.note = f"{subgraph.note}; answered by generated Cypher (validated read-only)"
-    return subgraph
 
 
 def neo4j_runner(session) -> Runner:

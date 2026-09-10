@@ -90,6 +90,86 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-09 — The trace has to name its arm, and the question text stays out of it
+
+Three calls taken while instrumenting the retrieval and generation path,
+each of which had a cheaper alternative that would have looked identical
+until it mattered.
+
+**`opentelemetry-api` is a core dependency, imported unguarded.** The API
+alone is a no-op without an SDK provider — that is the library's own
+contract — so the pipeline is instrumented with no `if tracing_enabled`
+branch anywhere in it. The alternative, a `try/except ImportError` falling
+back to a private no-op, would have turned "the observability extra was
+never installed" into "no traces ever appeared", which is this project's
+recurring failure shape rather than a new one. The SDK and the OTLP
+exporter stay in the extra, where the weight actually is; the SDK also
+joins `dev`, because `InMemorySpanExporter` is how the tests read back
+what the pipeline emitted.
+
+**The two arms' stage sets are disjoint apart from `budget` and
+`generation`, and a test pins that equality.** Arm A walks nothing and
+arms B and C fuse nothing, so naming arm A's fusion step `traversal` for
+symmetry would reproduce, in the viewer, the exact defect of five days
+ago: the harness passed a text retriever to the arm it recorded as
+graph-only, and every summary number still looked right because the routed
+branch fires on 2 of 20 questions. `SHARED_STAGES` is the guard, and it
+names the property — the two stages that genuinely *are* one operation on
+every arm — rather than a list someone maintains.
+
+**Question text is not a span attribute by default.** A trace is a thing
+that gets screenshotted into a README, and the golden set's RulesGuru
+questions are deliberately carried as ids plus a gitignored fetch. So
+`query_span` records the question's *length* always and its text only
+under an explicit flag, which the screenshot will set on a hand-authored
+question the repo already contains. This is the licensing posture the
+golden set already has, applied to the one surface that was about to leak
+past it.
+
+One thing is knowingly not reproducible: the Phoenix image in compose is
+`:latest`. The pin comes from the digest of the image that produces the
+README screenshot, and that run has not happened. Saying so beats
+inventing a version tag that may not exist.
+
+## 2026-09-09 — Phase 7 opens, and its own DoD is unmeetable as written
+
+Three scope decisions taken at the kickoff, all recorded before any work.
+
+**The carried experiments go to Phase 8, not here.** Phase 6's close carried
+four items; three of them — E-009, E-010 and the judge audit to n ≥ 30 per
+label — are experiments, not infrastructure, and all three are prerequisites
+of opening the evaluation split. Putting them in an observability phase
+would dilute both. Only `run_eval.py` as one command with `--smoke` and
+figures stays, because Phase 7's own DoD asks for an evaluation smoke in CI.
+
+**The CI smoke runs with no API key at all.** Explaining what `--smoke`
+meant surfaced a problem I had not seen: a full smoke needs an LLM key and a
+loaded corpus, and an API key in CI is a secret exposed on every pull
+request. The design instead injects **fake generators and a fake judge** —
+functions returning fixed text — so the smoke exercises retrieval, `answer()`,
+citation expansion, the token budget, judging and the report end to end
+without a credential. What it cannot test is model quality, which is not
+CI's job. Retrieval for arms B and C runs in the existing `integration` job
+against the Neo4j service container and the 50-card / 30-rule fixture the
+roadmap already specifies.
+
+**Phase 7's own DoD is unmeetable as written, and this is measured rather
+than argued.** It asks for "< 20 min até primeira resposta, incluindo
+download dos bulks". The cold path is 196 MB of downloads (171 MB of cards,
+25 MB of rulings, 1 MB of CR), 0.1s to parse the CR, 3.9s to read the card
+bulk, a graph load of 34,236 cards and 77,229 rulings — **and 20 minutes to
+embed arm A's corpus**, which consumes the entire budget before anything
+else has run. The criterion was written before arm A existed.
+
+The author's tolerance turned out to be the right criterion: a slow first
+run is acceptable if later ones are fast. That is already the implemented
+behaviour — the 677 MB vector cache is keyed on the corpus hash, so a second
+run loads in 0.3s and a corpus change invalidates rather than serving stale
+vectors. So the DoD becomes **cold once, warm thereafter**: the cold path is
+timed and published without a ceiling, the warm path is under 2 minutes to
+first answer, and the onboarding states which arm each path covers. Flagged
+for `/project-roadmap revise` rather than edited in place.
+
 ## 2026-09-09 — The reading notes stay open, deliberately, and the count is recorded
 
 A sweep of `notes/` found **no "My take" filled in any lit-note**: 50 prompts

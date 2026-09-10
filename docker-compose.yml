@@ -71,6 +71,47 @@ services:
       retries: 15
       start_period: 30s
 
+  # ── Phase 7: the trace viewer ──────────────────────────────────────────────
+  # Behind a profile so `docker compose up` stays the database alone, which is
+  # what every ETL and evaluation script actually needs. Bring it up only when
+  # you want to look at a trace:
+  #
+  #   docker compose --profile observability up -d --wait
+  #   docker rm -f graphrag-mtg-phoenix          # this is the teardown
+  #
+  # Teardown names the CONTAINER, for the reason spelled out above the MetaQA
+  # instance: `--profile observability` *adds* this service to the default set
+  # rather than restricting to it, so a profile-scoped `rm -sf` takes the
+  # corpus database down with it. That happened once already, on 2026-09-03.
+  #
+  # Port 6006 serves both the UI and the OTLP/HTTP collector at /v1/traces —
+  # the same endpoint `.env.example` sets OTEL_EXPORTER_OTLP_ENDPOINT to, and
+  # the same one `observability/tracing.py` falls back to. Three places, one
+  # value, on purpose: a viewer running where the exporter is not pointed is
+  # indistinguishable from instrumentation that was never added.
+  phoenix:
+    profiles: ["observability"]
+    # Unpinned, and knowingly so: the pin is taken from the digest of the
+    # image that produced the README's trace screenshot, and that run has not
+    # happened yet. Until then this line is the one part of the stack that is
+    # not reproducible, and saying so beats inventing a version tag.
+    image: arizephoenix/phoenix:latest
+    container_name: graphrag-mtg-phoenix
+    restart: unless-stopped
+    ports:
+      - "6006:6006"   # UI, and OTLP/HTTP at /v1/traces
+    environment:
+      PHOENIX_WORKING_DIR: /mnt/data
+    volumes:
+      - phoenix_data:/mnt/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6006 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+
 volumes:
   neo4j_data:
   neo4j_logs:
+  phoenix_data:
