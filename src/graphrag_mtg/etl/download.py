@@ -263,7 +263,14 @@ def resolve_all(client: httpx.Client, groups: list[str], args: argparse.Namespac
     return resolved
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    """Download every selected source group.
+
+    Args:
+        argv: Command-line arguments. Defaults to `sys.argv[1:]`; passed
+            explicitly by `scripts/bootstrap.py`, which calls this as a
+            function rather than reaching for `sys.argv` around it.
+    """
     load_dotenv()  # pick up CR_TXT_URL / MTR_PDF_URL / IPG_PDF_URL from .env
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", choices=SOURCE_GROUPS, help="download only one source group")
@@ -271,7 +278,7 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="ignore the manifest and re-download")
     parser.add_argument("--mtr-url", help="URL of the current MTR PDF (optional)")
     parser.add_argument("--ipg-url", help="URL of the current IPG PDF (optional)")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     groups = [args.source] if args.source else list(SOURCE_GROUPS)
     manifest = load_manifest()
@@ -280,13 +287,46 @@ def main() -> int:
         if not sources:
             print("No sources resolved. Nothing to do.")
             return 0
+        failed: list[str] = []
         for source in sources:
-            process(source, manifest, client, dry_run=args.dry_run, force=args.force)
+            try:
+                process(source, manifest, client, dry_run=args.dry_run, force=args.force)
+            except httpx.HTTPStatusError as error:
+                # A dead URL is the expected failure here, not an
+                # exceptional one. WotC replaces the Comprehensive Rules
+                # file each release and does not keep the old ones, so the
+                # URL recorded in a months-old manifest returns 404 — which
+                # used to surface as an httpx traceback from inside a
+                # streaming helper, naming the exception and not the fix.
+                failed.append(source.name)
+                print(f"[{source.name}] {_explain_http_failure(source, error)}")
 
     if not args.dry_run:
+        # Written even after a failure: whatever *did* download is recorded,
+        # so a re-run does not re-fetch 30 MB to retry the one file that did
+        # not resolve.
         save_manifest(manifest)
         print(f"\nManifest written to {MANIFEST_PATH}")
+    if failed:
+        print(f"\n{len(failed)} source(s) did not download: {', '.join(failed)}")
+        return 1
     return 0
+
+
+def _explain_http_failure(source: ResolvedSource, error: httpx.HTTPStatusError) -> str:
+    """One line saying what failed and, where we know it, what to do."""
+    status = error.response.status_code
+    line = f"HTTP {status} from {source.url}"
+    if source.name == "comprehensive_rules" and status == 404:
+        return (
+            f"{line}\n"
+            "    WotC replaces this file every release and does not keep the old ones, "
+            "so a URL that worked before will 404 rather than redirect.\n"
+            "    Set CR_TXT_URL to the current one: open magic.wizards.com/en/rules and "
+            "copy the 'TXT' link (the page is JS-rendered, which is why this cannot be "
+            "resolved automatically)."
+        )
+    return line
 
 
 if __name__ == "__main__":

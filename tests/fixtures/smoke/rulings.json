@@ -1,0 +1,20 @@
+[
+  {
+    "oracle_id": "smoke-0001",
+    "comment": "Its characteristic-defining ability applies in layer 7a, before any effect that sets its base power and toughness.",
+    "published_at": "2026-01-01",
+    "source": "wotc"
+  },
+  {
+    "oracle_id": "smoke-0002",
+    "comment": "The effect setting base power and toughness applies in layer 7b, so it overwrites a characteristic-defining ability applied in 7a.",
+    "published_at": "2026-01-01",
+    "source": "wotc"
+  },
+  {
+    "oracle_id": "smoke-0003",
+    "comment": "Changing an effect's timestamp changes the order effects are applied in within a layer.",
+    "published_at": "2026-01-01",
+    "source": "wotc"
+  }
+]

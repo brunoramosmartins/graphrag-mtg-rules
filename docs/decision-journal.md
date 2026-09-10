@@ -90,6 +90,281 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-10 — The graph claimed a provenance it did not have
+
+Timing the onboarding required an empty database and an empty `data/`, so
+the cold path was measured in a container against a throwaway Neo4j. It
+came out at **173.7 s** — download 3.7, schema 2.7, graph load 136.1,
+first answer 31.2 — plus 68.8 s to build the image with no layer cache.
+The warm path is 26.7 s in the container and 11.2 s from a host venv.
+Published in [onboarding.md](onboarding.md), with no ceiling attached and
+with network-bound figures separated from compute-bound ones, because a
+download time is a fact about the connection it was measured on.
+
+**The measurement found a bug that the measurement was not looking for.**
+The fresh graph held 34,937 cards. The development graph, reloaded from
+the same bulk hours earlier, held 34,236. Same code, same file — I checked
+the file, and it has 34,937 playable records today.
+
+The 34,236 came from `scryfall_oracle_cards.json`, a 179 MB legacy array
+downloaded in July and still sitting beside the current `.jsonl.gz`.
+`bulk_path` prefers `.jsonl.gz` and would have returned it — but
+`etl/cards.py` held `ORACLE_CARDS_PATH = bulk_path(...)` as a **module
+constant**, and a constant binds at import. `scripts/bootstrap.py` imports,
+then downloads, then loads. So the load read July's array while
+`_record_source_load` stamped it with the SHA-256 of the file just
+downloaded.
+
+Nothing failed. No exception, no warning, no count that looked wrong on
+its own. The graph simply asserted a provenance it did not have, and it
+would have kept asserting it: the recorded hash matches the manifest, so
+every future `load_all` skips the source as current.
+
+Three instances of one shape, all fixed:
+
+- `etl/cards.py` — `ORACLE_CARDS_PATH` is now `oracle_cards_path()`, and
+  `load_oracle_cards`'s default is `None` rather than a `Path`.
+- `graph/loader.py` — same, for `RULINGS_PATH`.
+- `scripts/run_eval.py` — `RULINGS_PATH` was the literal
+  `data/raw/scryfall_rulings.json` while the card half of the same corpus
+  went through `bulk_path`. Arm A was indexing today's cards beside
+  rulings from a legacy array, and `corpus_sha256` covered both halves and
+  described the mixture perfectly.
+
+The lesson is not "don't cache paths". It is that **which file is the
+corpus was being decided in three places**, and a hash computed over the
+result cannot tell you the inputs disagreed — it hashes whatever it was
+handed and reports a clean, stable, wrong answer. The test that now guards
+it asserts the default is not a `Path`, which is the defect stated
+directly rather than a symptom of it.
+
+Phase 6's figures are unaffected. Everything in that phase resolved to the
+same legacy array, so its runs were internally consistent, and
+`docs/evaluation.md` records the CR and card versions it used. The
+development graph is inconsistent with its own manifest and wants
+`bootstrap.py --force`.
+
+## 2026-09-10 — "Cold once, warm thereafter" is false, and Scryfall is why
+
+The full stack lands — a `Dockerfile`, an `app` service behind a compose
+profile, and `scripts/bootstrap.py` taking a clean machine from nothing to
+a cited answer with every step timed. Measured warm path: **11.2 seconds**,
+almost all of it the Scryfall bulk read that builds the linker's lexicon.
+Against a 2-minute criterion that is not close.
+
+**The DoD taken on 2026-09-09 is still wrong, in a new way.** It replaced
+"< 20 min to first answer" with "cold once, warm thereafter". Running the
+bootstrap proved that the second half does not hold either: **Scryfall
+regenerates its bulk daily**, so the second run on the second day fetches
+~30 MB, the card hash changes, the loader reloads all three sources
+(~130 s), and any vector index built over the old corpus stops matching.
+The honest statement is *"cold once, warm until Scryfall publishes, then
+partly cold again"* — and the interval is a day, not a quarter.
+
+This is the loader behaving exactly as designed; a graph quietly serving
+yesterday's cards would be worse, and the project's own standard has said
+since Phase 0 that reloads must be idempotent and hash-driven. What was
+missing is that nothing *said* the cost, so an unattended run could spend
+twenty minutes of re-embedding nobody asked for. `bootstrap.py` now says
+it before the first step and takes `--no-download`.
+
+I found this by causing it. Running the bootstrap on the live corpus
+instance re-downloaded the bulk, took the corpus from 115,547 to 116,248
+documents, and invalidated the 709 MB vector cache — `run_eval.py index`
+now reports a miss, and rebuilding is ~20 minutes and ~$0.17. Nothing
+already measured moved: Phase 6's figures are written, and the retrieval
+dumps carry `evidence_sha256`, so `rebuild()` still refuses to generate
+over evidence that has changed. The cost is entirely forward-looking, and
+it is the price of learning that the warm path has a shelf life.
+
+**The extras split into `tracing` and `observability`.** The first image
+came out at 1.49 GB, because `observability` pulls in Arize Phoenix —
+which is the *viewer*, a server this stack already runs as its own compose
+service. An image whose job is to export spans over HTTP does not need a
+web application, pandas and SQLAlchemy inside it. `tracing` is now the SDK
+and the OTLP exporter; `observability` is that plus Phoenix, for running
+the viewer from a host venv. The container installs the smaller one.
+
+**A second thing the run surfaced.** `etl/download.py` prints a message
+and returns 0 when it cannot resolve the Comprehensive Rules link, which
+is right for a page WotC keeps re-rendering — but it means a missing CR
+surfaces two steps later as a `FileNotFoundError` from the parser, naming
+the file and not the reason. The bootstrap now checks the three files the
+graph load needs by name, immediately after the download, and says which
+one is absent and why that usually happens.
+
+## 2026-09-10 — Arm C's smoke was arm B's smoke, and nothing said so
+
+CI now runs the evaluation smoke on all three arms with no API key: arm A
+in `lint-and-unit` with no database at all, arms B and C in `integration`
+against a fixture graph loaded by `scripts/load_smoke_graph.py`.
+
+**The defect worth recording is the one found while verifying it.** Arm C
+produced *exactly* the same numbers as arm B — same outcomes, same
+templates, same table. Arm C is arm B plus a text retriever, and that
+retriever fires only where the router sends it: on questions whose
+entities cannot reach the CR rule graph. All five fixture questions
+seeded it, so the half that defines arm C never ran, and CI would have
+tested arm B twice while reporting that it tested two arms.
+
+This is the Phase 6 mislabel again, with a green badge on it. There the
+harness passed a text retriever to the arm it recorded as graph-only, and
+the run survived because the routed branch fires on 2 of 20 questions.
+Here the branch fires on 0 of 5. Both times the symptom was *numbers that
+looked exactly as they should*, and both times the fix was to make the
+distinguishing property impossible to lose quietly: a sixth question
+whose two cards carry no keyword abilities, and a test asserting that the
+fixture contains a seedless question **and** a seeded one. Arm B now
+returns `NO_SEED` on it; arm C routes and retrieves `rule:613.4b`.
+
+**Two guards named after properties rather than commands.** The fixture
+loader never prunes: `load_rules` normally deletes rules the current
+document does not contain, which in a CI container holding only fixture
+data means every rule anything else created, including the namespaced
+nodes the integration tests build. A delete predicate must be no broader
+than what the command created — the compose teardown that named a profile
+and took the corpus container with it is the same mistake. And `run`
+refuses to traverse a graph with no `Rule` nodes: every question would
+come back `NO_MATCH`, the run would complete, write files and print a
+report, and nothing would be wrong with retrieval. One COUNT query buys
+the difference between a failing run and a passing one that tested
+nothing.
+
+**`build_stack` gained `cards=` beside `extra_cards=`.** One replaces the
+Scryfall bulk, the other adds to it. Two intentions, two arguments,
+deliberately: a single argument meaning both is how a run comes to index
+34,236 cards it was told not to.
+
+Verified against a disposable Neo4j on port 7690 rather than the corpus
+instance, which was up with the real 34,236 cards. All three arms ran,
+the loader was confirmed idempotent, and the container was removed by
+name.
+
+## 2026-09-10 — CI tests the wiring, and every smoke artefact has to say so
+
+`run_eval.py` gains a `run` subcommand — retrieval, generation, judging,
+report and figures in one process — plus `--smoke`, `--trace` and
+`--figures`. Four calls in it are worth the entry.
+
+**A smoke report is a fabricated figure, so it says so from inside the
+data.** The fake judge returns `correct` for everything, which means a
+smoke run prints a per-stratum table reading 1.00 across the board. A
+console banner is not a guard: it scrolls away, and the JSONL outlives
+it. So smoke output is written to `runs/smoke_*` rather than
+`runs/e001_*`, every row carries `"smoke": true` and
+`"model": "smoke-fake"`, and the banner appears in the generated markdown
+and on the face of the SVG as well as on the console. The sentence that
+has to survive future editing is the one about what CI does **not**
+test: a green badge is a claim about the wiring and never about the
+answers. Whether the prompt still works is a regression only a real model
+can show, and that is E-001's job, gated on the correctness ceiling.
+
+**The fake judge's label is fixed rather than sampled.** A varied fake
+would produce a *distribution*, and a distribution invites being read as
+a finding. One constant label reads as what it is.
+
+**The fixture contains no real card.** The licensing rule is that no bulk
+card data is committed, and the honest way to keep a fixture on the right
+side of it is for the fixture to have nothing to be on the wrong side
+with. Three invented cards and three invented rulings, against the CR
+excerpt the parser's golden-file tests already use.
+
+**The cost estimate for `run` is a ceiling, not the exact prompts.**
+Retrieval and generation are interleaved so that one question is one
+trace, which means the real prompts do not exist until money could
+already have been spent. The token budget bounds every context by
+construction, so a bound is available — and a bound printed before the
+loop honours the cost rule better than an exact figure printed after it.
+
+One defect found on the way, and it is the shape this project keeps
+finding. The harness opened a Neo4j session and read the 196 MB Scryfall
+bulk before **every** run, arm A included. `plan_arm` has always said arm
+A touches no graph, and a test has always asserted it — of the *plan*.
+The harness disagreed silently, and the only symptom was a slow start,
+until CI needed arm A with no database at all. The test that now guards
+it asserts the property of the harness rather than of the decision the
+harness was supposed to implement.
+
+## 2026-09-09 — The trace has to name its arm, and the question text stays out of it
+
+Three calls taken while instrumenting the retrieval and generation path,
+each of which had a cheaper alternative that would have looked identical
+until it mattered.
+
+**`opentelemetry-api` is a core dependency, imported unguarded.** The API
+alone is a no-op without an SDK provider — that is the library's own
+contract — so the pipeline is instrumented with no `if tracing_enabled`
+branch anywhere in it. The alternative, a `try/except ImportError` falling
+back to a private no-op, would have turned "the observability extra was
+never installed" into "no traces ever appeared", which is this project's
+recurring failure shape rather than a new one. The SDK and the OTLP
+exporter stay in the extra, where the weight actually is; the SDK also
+joins `dev`, because `InMemorySpanExporter` is how the tests read back
+what the pipeline emitted.
+
+**The two arms' stage sets are disjoint apart from `budget` and
+`generation`, and a test pins that equality.** Arm A walks nothing and
+arms B and C fuse nothing, so naming arm A's fusion step `traversal` for
+symmetry would reproduce, in the viewer, the exact defect of five days
+ago: the harness passed a text retriever to the arm it recorded as
+graph-only, and every summary number still looked right because the routed
+branch fires on 2 of 20 questions. `SHARED_STAGES` is the guard, and it
+names the property — the two stages that genuinely *are* one operation on
+every arm — rather than a list someone maintains.
+
+**Question text is not a span attribute by default.** A trace is a thing
+that gets screenshotted into a README, and the golden set's RulesGuru
+questions are deliberately carried as ids plus a gitignored fetch. So
+`query_span` records the question's *length* always and its text only
+under an explicit flag, which the screenshot will set on a hand-authored
+question the repo already contains. This is the licensing posture the
+golden set already has, applied to the one surface that was about to leak
+past it.
+
+One thing is knowingly not reproducible: the Phoenix image in compose is
+`:latest`. The pin comes from the digest of the image that produces the
+README screenshot, and that run has not happened. Saying so beats
+inventing a version tag that may not exist.
+
+## 2026-09-09 — Phase 7 opens, and its own DoD is unmeetable as written
+
+Three scope decisions taken at the kickoff, all recorded before any work.
+
+**The carried experiments go to Phase 8, not here.** Phase 6's close carried
+four items; three of them — E-009, E-010 and the judge audit to n ≥ 30 per
+label — are experiments, not infrastructure, and all three are prerequisites
+of opening the evaluation split. Putting them in an observability phase
+would dilute both. Only `run_eval.py` as one command with `--smoke` and
+figures stays, because Phase 7's own DoD asks for an evaluation smoke in CI.
+
+**The CI smoke runs with no API key at all.** Explaining what `--smoke`
+meant surfaced a problem I had not seen: a full smoke needs an LLM key and a
+loaded corpus, and an API key in CI is a secret exposed on every pull
+request. The design instead injects **fake generators and a fake judge** —
+functions returning fixed text — so the smoke exercises retrieval, `answer()`,
+citation expansion, the token budget, judging and the report end to end
+without a credential. What it cannot test is model quality, which is not
+CI's job. Retrieval for arms B and C runs in the existing `integration` job
+against the Neo4j service container and the 50-card / 30-rule fixture the
+roadmap already specifies.
+
+**Phase 7's own DoD is unmeetable as written, and this is measured rather
+than argued.** It asks for "< 20 min até primeira resposta, incluindo
+download dos bulks". The cold path is 196 MB of downloads (171 MB of cards,
+25 MB of rulings, 1 MB of CR), 0.1s to parse the CR, 3.9s to read the card
+bulk, a graph load of 34,236 cards and 77,229 rulings — **and 20 minutes to
+embed arm A's corpus**, which consumes the entire budget before anything
+else has run. The criterion was written before arm A existed.
+
+The author's tolerance turned out to be the right criterion: a slow first
+run is acceptable if later ones are fast. That is already the implemented
+behaviour — the 677 MB vector cache is keyed on the corpus hash, so a second
+run loads in 0.3s and a corpus change invalidates rather than serving stale
+vectors. So the DoD becomes **cold once, warm thereafter**: the cold path is
+timed and published without a ceiling, the warm path is under 2 minutes to
+first answer, and the onboarding states which arm each path covers. Flagged
+for `/project-roadmap revise` rather than edited in place.
+
 ## 2026-09-09 — The reading notes stay open, deliberately, and the count is recorded
 
 A sweep of `notes/` found **no "My take" filled in any lit-note**: 50 prompts

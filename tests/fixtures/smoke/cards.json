@@ -1,0 +1,65 @@
+[
+  {
+    "oracle_id": "smoke-0001",
+    "name": "Fixture Sentinel",
+    "layout": "normal",
+    "type_line": "Creature — Construct",
+    "cmc": 4.0,
+    "mana_cost": "{3}{B}",
+    "colors": ["B"],
+    "color_identity": ["B"],
+    "keywords": ["Deathtouch"],
+    "oracle_text": "Deathtouch. Fixture Sentinel's base power and toughness are each equal to the number of artifacts you control.",
+    "legalities": {
+      "standard": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "vintage": "legal",
+      "pauper": "not_legal",
+      "commander": "legal"
+    }
+  },
+  {
+    "oracle_id": "smoke-0002",
+    "name": "Layered Illusionist",
+    "layout": "normal",
+    "type_line": "Creature — Human Wizard",
+    "cmc": 3.0,
+    "mana_cost": "{2}{U}",
+    "colors": ["U"],
+    "color_identity": ["U"],
+    "keywords": [],
+    "oracle_text": "Creatures you control have base power and toughness 2/2.",
+    "legalities": {
+      "standard": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "vintage": "legal",
+      "pauper": "legal",
+      "commander": "legal"
+    }
+  },
+  {
+    "oracle_id": "smoke-0003",
+    "name": "Timestamp Warden",
+    "layout": "normal",
+    "type_line": "Enchantment",
+    "cmc": 2.0,
+    "mana_cost": "{1}{W}",
+    "colors": ["W"],
+    "color_identity": ["W"],
+    "keywords": [],
+    "oracle_text": "Whenever a continuous effect would be applied, its timestamp becomes the current turn.",
+    "legalities": {
+      "standard": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "vintage": "legal",
+      "pauper": "not_legal",
+      "commander": "legal"
+    }
+  }
+]

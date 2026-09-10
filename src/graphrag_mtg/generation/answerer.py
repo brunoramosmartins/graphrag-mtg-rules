@@ -33,6 +33,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from graphrag_mtg.generation.citations import cited_handles, expand, strip_citations
+from graphrag_mtg.observability import spans
+from graphrag_mtg.observability.tracing import annotate, stage
 from graphrag_mtg.retrieval.subgraph import Outcome, Subgraph, serialize
 
 #: Recorded with every run, per the E-007 configuration. A figure whose
@@ -182,28 +184,52 @@ def answer(
     """
     incomplete = bool(subgraph.dropped or subgraph.capped)
 
-    if subgraph.outcome is not Outcome.RESOLVED or subgraph.is_empty:
-        # Nothing to answer from. Calling the model here would be asking
-        # it to write about an empty page, which is precisely when it
-        # writes from memory.
+    with stage(
+        spans.GENERATION,
+        **{
+            spans.OUTCOME: subgraph.outcome,
+            spans.CONTEXT_INCOMPLETE: incomplete,
+            spans.PROMPT_VERSION: PROMPT_VERSION,
+        },
+    ) as span:
+        if subgraph.outcome is not Outcome.RESOLVED or subgraph.is_empty:
+            # Nothing to answer from. Calling the model here would be asking
+            # it to write about an empty page, which is precisely when it
+            # writes from memory.
+            annotate(span, **{spans.GENERATED: False, spans.REFUSED: True})
+            return Answer(
+                question=question,
+                text=f"{REFUSAL} — retrieval returned no usable evidence ({subgraph.outcome}).",
+                refused=True,
+                generated=False,
+                outcome=subgraph.outcome,
+                context_incomplete=incomplete,
+            )
+
+        text = generate(system, build_prompt(question, subgraph, notice=notice)).strip()
+        rendered, unknown = expand(text, subgraph)
+        handles = cited_handles(text)
+        annotate(
+            span,
+            **{
+                spans.GENERATED: True,
+                spans.REFUSED: is_refusal(text),
+                spans.CITATIONS: len(handles),
+                # Every entry is a fabricated citation, detected
+                # mechanically. Non-zero here is the one number in this
+                # trace that means the answer is unsound, so it goes on
+                # the span rather than only into E-007's taxonomy.
+                spans.UNKNOWN_HANDLES: unknown,
+                spans.RULE_FAMILIES: spans.rule_families(handles),
+            },
+        )
         return Answer(
             question=question,
-            text=f"{REFUSAL} — retrieval returned no usable evidence ({subgraph.outcome}).",
-            refused=True,
-            generated=False,
+            text=text,
+            rendered=rendered,
+            refused=is_refusal(text),
+            unknown=unknown,
+            handles=handles,
             outcome=subgraph.outcome,
             context_incomplete=incomplete,
         )
-
-    text = generate(system, build_prompt(question, subgraph, notice=notice)).strip()
-    rendered, unknown = expand(text, subgraph)
-    return Answer(
-        question=question,
-        text=text,
-        rendered=rendered,
-        refused=is_refusal(text),
-        unknown=unknown,
-        handles=cited_handles(text),
-        outcome=subgraph.outcome,
-        context_incomplete=incomplete,
-    )
