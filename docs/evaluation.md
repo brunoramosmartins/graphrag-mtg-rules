@@ -140,6 +140,55 @@ full run exists.
   not a quiet edit to the prediction.
 - The whole report must be reproducible with one command.
 
+## The one command, and what CI's version of it does not check
+
+*Added 2026-09-10, Phase 7.*
+
+One arm, from the raw sources to a markdown report and a forest plot:
+
+```bash
+python scripts/run_eval.py run --arm C --figures docs/figures
+```
+
+Retrieval, generation and judging happen in one process, which is also
+what makes a whole question one OpenTelemetry trace — every other
+subcommand is a single stage with a JSONL between it and the next, so
+its trace covers a fragment. Add `--trace` to export.
+
+The cost figure printed before the loop is an **upper bound**, not the
+exact prompts. Interleaving retrieval and generation is what keeps one
+question in one trace, and it means the real prompts do not exist until
+money could already have been spent; every context is capped at the token
+budget, so a bound exists and is the honest thing to print.
+
+### `--smoke` tests the wiring, not the quality
+
+CI runs the same command with `--smoke`: a fixture corpus of invented
+cards, a generator that answers by citing the first handle it is handed,
+and a judge that returns a fixed label. No API key, no Neo4j, no
+`data/raw/`.
+
+**A green CI badge is a claim about the wiring and never about the
+answers.** What the smoke checks is that the corpus builds, retrieval
+runs, the budget is enforced, the context serializes, the prompt
+assembles, citations expand, unknown handles are detected, verdicts are
+written and the report and figures render — and that every one of those
+stages still agrees with the next about its format.
+
+What it cannot check is whether the prompt still works, whether the judge
+still agrees with a human, or whether any arm is better than any other.
+Those need a real model on real questions, they are E-001's job, and the
+judge doing the scoring is itself gated on the correctness ceiling. An
+API key in CI is a secret exposed on every pull request, which is the
+trade this makes and the reason it is stated here rather than assumed.
+
+Because the fake judge labels everything `correct`, a smoke report shows
+1.00 across every stratum. That number is an artefact of the fixture. It
+is marked as such on the console, in the generated markdown, on the face
+of the SVG, in the filenames (`runs/smoke_*`, never `runs/e001_*`) and in
+every row (`"smoke": true`, `"model": "smoke-fake"`) — five places,
+because a banner is the one that scrolls away.
+
 ---
 
 # Results — E-003, extraction quality (2026-08-09)

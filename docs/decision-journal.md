@@ -90,6 +90,51 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-10 — CI tests the wiring, and every smoke artefact has to say so
+
+`run_eval.py` gains a `run` subcommand — retrieval, generation, judging,
+report and figures in one process — plus `--smoke`, `--trace` and
+`--figures`. Four calls in it are worth the entry.
+
+**A smoke report is a fabricated figure, so it says so from inside the
+data.** The fake judge returns `correct` for everything, which means a
+smoke run prints a per-stratum table reading 1.00 across the board. A
+console banner is not a guard: it scrolls away, and the JSONL outlives
+it. So smoke output is written to `runs/smoke_*` rather than
+`runs/e001_*`, every row carries `"smoke": true` and
+`"model": "smoke-fake"`, and the banner appears in the generated markdown
+and on the face of the SVG as well as on the console. The sentence that
+has to survive future editing is the one about what CI does **not**
+test: a green badge is a claim about the wiring and never about the
+answers. Whether the prompt still works is a regression only a real model
+can show, and that is E-001's job, gated on the correctness ceiling.
+
+**The fake judge's label is fixed rather than sampled.** A varied fake
+would produce a *distribution*, and a distribution invites being read as
+a finding. One constant label reads as what it is.
+
+**The fixture contains no real card.** The licensing rule is that no bulk
+card data is committed, and the honest way to keep a fixture on the right
+side of it is for the fixture to have nothing to be on the wrong side
+with. Three invented cards and three invented rulings, against the CR
+excerpt the parser's golden-file tests already use.
+
+**The cost estimate for `run` is a ceiling, not the exact prompts.**
+Retrieval and generation are interleaved so that one question is one
+trace, which means the real prompts do not exist until money could
+already have been spent. The token budget bounds every context by
+construction, so a bound is available — and a bound printed before the
+loop honours the cost rule better than an exact figure printed after it.
+
+One defect found on the way, and it is the shape this project keeps
+finding. The harness opened a Neo4j session and read the 196 MB Scryfall
+bulk before **every** run, arm A included. `plan_arm` has always said arm
+A touches no graph, and a test has always asserted it — of the *plan*.
+The harness disagreed silently, and the only symptom was a slow start,
+until CI needed arm A with no database at all. The test that now guards
+it asserts the property of the harness rather than of the decision the
+harness was supposed to implement.
+
 ## 2026-09-09 — The trace has to name its arm, and the question text stays out of it
 
 Three calls taken while instrumenting the retrieval and generation path,
