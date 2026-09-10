@@ -1,8 +1,8 @@
 {
   "purpose": "Smoke fixture split. Every question is on the development side, because the smoke must never exercise the `eval` guard as if it were a real opening of the evaluation split.",
   "seed": 0,
-  "n": 5,
-  "total": 5,
-  "dev_ids": ["sm-1", "sm-2", "sm-3", "sm-4", "sm-5"],
+  "n": 6,
+  "total": 6,
+  "dev_ids": ["sm-1", "sm-2", "sm-3", "sm-4", "sm-5", "sm-6"],
   "rule": "Fixture only. This file is not the golden set's split; that one lives at data/golden/phase4_dev_ids.json and is drawn once."
 }

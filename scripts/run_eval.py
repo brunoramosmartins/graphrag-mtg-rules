@@ -486,7 +486,11 @@ def build_retrieval_stack(args: argparse.Namespace, stack: ExitStack) -> Stack:
         # No linker, no router, no session, no bulk read.
         return Stack(plan=plan, searcher=vector_searcher(args))
 
-    linker, tfidf, oracle_text = build_stack(args.cr)
+    # `--cards` replaces the bulk rather than adding to it: the smoke has
+    # no 196 MB of gitignored Scryfall data, and a lexicon built from the
+    # bulk would resolve names the fixture graph does not contain.
+    fixture_cards = load_cards(args) if getattr(args, "cards", None) else None
+    linker, tfidf, oracle_text = build_stack(args.cr, cards=fixture_cards)
     searcher = tfidf if plan.retriever == "tfidf" else None
     if plan.retriever == "vector":
         searcher = vector_searcher(args)
@@ -497,6 +501,27 @@ def build_retrieval_stack(args: argparse.Namespace, stack: ExitStack) -> Stack:
         linker=linker,
         oracle_text=oracle_text,
         run=neo4j_runner(session),
+    )
+
+
+def require_a_populated_graph(stack: Stack) -> None:
+    """Refuse to traverse an empty graph.
+
+    Every question against one comes back `NO_MATCH`, which is a run that
+    completes, writes files, prints a report and tested nothing. In CI that
+    is a passing smoke with no subject; in a real run it is the loader
+    having silently not loaded. Both are worth one COUNT query.
+    """
+    if stack.run is None:
+        return
+    rows = list(stack.run("MATCH (r:Rule) RETURN count(r) AS n", {}))
+    if rows and rows[0]["n"]:
+        return
+    raise SystemExit(
+        "The graph holds no Rule nodes, so every traversal would return nothing and "
+        "the run would report NO_MATCH for every question without anything being "
+        "wrong with retrieval. Load the corpus, or `python scripts/load_smoke_graph.py` "
+        "for the fixture."
     )
 
 
@@ -1230,20 +1255,6 @@ def run_all(args: argparse.Namespace) -> int:
     """
     if args.smoke:
         smoke_paths(args)
-        if plan_arm(args).uses_graph:
-            # Named rather than left to fail on whichever prerequisite is
-            # missing first. Arms B and C need two things the fixture does
-            # not supply: `build_stack` reads the 196 MB Scryfall bulk for
-            # its lexicon, and the traversals need a loaded graph. Both are
-            # the CI task's work, not this one's, and a run that died on
-            # "no such file: oracle-cards.json" would read as a broken
-            # smoke rather than an unbuilt one.
-            raise SystemExit(
-                f"--smoke covers arm A only; arm {args.arm} needs the Scryfall bulk for its "
-                "lexicon and a loaded Neo4j for its traversals, and the fixture supplies "
-                "neither. Run `--smoke --arm A --mode lexical`, or run arm "
-                f"{args.arm} against the real corpus without --smoke."
-            )
     side = guard_side(args)
 
     if args.trace:
@@ -1308,6 +1319,7 @@ def run_all(args: argparse.Namespace) -> int:
     try:
         with ExitStack() as resources:
             stack = build_retrieval_stack(args, resources)
+            require_a_populated_graph(stack)
             retrieval_out = resources.enter_context(retrieval_path.open("w", encoding="utf-8"))
             answers_out = resources.enter_context(answers_path.open("w", encoding="utf-8"))
             verdicts_out = resources.enter_context(verdicts_path.open("w", encoding="utf-8"))
@@ -1349,7 +1361,7 @@ def run_all(args: argparse.Namespace) -> int:
                         + "\n"
                     )
                 print(
-                    f"  {row['id']:<8} {str(subgraph.outcome):<12} "
+                    f"  {row['id']:<8} {subgraph.outcome!s:<12} "
                     f"{'refused' if result.refused else 'answered':<9} {verdict.label.value}"
                 )
     finally:

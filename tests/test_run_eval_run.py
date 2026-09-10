@@ -361,12 +361,84 @@ class TestCeilingEstimate:
         assert ten.usd > one.usd
 
 
-class TestSmokeRefusesWhatItCannotDo:
-    def test_a_graph_arm_is_named_rather_than_left_to_fail(self) -> None:
-        # Arms B and C need the Scryfall bulk for the lexicon and a loaded
-        # Neo4j for the traversals. A run dying on "no such file:
-        # oracle-cards.json" reads as a broken smoke rather than an
-        # unbuilt one.
-        args = namespace(arm="C", smoke=True, limit=0, force=False, dry_run=True, trace=False)
-        with pytest.raises(SystemExit, match="smoke covers arm A only"):
-            run_eval.run_all(args)
+class TestEmptyGraphIsRefused:
+    """A traversal over an empty graph is a run that tested nothing.
+
+    Every question comes back `NO_MATCH`, the run completes, writes its
+    files and prints a report. In CI that is a passing smoke with no
+    subject; in a real run it is the loader having silently not loaded.
+    """
+
+    def stack(self, rows) -> run_eval.Stack:
+        plan = run_eval.plan_arm(namespace(arm="B"))
+        return run_eval.Stack(plan=plan, searcher=None, run=lambda cypher, params: rows)
+
+    def test_a_graph_with_no_rules_stops_the_run(self) -> None:
+        with pytest.raises(SystemExit, match="no Rule nodes"):
+            run_eval.require_a_populated_graph(self.stack([{"n": 0}]))
+
+    def test_a_loaded_graph_passes(self) -> None:
+        run_eval.require_a_populated_graph(self.stack([{"n": 13}]))
+
+    def test_an_arm_with_no_runner_is_not_asked(self) -> None:
+        # Arm A has no session to query, and demanding one would undo the
+        # coupling this phase removed.
+        plan = run_eval.plan_arm(namespace(arm="A"))
+        run_eval.require_a_populated_graph(run_eval.Stack(plan=plan, searcher=object(), run=None))
+
+
+class TestTheFixtureExercisesTheRouter:
+    """Arm C's distinguishing half must actually fire on the fixture.
+
+    Arm C is arm B plus a text retriever, and that retriever runs only
+    where the router sends it — on questions whose entities cannot reach
+    the CR rule graph. A fixture in which every question seeds the graph
+    makes the two arms produce byte-identical output while both pass,
+    which is the Phase 6 mislabel with a green badge on it. It very nearly
+    happened here: the first five fixture questions all seeded.
+
+    Built without `build_stack`, which opens a Neo4j session for its
+    format probe. These run in `lint-and-unit`, where there is no database.
+    """
+
+    def linker(self):
+        from graphrag_mtg.etl.cr_parser import parse_cr
+        from graphrag_mtg.graph.loader import keyword_definition_rows
+        from graphrag_mtg.retrieval.linking import QueryLinker, build_card_lexicon
+
+        cards = run_eval.load_cards(namespace(cards=FIXTURE / "cards.json"))
+        document = parse_cr(ROOT / "tests" / "fixtures" / "cr_excerpt.txt")
+        return QueryLinker(
+            build_card_lexicon(cards),
+            {row["display_name"] for row in keyword_definition_rows(document)},
+            {card["oracle_id"]: card.get("keywords", []) for card in cards},
+        )
+
+    def questions(self) -> list[str]:
+        import json as _json
+
+        path = FIXTURE / "golden" / "authored_v0.jsonl"
+        return [
+            _json.loads(line)["question"]
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+
+    def test_at_least_one_question_cannot_reach_the_rule_graph(self) -> None:
+        linker = self.linker()
+        seedless = [q for q in self.questions() if not linker.link(q).has_graph_seed]
+        assert seedless, "no fixture question routes to the text half; C would equal B"
+
+    def test_at_least_one_question_does_reach_it(self) -> None:
+        # The complement: a fixture that seeded nothing would exercise no
+        # traversal at all and arm B would be the one testing nothing.
+        linker = self.linker()
+        assert any(linker.link(q).has_graph_seed for q in self.questions())
+
+    def test_a_card_with_keywords_and_one_without_are_both_present(self) -> None:
+        # `has_graph_seed` turns on exactly this distinction, so a fixture
+        # whose cards were all one or all the other could not produce both
+        # branches however the questions were written.
+        cards = run_eval.load_cards(namespace(cards=FIXTURE / "cards.json"))
+        assert any(card.get("keywords") for card in cards)
+        assert any(not card.get("keywords") for card in cards)

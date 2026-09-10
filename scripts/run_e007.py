@@ -118,7 +118,13 @@ def load_pool(pool: Path, split: Path, side: str) -> list[dict]:
     return rows if wanted is None else [row for row in rows if row["id"] in wanted]
 
 
-def build_stack(cr: Path, *, extra_cards: list[dict] | None = None, extra_keywords=()):
+def build_stack(
+    cr: Path,
+    *,
+    extra_cards: list[dict] | None = None,
+    extra_keywords=(),
+    cards: list[dict] | None = None,
+):
     """Assemble the shipped retrieval stack, exactly as E-006 ran it.
 
     Args:
@@ -127,9 +133,16 @@ def build_stack(cr: Path, *, extra_cards: list[dict] | None = None, extra_keywor
             E-008 loads fictional cards into the graph, and a linker that
             cannot resolve them would score a retrieval miss as a leak.
         extra_keywords: Keyword display names likewise absent from the CR.
+        cards: Card records to use **instead of** the Scryfall bulk. For
+            the CI smoke, which has no bulk: a pull request cannot hold
+            196 MB of gitignored data. Distinct from `extra_cards`, which
+            adds to it — replacing and extending are different intentions
+            and one argument meaning both is how a run quietly indexes
+            34,236 cards it was told not to.
     """
     doc = parse_cr(cr)
-    cards = list(iter_bulk(bulk_path(ORACLE_CARDS_STEM))) + list(extra_cards or [])
+    base = list(iter_bulk(bulk_path(ORACLE_CARDS_STEM))) if cards is None else list(cards)
+    cards = base + list(extra_cards or [])
     lexicon = build_card_lexicon(cards)
     keywords_by_oracle = {c["oracle_id"]: c.get("keywords", []) for c in cards}
     oracle_text = {c["oracle_id"]: c.get("oracle_text", "") for c in cards}

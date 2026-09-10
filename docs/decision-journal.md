@@ -90,6 +90,53 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-10 — Arm C's smoke was arm B's smoke, and nothing said so
+
+CI now runs the evaluation smoke on all three arms with no API key: arm A
+in `lint-and-unit` with no database at all, arms B and C in `integration`
+against a fixture graph loaded by `scripts/load_smoke_graph.py`.
+
+**The defect worth recording is the one found while verifying it.** Arm C
+produced *exactly* the same numbers as arm B — same outcomes, same
+templates, same table. Arm C is arm B plus a text retriever, and that
+retriever fires only where the router sends it: on questions whose
+entities cannot reach the CR rule graph. All five fixture questions
+seeded it, so the half that defines arm C never ran, and CI would have
+tested arm B twice while reporting that it tested two arms.
+
+This is the Phase 6 mislabel again, with a green badge on it. There the
+harness passed a text retriever to the arm it recorded as graph-only, and
+the run survived because the routed branch fires on 2 of 20 questions.
+Here the branch fires on 0 of 5. Both times the symptom was *numbers that
+looked exactly as they should*, and both times the fix was to make the
+distinguishing property impossible to lose quietly: a sixth question
+whose two cards carry no keyword abilities, and a test asserting that the
+fixture contains a seedless question **and** a seeded one. Arm B now
+returns `NO_SEED` on it; arm C routes and retrieves `rule:613.4b`.
+
+**Two guards named after properties rather than commands.** The fixture
+loader never prunes: `load_rules` normally deletes rules the current
+document does not contain, which in a CI container holding only fixture
+data means every rule anything else created, including the namespaced
+nodes the integration tests build. A delete predicate must be no broader
+than what the command created — the compose teardown that named a profile
+and took the corpus container with it is the same mistake. And `run`
+refuses to traverse a graph with no `Rule` nodes: every question would
+come back `NO_MATCH`, the run would complete, write files and print a
+report, and nothing would be wrong with retrieval. One COUNT query buys
+the difference between a failing run and a passing one that tested
+nothing.
+
+**`build_stack` gained `cards=` beside `extra_cards=`.** One replaces the
+Scryfall bulk, the other adds to it. Two intentions, two arguments,
+deliberately: a single argument meaning both is how a run comes to index
+34,236 cards it was told not to.
+
+Verified against a disposable Neo4j on port 7690 rather than the corpus
+instance, which was up with the real 34,236 cards. All three arms ran,
+the loader was confirmed idempotent, and the container was removed by
+name.
+
 ## 2026-09-10 — CI tests the wiring, and every smoke artefact has to say so
 
 `run_eval.py` gains a `run` subcommand — retrieval, generation, judging,
