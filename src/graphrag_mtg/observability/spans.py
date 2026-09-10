@@ -70,6 +70,7 @@ SHARED_STAGES = frozenset({BUDGET, GENERATION})
 ARM = "graphrag.arm"
 QUESTION = "graphrag.question"
 QUESTION_CHARS = "graphrag.question.chars"
+QUESTION_ID = "graphrag.question.id"
 OUTCOME = "graphrag.outcome"
 NOTE = "graphrag.note"
 
@@ -144,7 +145,13 @@ def rule_families(citations: Iterable[str]) -> list[str]:
 
 
 @contextmanager
-def query_span(question: str, *, arm: str, record_question: bool = False) -> Iterator[Span]:
+def query_span(
+    question: str,
+    *,
+    arm: str,
+    question_id: str | None = None,
+    record_question: bool = False,
+) -> Iterator[Span]:
     """The root span for one question.
 
     Args:
@@ -154,12 +161,23 @@ def query_span(question: str, *, arm: str, record_question: bool = False) -> Ite
             or the shipped system's own label. Free-form because the
             demo app is not one of E-001's arms and should not pretend to
             be, but never absent.
+        question_id: The golden set's id for this question, when there is
+            one. An id is not the question: the repo already versions
+            RulesGuru ids publicly, and it is the text that the licence
+            keeps out. Recorded because a screenshotted trace whose
+            caption claims which question it shows should let the reader
+            check that claim inside the image — the same reason a smoke
+            artefact says it is synthetic from inside the data. Without
+            it the only handle on a trace is `question.chars`, which
+            identifies a question the way a page count identifies a book.
         record_question: Put the question text on the span. Off by
             default: a trace is a thing that gets screenshotted, and the
             golden set's licensed questions are kept out of this repo on
             purpose. Turn it on for a question the repo already carries.
     """
     with stage(QUERY, **{ARM: arm, QUESTION_CHARS: len(question)}) as span:
+        if question_id:
+            annotate(span, **{QUESTION_ID: question_id})
         if record_question:
             annotate(span, **{QUESTION: question})
         yield span

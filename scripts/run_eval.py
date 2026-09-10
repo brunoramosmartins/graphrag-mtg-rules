@@ -1345,7 +1345,10 @@ def run_all(args: argparse.Namespace) -> int:
             for row in rows:
                 question = text_of(row, args.cache_dir)
                 with spans.query_span(
-                    question, arm=args.arm, record_question=args.record_questions
+                    question,
+                    arm=args.arm,
+                    question_id=row["id"],
+                    record_question=args.record_questions,
                 ):
                     subgraph = retrieve_one(question, stack, args)
                     outcomes[str(subgraph.outcome)] += 1

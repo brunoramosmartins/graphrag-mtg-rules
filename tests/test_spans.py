@@ -312,6 +312,26 @@ class TestRootSpan:
         assert spans.QUESTION not in root.attributes
         assert root.attributes[spans.QUESTION_CHARS] == len("What does Flying do?")
 
+    def test_the_id_names_the_question_without_quoting_it(self, recorded) -> None:
+        # A screenshotted trace whose caption claims which question it
+        # shows should let the reader check that inside the image. The id
+        # is the handle the repo already versions publicly; the text is
+        # the part the licence keeps out, and it stays out.
+        with spans.query_span("What does Flying do?", arm="C", question_id="hand-flying") as _:
+            pass
+        (root,) = by_name(recorded, spans.QUERY)
+        assert root.attributes[spans.QUESTION_ID] == "hand-flying"
+        assert spans.QUESTION not in root.attributes
+
+    def test_a_question_with_no_id_records_none(self, recorded) -> None:
+        # The demo app answers free-typed questions, which have no golden
+        # id. An absent attribute is right; an empty string would read as
+        # an id that exists and is blank.
+        with spans.query_span("What does Flying do?", arm="demo"):
+            pass
+        (root,) = by_name(recorded, spans.QUERY)
+        assert spans.QUESTION_ID not in root.attributes
+
     def test_the_question_can_be_recorded_when_the_caller_owns_it(self, recorded) -> None:
         with spans.query_span("What does Flying do?", arm="demo", record_question=True):
             pass
