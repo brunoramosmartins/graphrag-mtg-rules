@@ -90,6 +90,71 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-10 — A citation path stays wrong because a hash covers it
+
+Making the trace readable made a defect readable with it. Every subrule of
+a rule cites the same provenance string: the path pattern ends in a bare
+`(:Rule)`, so `701.6a` and `701.6b` both carry
+`(:Rule {701.6})-[:HAS_SUBRULE*]->(:Rule)`. That string is not only a
+viewer detail — it goes into the context block the model reads, and into
+the citation a reader of an answer sees. Two cited rules, one provenance.
+
+The fix is three characters in three templates and it was written, tested
+and reverted. `evidence_fingerprint` hashes
+`kind|key|text|template|path|distance`, so the **path is inside the hash**,
+and E-007's sufficiency labels point at those hashes. Changing the string
+makes an unchanged retrieval look like changed evidence to the guard whose
+entire job is to refuse changed evidence — and that guard's own docstring
+records it having fired once already on a presentation change, which is
+what this would be.
+
+So the decision is: **leave the path wrong until the change can be made
+deliberately.** Repairing it means re-fingerprinting existing labels, which
+is a Phase 8 call with its own entry, not a side effect of preparing a
+README screenshot. Recorded here because a known defect that is not written
+down is indistinguishable from one nobody noticed, and the trace that
+exposed it will be in the README where anyone can read the duplicate lines.
+
+What was fixed instead is smaller and mine: `graphrag.paths` filtered empty
+strings while `graphrag.evidence.keys` did not. Phoenix renders a list
+attribute as indexed rows, so the two are read as pairs, and one pathless
+piece of evidence would have shifted every later path onto the wrong key.
+Two lists that look aligned and are not is worse than a visible gap.
+
+## 2026-09-10 — The trace was complete and unreadable
+
+Phase 7's spans carried a rich `graphrag.*` vocabulary and no
+`openinference.span.kind`, so Phoenix drew every one as a bare name with
+`kind: unknown`, no panels and no cost. A private vocabulary and no
+instrumentation look identical in the viewer, which matters because the
+DoD asks for a trace that is **legible**, and the reader it has to be
+legible to is a stranger looking at a screenshot.
+
+Three things changed. Span kinds are declared through a registry the
+wiring module owns and the vocabulary module fills, so `tracing.py` still
+does not know what a `traversal` is. `fusion` and `text2cypher` are
+`CHAIN` rather than the richer kinds that fit their names: no reranking
+model runs in the first, and no model call happens in the second, and a
+kind is a claim about what happened.
+
+And the spans now say *what was found* rather than only how much —
+`evidence.keys`, `paths`, `citations.keys`. These are identifiers: a rule
+number, a ruling id, a card name, and the walk that reached them. That is
+the half of this corpus the project publishes; the node text is the half
+it never commits, and it stays off the span for the same reason it stays
+out of git. `llm.token_count.*` is likewise absent: `LlmClient` surfaces
+no usage report, the only numbers available are the budget span's chars/4
+estimates, and publishing an estimate under a key that means "what was
+billed" is the provenance failure this project keeps finding. The cost
+reads `$0` and means "not reported".
+
+`--record-questions` had existed since the spans landed, documented as
+being for this screenshot, with nothing enforcing the line it assumed.
+`guard_recorded_questions` now refuses a batch whose rows keep their text
+in the gitignored cache — the same question `text_of` asks, rather than a
+filename check that would pass the moment such a row arrived from
+elsewhere.
+
 ## 2026-09-10 — The graph claimed a provenance it did not have
 
 Timing the onboarding required an empty database and an empty `data/`, so

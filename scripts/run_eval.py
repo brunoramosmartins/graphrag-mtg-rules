@@ -81,7 +81,13 @@ from contextlib import ExitStack
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, RULINGS_STEM, bulk_path, iter_bulk
+from graphrag_mtg.etl.bulk import (
+    ORACLE_CARDS_STEM,
+    RULINGS_STEM,
+    bulk_path,
+    iter_bulk,
+    load_bulk,
+)
 from graphrag_mtg.etl.cr_parser import CR_TXT_PATH, parse_cr
 from graphrag_mtg.evaluation.arm_c import VectorRuleSearch
 from graphrag_mtg.evaluation.baseline_vector import build_arm
@@ -280,10 +286,17 @@ def artefact(template: str, args: argparse.Namespace, **fields: object) -> Path:
     gitignored and its files are the only copy of what a label describes,
     so the one thing a synthetic run must never do is land where a real one
     is looked for.
+
+    `--tag` is the same rule for the general case. A run made to capture a
+    trace or to reproduce a bug is real — real model, real spend — but it is
+    not E-001, and the guard that refuses to overwrite an existing answers
+    file is the only thing standing between such a run and a set of judged
+    answers that cannot be regenerated for free.
     """
     path = Path(template.format(**fields))
-    if getattr(args, "smoke", False):
-        return path.with_name("smoke_" + path.name.removeprefix("e001_"))
+    prefix = "smoke" if getattr(args, "smoke", False) else getattr(args, "tag", None)
+    if prefix:
+        return path.with_name(f"{prefix}_" + path.name.removeprefix("e001_"))
     return path
 
 
@@ -332,6 +345,32 @@ def text_of(row: dict, cache: Path) -> str:
         raise SystemExit(f"No cached text for {row['id']} at {path}.")
     payload = json.loads(path.read_text(encoding="utf-8"))
     return payload.get("questionSimple") or payload.get("question") or ""
+
+
+def guard_recorded_questions(rows: list[dict], args: argparse.Namespace) -> None:
+    """Refuse to put licensed question text on a span.
+
+    `--record-questions` exists for the README's trace screenshot, and a
+    screenshot is the public repo. The rule it enforces is the one the
+    golden set already follows: text the repo versions inline may be
+    recorded, text the repo keeps in a gitignored cache may not.
+
+    Naming the property rather than the file matters here. A guard reading
+    "not ids_v0.jsonl" would pass the moment a RulesGuru row arrived from
+    somewhere else; this one asks whether the row itself carries its text,
+    which is the same question `text_of` asks.
+    """
+    if not getattr(args, "record_questions", False):
+        return
+    cached = [row["id"] for row in rows if not row.get("question")]
+    if cached:
+        raise SystemExit(
+            f"--record-questions would put {len(cached)} licensed question(s) on a span: "
+            f"{', '.join(cached[:5])}{'...' if len(cached) > 5 else ''}. These rows keep "
+            "their text in the gitignored cache, and a trace is a thing that gets "
+            "screenshotted into a public README. Run without the flag, or limit the "
+            "batch to questions this repo carries inline."
+        )
 
 
 def guard_side(args: argparse.Namespace) -> str:
@@ -696,7 +735,7 @@ def run_generation(args: argparse.Namespace) -> int:
     with out.open("w", encoding="utf-8") as handle:
         for record, question in prepared:
             subgraph = rebuild(record, question)
-            result = answer(question, subgraph, generate, notice=NOTICE)
+            result = answer(question, subgraph, generate, notice=NOTICE, model=model_name)
             handle.write(
                 json.dumps(answer_row(record, result, args, side, model_name), ensure_ascii=False)
                 + "\n"
@@ -724,8 +763,7 @@ def load_cards(args: argparse.Namespace) -> list[dict]:
 def load_corpus(args: argparse.Namespace) -> list:
     """Build arm A's document set from the raw sources."""
     cr = parse_cr(args.cr)
-    rulings = json.loads(args.rulings.read_text(encoding="utf-8"))
-    return build_corpus(cr, load_cards(args), rulings)
+    return build_corpus(cr, load_cards(args), load_bulk(args.rulings))
 
 
 def index(args: argparse.Namespace) -> int:
@@ -1284,6 +1322,7 @@ def run_all(args: argparse.Namespace) -> int:
                 "— pass --force only if you mean to destroy them."
             )
 
+    guard_recorded_questions(rows, args)
     generate, gen_model = generator_for(args)
     judge, judge_model = judge_for(args)
 
@@ -1333,7 +1372,10 @@ def run_all(args: argparse.Namespace) -> int:
             for row in rows:
                 question = text_of(row, args.cache_dir)
                 with spans.query_span(
-                    question, arm=args.arm, record_question=args.record_questions
+                    question,
+                    arm=args.arm,
+                    question_id=row["id"],
+                    record_question=args.record_questions,
                 ):
                     subgraph = retrieve_one(question, stack, args)
                     outcomes[str(subgraph.outcome)] += 1
@@ -1342,7 +1384,9 @@ def run_all(args: argparse.Namespace) -> int:
                         + "\n"
                     )
 
-                    result = answer(question, subgraph, generate, notice=NOTICE)
+                    result = answer(
+                        question, subgraph, generate, notice=NOTICE, model=gen_model
+                    )
                     record = {"question_id": row["id"], "stratum": row["stratum"]}
                     answers_out.write(
                         json.dumps(
@@ -1435,6 +1479,13 @@ def main() -> int:
         "--smoke",
         action="store_true",
         help="fixture corpus, fake generator, fake judge: the wiring, with no key and no spend",
+    )
+    common.add_argument(
+        "--tag",
+        default=None,
+        help="write under `runs/<tag>_*` instead of `runs/e001_*`, for a run that is "
+        "not the experiment (capturing a trace, reproducing a bug) and must not land "
+        "where the experiment is looked for",
     )
 
     run = sub.add_parser(

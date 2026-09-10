@@ -4,13 +4,20 @@ The connective tissue for Phase 3. Each ruling flows through the whole
 cascade and only gate-approved edges survive:
 
     ruling text
-      ├─ linker.scan_ruling ──────▶ resolved mentions (exact/loose)
-      │                         └─▶ pending homonyms
-      ├─ disambiguate ────────────▶ LLM yes/no on each homonym (1 call)
-      ├─ explicit_citations ──────▶ CITES_RULE candidates (deterministic)
-      ├─ extractor (--llm-citations, off) ─▶ inferred citations, for E-003
-      └─ gate.gate_candidates ────▶ GatedTriple[]  (schema + span + confidence
-                                     + existence + dedupe)
+      +- linker.scan_ruling ------> resolved mentions (exact/loose)
+      |                       '---> pending homonyms
+      +- disambiguate ------------> LLM yes/no on each homonym (1 call)
+      +- explicit_citations ------> CITES_RULE candidates (deterministic)
+      +- extractor (--llm-citations, off) -> inferred citations, for E-003
+      '- gate.gate_candidates ----> GatedTriple[]  (schema + span + confidence
+                                    + existence + dedupe)
+
+    (ASCII on purpose, and no backslashes: argparse prints this docstring
+    as the ``--help`` description, a Windows console is cp1252, and
+    box-drawing characters raise ``UnicodeEncodeError`` there rather than
+    printing. ``--help`` crashing is a worse trade than a diagram drawn
+    with plus signs. The parser uses a raw formatter so the diagram keeps
+    its lines instead of being reflowed into one paragraph.)
 
 Citations are deterministic since the E-003 schema reduction
 (2026-08-09): the inferred path measured F1 0.125 and gate G3's
@@ -205,7 +212,9 @@ def _select(rulings: list[dict], ids_path: Path | None, split: str, limit: int) 
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--rulings", type=Path, default=bulk_path(RULINGS_STEM))
     parser.add_argument("--cards", type=Path, default=bulk_path(ORACLE_CARDS_STEM))
     parser.add_argument("--cr", type=Path, default=Path("data/raw/comprehensive_rules.txt"))

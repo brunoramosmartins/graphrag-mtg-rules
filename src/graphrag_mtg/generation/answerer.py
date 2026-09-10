@@ -164,6 +164,7 @@ def answer(
     *,
     system: str = SYSTEM,
     notice: bool = True,
+    model: str | None = None,
 ) -> Answer:
     """Generate one grounded answer, or refuse.
 
@@ -190,6 +191,11 @@ def answer(
             spans.OUTCOME: subgraph.outcome,
             spans.CONTEXT_INCOMPLETE: incomplete,
             spans.PROMPT_VERSION: PROMPT_VERSION,
+            # None when the caller did not name one, and an absent
+            # attribute is right: the fake generators in the smoke path and
+            # in the tests are not a model, and a blank value would read as
+            # a model whose name nobody recorded.
+            spans.LLM_MODEL_NAME: model,
         },
     ) as span:
         if subgraph.outcome is not Outcome.RESOLVED or subgraph.is_empty:
@@ -215,6 +221,13 @@ def answer(
                 spans.GENERATED: True,
                 spans.REFUSED: is_refusal(text),
                 spans.CITATIONS: len(handles),
+                # Which ones, not only how many. A count of 2 beside a
+                # traversal that added 8 pieces of evidence says the answer
+                # used a quarter of what was retrieved; the handles say
+                # which quarter, which is the difference between noticing a
+                # number and being able to check it against the paths on
+                # the traversal spans above.
+                spans.CITATION_KEYS: spans.first_n(handles),
                 # Every entry is a fabricated citation, detected
                 # mechanically. Non-zero here is the one number in this
                 # trace that means the answer is unsound, so it goes on

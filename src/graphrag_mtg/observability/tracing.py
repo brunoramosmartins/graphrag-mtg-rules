@@ -114,6 +114,25 @@ def annotate(span: Span, **attributes: Any) -> None:
             span.set_attribute(key, cleaned)
 
 
+#: OpenInference's attribute for what kind of step a span is. Phoenix reads
+#: it to decide how to render one: a span with no kind is drawn as a bare
+#: name with no panels, which is why an uninstrumented-looking trace and a
+#: trace with a rich private vocabulary look the same in the viewer.
+OPENINFERENCE_SPAN_KIND = "openinference.span.kind"
+
+#: Filled by the vocabulary module at import — see
+#: `observability.spans.SPAN_KINDS`. It lives here because :func:`stage` is
+#: the one place every span passes through, and it is a registry rather
+#: than a constant because the reverse dependency is the wrong way round:
+#: this module is OTel wiring and must not know what a `traversal` is.
+SPAN_KINDS: dict[str, str] = {}
+
+
+def register_span_kinds(mapping: dict[str, str]) -> None:
+    """Declare which OpenInference kind each span name maps to."""
+    SPAN_KINDS.update(mapping)
+
+
 @contextmanager
 def stage(name: str, **attributes: Any) -> Iterator[Span]:
     """One pipeline stage as a span, with its attributes already set.
@@ -124,6 +143,9 @@ def stage(name: str, **attributes: Any) -> Iterator[Span]:
     trace and still fails the caller.
     """
     with tracer().start_as_current_span(name) as span:
+        kind = SPAN_KINDS.get(name)
+        if kind:
+            annotate(span, **{OPENINFERENCE_SPAN_KIND: kind})
         annotate(span, **attributes)
         yield span
 

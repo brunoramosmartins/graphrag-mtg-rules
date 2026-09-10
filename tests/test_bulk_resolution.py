@@ -22,6 +22,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, RULINGS_STEM, bulk_path
@@ -82,6 +84,55 @@ class TestResolvedAtCallTime:
             encoding="utf-8",
         )
         assert [card.oracle_id for card in load_oracle_cards(bulk)] == ["o1"]
+
+
+class TestTheReaderFollowsThePath:
+    """Resolving a path correctly is half of it; the other half reads it.
+
+    On 2026-09-10 the path fix landed and the reader did not. `RULINGS_PATH`
+    started resolving to `.jsonl.gz`, `load_corpus` still did
+    `json.loads(path.read_text())`, and the first real run died on
+    `UnicodeDecodeError: invalid start byte 0x8b` — which is gzip's magic
+    number, arriving where a `[` was expected. The legacy `.json` arrays had
+    been deleted the same day, so there was nothing to fall back to.
+    """
+
+    def _rulings_gz(self, tmp_path: Path) -> Path:
+        path = tmp_path / f"{RULINGS_STEM}.jsonl.gz"
+        rows = [
+            {"oracle_id": "o1", "comment": "A ruling about the stack.", "published_at": "2026-01-01"},
+            {"oracle_id": "o1", "comment": "A second ruling.", "published_at": "2026-01-02"},
+        ]
+        path.write_bytes(gzip.compress("\n".join(json.dumps(r) for r in rows).encode("utf-8")))
+        return path
+
+    def test_the_corpus_builder_reads_a_compressed_bulk(self, tmp_path: Path) -> None:
+        # The exact call that failed. It goes through the bulk reader now,
+        # which detects the format from the content rather than the name.
+        from graphrag_mtg.etl.bulk import load_bulk
+
+        rows = load_bulk(self._rulings_gz(tmp_path))
+        assert [r["oracle_id"] for r in rows] == ["o1", "o1"]
+
+    @pytest.mark.parametrize(
+        "script", ["run_eval.py", "sweep_arm_a.py", "load_smoke_graph.py",
+                   "extraction_cost_report.py", "sample_rulings_for_annotation.py",
+                   "prefill_extraction_annotations.py"]
+    )
+    def test_no_script_reads_a_bulk_as_plain_text(self, script: str) -> None:
+        # A grep-shaped guard, deliberately. Every one of these scripts had
+        # the same two lines, and each was written before the file it reads
+        # could be compressed. The next one will be written the same way.
+        source = (Path(__file__).resolve().parents[1] / "scripts" / script).read_text(
+            encoding="utf-8"
+        )
+        for forbidden in ("rulings.read_text", "cards.read_text",
+                          "rulings.open(encoding", "cards.open(encoding"):
+            assert forbidden not in source, (
+                f"{script} reads a bulk as plain text via `{forbidden}`; a "
+                "`.jsonl.gz` fails there with a UnicodeDecodeError on 0x8b. "
+                "Use `load_bulk` or `iter_bulk`."
+            )
 
 
 class TestOneCorpusNotTwo:

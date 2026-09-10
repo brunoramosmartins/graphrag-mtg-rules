@@ -45,9 +45,18 @@ was chosen because it lets us *measure the truth*. Full rationale in
 
 ## Status
 
-**Phase 0 — Foundation & Licensing.** Scaffold, ADRs, licensing gate
-(G1), and a minimal Neo4j compose are in place. Roadmap: Phases 0→8
-(vector→graph→agentic trilogy). See [`docs/`](docs/).
+**Phase 7 — Observability, Infra & CI.** The pipeline runs end to end:
+the graph, retrieval, grounded generation, a three-arm evaluation with
+confidence intervals, OpenTelemetry spans on every stage, and CI that
+exercises all three arms with no API key. Phase 8 packages it — demo,
+README, release. Roadmap: Phases 0→8 (vector→graph→agentic trilogy).
+
+The results are not a headline yet, and
+[`docs/evaluation.md`](docs/evaluation.md) says why: the MetaQA
+calibration failed its floor and the divergence is analysed rather than
+buried, the judge is not gated because no label reaches n ≥ 30, and the
+57-question evaluation split is still closed. What is measured, and every
+limitation that bounds it, is written down before any claim is made.
 
 ## Quickstart
 
@@ -96,8 +105,58 @@ python scripts/fetch_samples.py   # licensing-gate sanity
 
 </details>
 
+## What a question does
+
+Every stage is an OpenTelemetry span, and the span for a traversal carries
+the walk it made. This is one question through the shipped arm, in Phoenix:
+
+![A Phoenix trace of one question through arm C: the root span graphrag.query with linking, routing, four traversals, budget and generation beneath it; the selected traversal lists the evidence it added and the graph paths that reached it.](docs/images/trace-arm-c-traversal.png)
+
+*Arm C (graph + text, routed), question `hand-humility-plus-counter` from
+[`data/golden/authored_v0.jsonl`](data/golden/authored_v0.jsonl), text half in
+`--mode lexical` — pin 2's registered ablation, chosen so the figure did not
+need a vector index rebuilt over a corpus that changes daily. Corpus of
+2026-09-10. `Total Cost $0` means token usage is not reported, not that the
+run was free.*
+
+The selected `traversal` is the point of the picture:
+
+```
+graphrag.template          keyword_definition
+graphrag.evidence.keys     keyword:Counter · rule:701.6 · rule:701.6a · rule:701.6b
+graphrag.paths             (:Keyword {Counter})
+                           (:Keyword {Counter})-[:DEFINED_BY]->(:Rule {701.6})
+                           (:Rule {701.6})-[:HAS_SUBRULE*]->(:Rule)
+                           (:Rule {701.6})-[:HAS_SUBRULE*]->(:Rule)
+```
+
+One template resolved a keyword the question named, followed `DEFINED_BY` to
+the rule that governs it, and walked `HAS_SUBRULE*` down to the subrules — four
+citable nodes, each with the path that reached it. Those paths are what the
+generated answer cites, which is what makes an answer checkable rather than
+plausible.
+
+The last two path lines are identical because that pattern does not name the
+subrule it arrives at; `evidence.keys` at the same index does (`701.6a`,
+`701.6b`). It is a known defect, left in place deliberately: the path string is
+inside `evidence_sha256`, and E-007's sufficiency labels point at those hashes,
+so repairing it is a deliberate re-fingerprint rather than a cosmetic edit.
+See [the decision journal](docs/decision-journal.md).
+
+**A trace names its arm.** The graph arms and the vector arm share exactly two
+span names — `budget` and `generation`, which genuinely are the same operation —
+and a test pins that intersection. Arm A never appears to walk; arms B and C
+never appear to fuse. Phase 6 lost a run to a mislabel that every summary number
+agreed with, and a viewer reproduces that failure the moment two arms name their
+stages alike.
+
+**Question text is withheld by default.** The golden set's RulesGuru questions
+live in this repo as ids plus a gitignored fetch, and a trace is a thing that
+gets screenshotted into a README. `--record-questions` opts in, and refuses a
+batch whose rows keep their text in the cache.
+
 <details>
-<summary>Traces</summary>
+<summary>Reproducing it</summary>
 
 ```bash
 docker compose --profile observability up -d --wait   # Phoenix on :6006
@@ -105,7 +164,9 @@ python scripts/run_eval.py run --arm C --limit 1 --trace
 ```
 
 `run` is the only command whose trace covers a whole question; every other
-one is a single stage.
+one is a single stage. Add `--tag <name>` for a run that is not the
+experiment — it writes to `runs/<name>_*` instead of `runs/e001_*`, which is
+what stops a trace capture from overwriting judged answers.
 
 </details>
 

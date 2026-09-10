@@ -37,6 +37,7 @@ import json
 import sys
 from pathlib import Path
 
+from graphrag_mtg.etl.bulk import load_bulk
 from graphrag_mtg.etl.cards import is_playable, parse_card
 from graphrag_mtg.etl.cr_parser import parse_cr
 from graphrag_mtg.graph.connection import driver_session
@@ -82,7 +83,7 @@ def main() -> int:
     print(f"schema: {apply_schema()} statement(s)")
 
     doc = parse_cr(args.cr)
-    raw_cards = json.loads(args.cards.read_text(encoding="utf-8"))
+    raw_cards = load_bulk(args.cards)
     kept = [card for card in raw_cards if is_playable(card)]
     if len(kept) != len(raw_cards):
         # The fixture is three cards written by hand; if the shared
@@ -93,7 +94,7 @@ def main() -> int:
             "The fixture is hand-written, so this is a defect in it, not a filter working."
         )
     cards = [parse_card(card) for card in kept]
-    rulings = json.loads(args.rulings.read_text(encoding="utf-8"))
+    rulings = load_bulk(args.rulings)
 
     with driver_session() as session:
         rules = load_rules(

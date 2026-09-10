@@ -46,6 +46,7 @@ def namespace(**kw) -> argparse.Namespace:
         "always_text": False,
         "iterative": False,
         "smoke": True,
+        "tag": None,
         "token_budget": 6000,
         "kind_cap": 25,
         "vectors": Path("data/interim/e001_vectors.bin"),
@@ -79,6 +80,31 @@ class TestArtefactNaming:
             path = run_eval.artefact(run_eval.RETRIEVAL, namespace(smoke=smoke), slug="A",
                                      split="dev")
             assert path.parts[0] == "runs"
+
+    def test_a_tagged_run_is_real_but_is_not_the_experiment(self) -> None:
+        # A run made to capture a trace spends real money on a real model, so
+        # it is not a smoke — but it is not E-001 either, and the answers file
+        # it would otherwise collide with cannot be regenerated for free.
+        path = run_eval.artefact(
+            run_eval.ANSWERS, namespace(smoke=False, tag="trace"), slug="C", split="dev"
+        )
+        assert path.name.startswith("trace_")
+        assert "e001" not in path.name
+        assert path.parts[0] == "runs"
+
+    def test_smoke_wins_over_a_tag(self) -> None:
+        # Both prefixes answer the same question, and only one of them also
+        # means "nothing here is evidence". If a run is synthetic, that is the
+        # fact the filename has to carry.
+        path = run_eval.artefact(
+            run_eval.ANSWERS, namespace(smoke=True, tag="trace"), slug="C", split="dev"
+        )
+        assert path.name.startswith("smoke_")
+
+    def test_no_tag_leaves_the_experiment_path_alone(self) -> None:
+        assert run_eval.artefact(
+            run_eval.ANSWERS, namespace(smoke=False, tag=None), slug="C", split="dev"
+        ).name.startswith("e001_")
 
 
 class TestSmokeFakes:
@@ -442,3 +468,36 @@ class TestTheFixtureExercisesTheRouter:
         cards = run_eval.load_cards(namespace(cards=FIXTURE / "cards.json"))
         assert any(card.get("keywords") for card in cards)
         assert any(not card.get("keywords") for card in cards)
+
+
+class TestRecordedQuestionsGuard:
+    """`--record-questions` writes into a public artefact, so it has a gate.
+
+    A trace gets screenshotted into the README. The golden set already
+    draws the line the guard enforces: authored questions carry their text
+    inline in a versioned file, RulesGuru rows carry `null` and keep the
+    text in a gitignored cache.
+    """
+
+    def test_licensed_rows_stop_the_run(self) -> None:
+        rows = [{"id": "rg-123", "question": None}, {"id": "hand-x", "question": "What?"}]
+        with pytest.raises(SystemExit) as caught:
+            run_eval.guard_recorded_questions(rows, namespace(record_questions=True))
+        assert "rg-123" in str(caught.value)
+
+    def test_rows_the_repo_carries_are_allowed(self) -> None:
+        rows = [{"id": "hand-x", "question": "What does Flying do?"}]
+        run_eval.guard_recorded_questions(rows, namespace(record_questions=True))
+
+    def test_the_guard_is_silent_without_the_flag(self) -> None:
+        # Withholding is the default, so a batch of licensed questions is
+        # perfectly fine — it is the flag that needs justifying, not the row.
+        rows = [{"id": "rg-123", "question": None}]
+        run_eval.guard_recorded_questions(rows, namespace(record_questions=False))
+
+    def test_the_property_is_the_row_not_the_filename(self) -> None:
+        # A guard reading "not ids_v0.jsonl" would pass the moment a
+        # RulesGuru row arrived from somewhere else.
+        rows = [{"id": "anything", "question": ""}]
+        with pytest.raises(SystemExit):
+            run_eval.guard_recorded_questions(rows, namespace(record_questions=True))

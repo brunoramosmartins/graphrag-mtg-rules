@@ -23,7 +23,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import random
 import sys
 from pathlib import Path
@@ -31,6 +30,7 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, RULINGS_STEM, bulk_path, load_bulk
 from graphrag_mtg.extraction import disambiguate, extractor
 from graphrag_mtg.extraction.linker import Lexicon, scan_ruling
 from graphrag_mtg.extraction.llm import estimate_tokens, price_for_model
@@ -41,10 +41,8 @@ OUTPUT_TOKENS_PER_CALL = 300  # both stages return a short JSON array
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rulings", type=Path, default=Path("data/raw/scryfall_rulings.json"))
-    parser.add_argument(
-        "--cards", type=Path, default=Path("data/raw/scryfall_oracle_cards.json")
-    )
+    parser.add_argument("--rulings", type=Path, default=bulk_path(RULINGS_STEM))
+    parser.add_argument("--cards", type=Path, default=bulk_path(ORACLE_CARDS_STEM))
     parser.add_argument("--cr", type=Path, default=Path("data/raw/comprehensive_rules.txt"))
     parser.add_argument("--sample", type=int, default=2000, help="rulings to sample")
     parser.add_argument("--model", type=str, default=None, help="override LLM_MODEL")
@@ -55,12 +53,10 @@ def main() -> int:
     model = args.model or get_settings().llm_model
     price_in, price_out = price_for_model(model)
 
-    with args.cards.open(encoding="utf-8") as fh:
-        cards = json.load(fh)
+    cards = load_bulk(args.cards)
     lexicon = Lexicon.build((c["name"], c["oracle_id"]) for c in cards)
 
-    with args.rulings.open(encoding="utf-8") as fh:
-        rulings = json.load(fh)
+    rulings = load_bulk(args.rulings)
     corpus_n = len(rulings)
     sample = random.Random(SEED).sample(rulings, min(args.sample, corpus_n))
 

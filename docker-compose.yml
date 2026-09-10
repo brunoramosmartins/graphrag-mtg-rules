@@ -154,11 +154,36 @@ services:
     volumes:
       - phoenix_data:/mnt/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:6006 || exit 1"]
+      # Exec form, and Python, because this image is distroless: it has no
+      # /bin/sh, so `CMD-SHELL` cannot run at all, and no wget or curl to run
+      # under one. A shell-form healthcheck here does not report the service
+      # as unhealthy — it reports every probe as `exec failed`, which reads
+      # identically to a server that never came up. It did come up; only the
+      # probe was impossible. Phoenix is a Python application, so its own
+      # interpreter is the one binary the image is guaranteed to have.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:6006', timeout=3).status == 200 else 1)"
       interval: 10s
       timeout: 5s
       retries: 15
-      start_period: 20s
+      # Phoenix runs Alembic migrations before it binds the port, so it is not
+      # listening for the first ~25-30s of a cold start on Docker Desktop.
+      # 20s was tight enough that the probe started counting failures against
+      # a server that was still migrating.
+      #
+      # This does not make `up --wait` reliable for this service, and it is
+      # worth knowing why: `--wait` reports a container that restarts while it
+      # is waiting as "unhealthy", which is a different fact from a probe
+      # failing. Observed 2026-09-10 — the container took a graceful SIGTERM
+      # about eight seconds into its first boot and came back under
+      # `restart: unless-stopped`; the probe was fine both times. If `--wait`
+      # reports this service unhealthy, check `docker inspect` before
+      # believing it: `RestartCount` and `Health.FailingStreak` tell the two
+      # cases apart.
+      start_period: 60s
 
 volumes:
   neo4j_data:
