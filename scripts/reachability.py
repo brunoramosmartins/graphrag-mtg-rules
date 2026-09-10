@@ -3,7 +3,7 @@
 
 The measurement that decides Phase 4's architecture. Phase 3 reduced
 `CITES_RULE` to explicit citations (ADR-006), removing the intended
-ruling→rule bridge. The open question was whether the *remaining*
+ruling-to-rule bridge. The open question was whether the *remaining*
 deterministic structure — `Keyword-[:DEFINED_BY]->Rule`, the CR tree, and
 the parser-validated `REFERENCES` cross-references — already reaches the
 rules the golden set needs, over several hops.

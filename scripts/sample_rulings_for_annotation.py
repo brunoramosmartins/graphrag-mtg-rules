@@ -7,8 +7,8 @@ changes afterwards. The draw is stratified by what the deterministic
 linker already knows, deliberately overweighting the tail that decides
 the phase (single-word homonym candidates like "Opt"):
 
-- ``homonym``   — ≥1 single-word candidate pending LLM disambiguation
-- ``multiword`` — ≥1 deterministic mention, no homonym candidates
+- ``homonym``   — at least 1 single-word candidate pending LLM disambiguation
+- ``multiword`` — at least 1 deterministic mention, no homonym candidates
 - ``explicit``  — text states a CR rule number (measured: 25 in 77,999, 3 cards)
 - ``plain``     — none of the above (the negatives that keep precision honest)
 
