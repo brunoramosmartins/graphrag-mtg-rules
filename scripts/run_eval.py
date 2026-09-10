@@ -280,10 +280,17 @@ def artefact(template: str, args: argparse.Namespace, **fields: object) -> Path:
     gitignored and its files are the only copy of what a label describes,
     so the one thing a synthetic run must never do is land where a real one
     is looked for.
+
+    `--tag` is the same rule for the general case. A run made to capture a
+    trace or to reproduce a bug is real — real model, real spend — but it is
+    not E-001, and the guard that refuses to overwrite an existing answers
+    file is the only thing standing between such a run and a set of judged
+    answers that cannot be regenerated for free.
     """
     path = Path(template.format(**fields))
-    if getattr(args, "smoke", False):
-        return path.with_name("smoke_" + path.name.removeprefix("e001_"))
+    prefix = "smoke" if getattr(args, "smoke", False) else getattr(args, "tag", None)
+    if prefix:
+        return path.with_name(f"{prefix}_" + path.name.removeprefix("e001_"))
     return path
 
 
@@ -1435,6 +1442,13 @@ def main() -> int:
         "--smoke",
         action="store_true",
         help="fixture corpus, fake generator, fake judge: the wiring, with no key and no spend",
+    )
+    common.add_argument(
+        "--tag",
+        default=None,
+        help="write under `runs/<tag>_*` instead of `runs/e001_*`, for a run that is "
+        "not the experiment (capturing a trace, reproducing a bug) and must not land "
+        "where the experiment is looked for",
     )
 
     run = sub.add_parser(

@@ -154,7 +154,18 @@ services:
     volumes:
       - phoenix_data:/mnt/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:6006 || exit 1"]
+      # Exec form, and Python, because this image is distroless: it has no
+      # /bin/sh, so `CMD-SHELL` cannot run at all, and no wget or curl to run
+      # under one. A shell-form healthcheck here does not report the service
+      # as unhealthy — it reports every probe as `exec failed`, which reads
+      # identically to a server that never came up. It did come up; only the
+      # probe was impossible. Phoenix is a Python application, so its own
+      # interpreter is the one binary the image is guaranteed to have.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:6006', timeout=3).status == 200 else 1)"
       interval: 10s
       timeout: 5s
       retries: 15

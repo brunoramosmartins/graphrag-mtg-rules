@@ -46,6 +46,7 @@ def namespace(**kw) -> argparse.Namespace:
         "always_text": False,
         "iterative": False,
         "smoke": True,
+        "tag": None,
         "token_budget": 6000,
         "kind_cap": 25,
         "vectors": Path("data/interim/e001_vectors.bin"),
@@ -79,6 +80,31 @@ class TestArtefactNaming:
             path = run_eval.artefact(run_eval.RETRIEVAL, namespace(smoke=smoke), slug="A",
                                      split="dev")
             assert path.parts[0] == "runs"
+
+    def test_a_tagged_run_is_real_but_is_not_the_experiment(self) -> None:
+        # A run made to capture a trace spends real money on a real model, so
+        # it is not a smoke — but it is not E-001 either, and the answers file
+        # it would otherwise collide with cannot be regenerated for free.
+        path = run_eval.artefact(
+            run_eval.ANSWERS, namespace(smoke=False, tag="trace"), slug="C", split="dev"
+        )
+        assert path.name.startswith("trace_")
+        assert "e001" not in path.name
+        assert path.parts[0] == "runs"
+
+    def test_smoke_wins_over_a_tag(self) -> None:
+        # Both prefixes answer the same question, and only one of them also
+        # means "nothing here is evidence". If a run is synthetic, that is the
+        # fact the filename has to carry.
+        path = run_eval.artefact(
+            run_eval.ANSWERS, namespace(smoke=True, tag="trace"), slug="C", split="dev"
+        )
+        assert path.name.startswith("smoke_")
+
+    def test_no_tag_leaves_the_experiment_path_alone(self) -> None:
+        assert run_eval.artefact(
+            run_eval.ANSWERS, namespace(smoke=False, tag=None), slug="C", split="dev"
+        ).name.startswith("e001_")
 
 
 class TestSmokeFakes:
