@@ -90,6 +90,88 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-10 — The judge audit's first finding was a batch effect I reported as structural
+
+Phase 8's first task was the judge audit to n ≥ 30 per label. It produced
+three things before any label was collected, and the third one reverses the
+first two.
+
+**The floor is unreachable with the questions that exist.** E-011 requires
+≥ 30 answers *and* ≥ 30 question clusters per label, and for correctness a
+cluster is a question. Today: correct 18, partial 14, incorrect 23. Exactly
+**seven** unlabelled questions exist outside the closed evaluation split.
+Reaching the floor means drawing ~64 new RulesGuru questions, as the E-007
+pool was drawn — its 42 sit entirely outside the golden 77.
+
+**So I looked at the disagreements instead, and found a pattern that was
+not there.** All 15 have the judge stricter than the human, never the
+reverse. Agreement was 1.000 on single-verdict strata and ~0.68 on the two
+compound-verdict strata, and I registered E-011b saying the rubric has
+three labels written for one verdict while the questions have several.
+
+**The red-team decomposed the table by batch and the effect vanished.**
+Within b2, the only batch holding both kinds, single verdict is 9/10 and
+compound is 8/9 — 0.900 against 0.889. The whole contrast was b1 (0.639)
+against b2 (0.895), and stratum is collinear with batch. The count that
+looked like a finding, 14 disagreements in the compound strata, is 12 under
+a flat rate. Every cell interval overlaps every other. I published five bare
+proportions with no interval and no correction in a project whose rule says
+otherwise, and built a hypothesis on them.
+
+**The worse miss.** There is a third explanation I never considered and
+which the evidence supports better: a judge correcting from its own Magic
+knowledge. Tie-break 2 forbids calling an unsupported assertion `incorrect`,
+and ten `partial → incorrect` rows with zero in the other direction is that
+violation's signature. The control for it — `perturbed_key` — is registered,
+coded, and has never run. The revision I was about to write gives `partial`
+precedence over `incorrect`, which **suppresses that failure's only visible
+symptom**: agreement rises, the rubric takes the blame, and a judge that
+favours whichever arm resembles what it already believes goes into the
+head-to-head validated.
+
+**And "collecting is hopeless" was arithmetic on the wrong number.** I
+computed it on the pooled 0.727 against 0.720. E-011 gates per label, and
+per label `incorrect` is 23/23, about seventeen answers short of a floor it
+would clear at 28/30. Collecting is not a bet; it is a cheap measurement
+that gates one label and demonstrates two failing.
+
+The decision: the key-fidelity control runs before any rubric text is
+written, the judge's own rationales are coded against the keys, and the
+judge is cross-tabulated against the frozen second human pass. None of the
+three spends blindness, and two of them were available while I was calling
+the alternative untestable.
+
+## 2026-09-10 — Phase 8 opens, and the release DoD outranks the demo
+
+Phase 7 closed with every box ticked, and the gate check found every
+artefact on disk. Three decisions taken at the kickoff, before any work.
+
+**The carried experiments are the phase's critical path, not the demo.**
+Phase 6 sent four items here and Phase 7 forwarded them untouched: E-009,
+E-010, the judge audit to n ≥ 30 per label, and the head-to-head table.
+The first three are prerequisites of opening the 57-question evaluation
+split, and the fourth cannot be written until correctness is validated,
+which is what the judge audit decides. The roadmap lists the demo first
+and it is the more visible deliverable, but a demo over unvalidated
+numbers is a demo that has to be rebuilt when the numbers arrive. So the
+order is: judge audit, then E-009 and E-010, then the split, then the
+table, then the demo built over results that will not move.
+
+**The evaluation split opens once, and opening it is irreversible.** Every
+number in `docs/evaluation.md` today comes from the 20-question
+development split. The 57 held-out questions have been closed since Phase
+1 and `--open-the-evaluation-split` exists to make opening them a
+deliberate act. Once opened they stop being held out, so the phase gets
+one attempt, after the judge is gated and not before.
+
+**Arm A's vector index is stale and will be rebuilt on the corpus the
+split runs against, not before.** The bulk-path fix moved the corpus from
+a legacy July array to the daily bulk, `corpus_sha256` changed, and the
+709 MB cache no longer matches. Rebuilding costs about twenty minutes and
+$0.17 of embeddings, and Scryfall regenerates its bulk daily — so
+rebuilding now means rebuilding twice. The corpus for the eval run is
+frozen at that run's date and recorded with it.
+
 ## 2026-09-10 — A citation path stays wrong because a hash covers it
 
 Making the trace readable made a defect readable with it. Every subrule of

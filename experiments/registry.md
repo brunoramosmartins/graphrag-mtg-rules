@@ -3549,6 +3549,212 @@ the number, so the sample is pinned here, before the first label exists.
   strata. Every figure is published naming its composition rather than as
   one homogeneous sample.
 
+### E-011b — the rubric assumes one verdict; the questions have several (registered 2026-09-10, not yet run)
+
+- **Registered:** 2026-09-10, after reading the 15 disagreements and before
+  any `p6-c2` text exists. The diagnosis below is what the entry is
+  accountable to; the revision it proposes has not been written.
+- **Why this exists.** E-011's gate is *lower bound of judge–human agreement
+  ≥ lower bound of the human ceiling* = **0.720**. Measured 2026-09-09:
+  **0.727 [0.598, 0.827]** over 55 pairs. Not gated. The obvious response —
+  collect more pairs — was checked first and rejected on arithmetic: the
+  threshold sits essentially on the point estimate, so if the true rate is
+  0.727 **no achievable n gates it** (n = 5000 gives a lower bound of 0.714),
+  and at n = 90 the judge would need 0.822. Collecting is a bet on which end
+  of today's interval is true, and there is cheaper information available.
+- **What the 15 disagreements say.** Every one has the judge **stricter**
+  than the human — 10 `partial → incorrect`, 4 `correct → partial`, 1
+  `correct → incorrect`, and **zero** in the other direction. Symmetric
+  ambiguity would disagree both ways.
+- **The structural defect, measured.** Agreement by stratum:
+
+  | stratum | agreement |
+  |---|---|
+  | `legality_1hop` | 5/5 = 1.000 |
+  | `keyword_rule_2hop` | 2/2 = 1.000 |
+  | `definition_1hop` | 3/4 = 0.750 |
+  | `interaction_multihop` | 19/28 = 0.679 |
+  | `negative_temporal` | 11/16 = 0.688 |
+
+  Perfect where a question has **one** verdict; broken where the verdict is
+  **compound**. `rg-1049` asks *"what does the battlefield look like?"* and
+  its key opens with two board-state claims at once. The rubric's three
+  labels are written as though every question has a single yes to reach, and
+  say nothing about an answer that reaches half a compound verdict. 14 of
+  the 15 disagreements sit in the two compound strata.
+- **A second, textual defect.** `partial` is "reaches the key's verdict but
+  … arrives there by reasoning the key contradicts"; `incorrect` is "the
+  verdict contradicts the key, **or** the answer asserts something the key
+  contradicts". An answer that reaches the right verdict while asserting
+  something the key contradicts satisfies **both** definitions, and no
+  precedence rule separates them.
+- **The uncomfortable reading, recorded because it is the live alternative.**
+  On the two cases read in full, the judge applied the written tie-breaks and
+  the human did not: `rg-6817` is exactly tie-break 3 ("a judge-level answer
+  is the explanation, not the yes") and the human scored it `correct`. The
+  one-directional pattern is equally consistent with **the human having
+  drifted from the rubric** as with the rubric being ambiguous. This cannot
+  be tested on this sample: re-labelling now would be re-labelling after
+  seeing the judge, which destroys the blindness E-011 point 5 requires.
+- **Hypothesis.** The disagreement is concentrated in compound-verdict
+  questions and is caused by the rubric having no rule for them, not by the
+  judge being miscalibrated.
+- **Prediction, recorded before `p6-c2` is written or run:** under a rubric
+  that (a) scores a compound verdict claim-by-claim and (b) gives `partial`
+  precedence over `incorrect` when the principal verdict is reached,
+  agreement on `interaction_multihop` and `negative_temporal` rises above
+  0.80 while `legality_1hop` and `keyword_rule_2hop` stay at 1.000. If the
+  single-verdict strata **fall**, the revision traded one ambiguity for
+  another and is withdrawn.
+- **Decision rule.** `p6-c2` is written, the judge is re-run over the same 55
+  answers, and the result is compared per stratum. **The resulting figure
+  cannot gate anything**, whatever it says — see the threat below. It decides
+  only whether a fresh blind sample is worth collecting.
+- **Threat that bounds the whole entry.** `p6-c2` will be written after
+  reading these 15 disagreements, so agreement measured on the same 55 pairs
+  is fitted to them and is optimistic by an unknown amount. It is the
+  dev-split relationship the project already runs on retrieval, at the level
+  of the instrument. Gating correctness requires the revised rubric to be
+  scored on answers neither reader has seen, which needs `audit_judge.py
+  build` — a subcommand its own docstring describes and which does not exist.
+- **Cost.** Re-judging 55 answers with `gpt-4o-mini` is about \$0.01. The
+  expensive step is the fresh blind pass, and this entry exists to decide
+  whether to spend it.
+- **Actual result:** _not run — superseded before running by the amendment
+  below. The hypothesis, the prediction and the decision rule above are
+  withdrawn; they are kept in place because a withdrawn prediction that is
+  deleted cannot be counted against the person who made it._
+
+#### E-011b amendment 2026-09-10b — the effect is a batch effect, the prediction was an identity, and the best-supported hypothesis was missing
+
+Red-teamed the same day it was registered, before any rubric text existed.
+Nine blocking findings; four were verified by re-deriving them from the
+data. Additions and withdrawals, not a rewrite.
+
+**1. The structural defect is not identifiable in this sample.** The
+five-row stratum table is confounded with batch. Decomposed:
+
+| batch | single verdict | compound verdict |
+|---|---|---|
+| b1 | 1/1 | 22/35 = 0.629 |
+| b2 | 9/10 = **0.900** | 8/9 = **0.889** |
+
+**Within b2 — the only batch holding both kinds — there is no stratum
+effect.** The entire contrast the entry called structural is b1 (0.639)
+against b2 (0.895). b1 and b2 also differ on the incompleteness notice
+(live in b1, suppressed in b2, and tie-break 4 therefore fires only in
+b1), on the question pool, on answer-key provenance, and on the exposure
+flags. Any of those explains a one-directional stricter judge concentrated
+in b1 without reference to verdict arity. **Withdrawn:** the hypothesis
+that compound verdicts cause the disagreement. If it is ever revived,
+verdict arity must be annotated per question as its own variable, blind to
+the disagreement outcome, rather than read off a stratum label assigned by
+hop count.
+
+**2. The count that looked like a finding is the null.** 44 of 55 rows sit
+in the two compound strata, so a flat disagreement rate predicts 15 × 44/55
+= **12** disagreements there; 14 were observed. Wilson intervals on the
+five cells — legality [0.566, 1.000], keyword [0.342, 1.000], definition
+[0.301, 0.954], interaction [0.493, 0.821], negative_temporal [0.444,
+0.858] — **all overlap**, and four contain the pooled estimate. The entry
+printed five bare proportions with no interval and no correction, in a
+project whose own primary analysis Holm-corrects a family of four.
+
+**3. The prediction was entailed by the revision, not tested by it.** Rule
+(b), `partial` taking precedence over `incorrect`, is defined over exactly
+the residual it would be scored on: 10 of the 15 disagreements are
+`partial → incorrect`, and converting them is the rule's definition. To
+clear "above 0.80", `interaction_multihop` needed 4 flips and
+`negative_temporal` 2, out of ~10 available of precisely the targeted type.
+The prediction could not fail unless the revision failed to implement its
+own sentence. The withdrawal condition was no better: `legality` and
+`keyword` are 5/5 and 2/2, contain no boundary case rule (b) can touch, and
+staying at 1.000 has ~50% power against a true 10-point degradation.
+
+**4. The hypothesis with the most support was absent, and the proposed fix
+would have hidden it.** Tie-break 2 reads: *"an assertion the key neither
+states nor contradicts is `partial`, never `incorrect`. Calling it
+incorrect requires knowing it is false, which is knowledge the key did not
+supply."* **Ten `partial → incorrect` rows and zero in the other direction
+is the signature of a judge correcting from its own Magic knowledge** —
+the failure `judge.py`'s docstring says agreement figures cannot detect,
+the failure `perturbed_key` was written to control, and a control that has
+never been run. Giving `partial` precedence over `incorrect` suppresses
+that failure's only visible symptom. Agreement would rise, the rubric would
+be recorded as the culprit, and a judge that favours whichever arm
+resembles what it already believes would enter E-001's head-to-head
+validated. **Registered as a precondition:** the key-fidelity control runs
+*before* any rubric revision is written.
+
+**5. The registered run is refused by the project's own tooling, and if
+forced it measures the wrong pair.** `audit_judge.py` raises on a
+rubric-hash mismatch — *"the judge and the human read different rubrics.
+Their agreement would not describe one instrument"* — and there is no
+override. The guard is right: a p6-c2 judge scored against p6-c1 human
+labels measures whether the revised judge moved toward the *old human's*
+reading, which is the drift hypothesis restated rather than evidence
+against it.
+
+**6. "Collecting is hopeless" was computed on a quantity E-011 does not
+gate.** The pooled 0.727 against 0.720 is not the gate; the gate is per
+label. Per label, `incorrect` is **23/23**, seven clusters below the floor
+— about 17 more answers at the observed mix — and at 28/30 its interval is
+[0.787, 0.982], which **passes**. So collecting is not a bet on which end
+of an interval is true: it is a cheap measurement that would gate one label
+and demonstrate two failing. `correct` (13/18) and `partial` (4/14) remain
+unreachable at this threshold, and that is a result worth publishing rather
+than an obstacle.
+
+**7. Four exposed rows are silently inside every figure.**
+`audit_correctness.py` honours the `exposed` flag and reports the ceiling
+with and without the four b1 rows discussed with an external LLM, as the
+2026-09-04 amendment pre-committed. `audit_judge.py` never reads the field.
+The 0.727, the per-label table and the stratum table all include them, with
+no with/without figure, and all four sit in the batch carrying the effect.
+Registered: the exclusion is carried into `audit_judge.py` and every figure
+above is re-reported both ways before any of it is treated as a diagnosis.
+
+**8. What replaces the withdrawn design.** Three diagnostics, none of which
+spends blindness, ordered; no rubric text is written until they report.
+
+  1. **The key-fidelity control** (`perturbed_key`, registered, coded,
+     never run). Discriminates domain leakage from rubric ambiguity
+     directly. Costs cents.
+  2. **Code the 15 judge rationales against the keys.** Each cites either
+     something the key states (a compoundness or tie-break 5 difference),
+     a contradiction *the key does not contain* (domain leakage), or
+     tie-break 3 (human drift). This reads the judge's own text, reopens
+     no human label, and makes the entry's claim that the alternative
+     "cannot be tested on this sample" false — it was testable all along.
+  3. **Cross-tabulate against human pass 2**, which is frozen and was
+     labelled blind to the judge. E-011a reports that seven of nine human
+     self-disagreements start at `partial`; the overlap with the judge's
+     ten `partial → incorrect` rows is computable today and separates
+     "both readers find this boundary hard" from "the judge applies a rule
+     the human does not".
+
+**9. Constraints carried forward for whatever design follows.** Any
+threshold must be a function of a measured ceiling and must say whether it
+applies to a point estimate or a bound — E-011's amendment withdrew
+hand-picked constants for exactly the reason "above 0.80" repeated one
+entry later, and no per-stratum ceiling exists. Any paired comparison over
+the same 55 rows uses exact McNemar, as `run_eval.py` already does, with a
+noise floor from re-running the judge under **unchanged** p6-c1 first,
+because a model at temperature 0 is not deterministic. At most one rubric
+version may be scored on these 55 answers, or the in-sample leak the entry
+disclosed in prose becomes an iteration loop. And adopting any p6-c2
+invalidates the 0.720 threshold, which was measured under p6-c1: a new
+rubric needs a new ceiling, which is two more blind human passes five days
+apart.
+
+**What survives.** Two observations, neither of which depended on the
+withdrawn hypothesis: every one of the 15 disagreements has the judge
+stricter than the human, with none in the other direction; and the
+`partial` and `incorrect` definitions overlap textually, with no precedence
+rule separating an answer that reaches the key's verdict while asserting
+something the key contradicts. The second is a real defect in the rubric
+text. It is not established to be the cause of anything.
+
 ## E-012 — is long-context generation the bottleneck, and is it size or depth?
 
 - **Registered:** 2026-09-03, before any 12b question has been drawn and
