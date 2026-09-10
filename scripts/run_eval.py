@@ -347,6 +347,32 @@ def text_of(row: dict, cache: Path) -> str:
     return payload.get("questionSimple") or payload.get("question") or ""
 
 
+def guard_recorded_questions(rows: list[dict], args: argparse.Namespace) -> None:
+    """Refuse to put licensed question text on a span.
+
+    `--record-questions` exists for the README's trace screenshot, and a
+    screenshot is the public repo. The rule it enforces is the one the
+    golden set already follows: text the repo versions inline may be
+    recorded, text the repo keeps in a gitignored cache may not.
+
+    Naming the property rather than the file matters here. A guard reading
+    "not ids_v0.jsonl" would pass the moment a RulesGuru row arrived from
+    somewhere else; this one asks whether the row itself carries its text,
+    which is the same question `text_of` asks.
+    """
+    if not getattr(args, "record_questions", False):
+        return
+    cached = [row["id"] for row in rows if not row.get("question")]
+    if cached:
+        raise SystemExit(
+            f"--record-questions would put {len(cached)} licensed question(s) on a span: "
+            f"{', '.join(cached[:5])}{'...' if len(cached) > 5 else ''}. These rows keep "
+            "their text in the gitignored cache, and a trace is a thing that gets "
+            "screenshotted into a public README. Run without the flag, or limit the "
+            "batch to questions this repo carries inline."
+        )
+
+
 def guard_side(args: argparse.Namespace) -> str:
     if args.split_side == "eval" and not args.open_the_evaluation_split:
         raise SystemExit(
@@ -709,7 +735,7 @@ def run_generation(args: argparse.Namespace) -> int:
     with out.open("w", encoding="utf-8") as handle:
         for record, question in prepared:
             subgraph = rebuild(record, question)
-            result = answer(question, subgraph, generate, notice=NOTICE)
+            result = answer(question, subgraph, generate, notice=NOTICE, model=model_name)
             handle.write(
                 json.dumps(answer_row(record, result, args, side, model_name), ensure_ascii=False)
                 + "\n"
@@ -1296,6 +1322,7 @@ def run_all(args: argparse.Namespace) -> int:
                 "— pass --force only if you mean to destroy them."
             )
 
+    guard_recorded_questions(rows, args)
     generate, gen_model = generator_for(args)
     judge, judge_model = judge_for(args)
 
@@ -1357,7 +1384,9 @@ def run_all(args: argparse.Namespace) -> int:
                         + "\n"
                     )
 
-                    result = answer(question, subgraph, generate, notice=NOTICE)
+                    result = answer(
+                        question, subgraph, generate, notice=NOTICE, model=gen_model
+                    )
                     record = {"question_id": row["id"], "stratum": row["stratum"]}
                     answers_out.write(
                         json.dumps(

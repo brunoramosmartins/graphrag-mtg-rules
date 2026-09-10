@@ -31,7 +31,7 @@ from contextlib import contextmanager
 
 from opentelemetry.trace import Span
 
-from graphrag_mtg.observability.tracing import annotate, stage
+from graphrag_mtg.observability.tracing import annotate, register_span_kinds, stage
 
 # ── Span names ───────────────────────────────────────────────────────────────
 
@@ -65,7 +65,64 @@ VECTOR_STAGES = frozenset({LEXICAL, DENSE, FUSION, BUDGET, GENERATION})
 #: does, and the trace stops distinguishing the arms.
 SHARED_STAGES = frozenset({BUDGET, GENERATION})
 
+# ── What kind of step each span is, in Phoenix's vocabulary ──────────────────
+
+# Phoenix renders a span according to `openinference.span.kind`. Without it
+# every span shows as `unknown` with no input, no output and no cost — which
+# is what a trace of this pipeline looked like until 2026-09-10, and it is
+# indistinguishable from instrumentation that was never added. The names
+# above are ours and stay ours; this map is the translation the viewer reads.
+#
+# Two entries are deliberately CHAIN rather than the tempting alternative:
+#
+# - `fusion` is reciprocal-rank fusion over two ranked lists. RERANKER would
+#   render more prettily and would tell the reader a reranking *model* ran.
+#   None did.
+# - `text2cypher` wraps validation and execution of a generated query. The
+#   generation happens elsewhere; marking this span LLM would attribute a
+#   model call to a step that makes none.
+#: The kinds this project claims. A frozenset rather than three string
+#: constants so the vocabulary's own tests can tell an attribute *key* from
+#: a kind *value* by type — they are all uppercase module-level strings
+#: otherwise, and one namespace test already tripped over that.
+PHOENIX_KINDS = frozenset({"CHAIN", "LLM", "RETRIEVER"})
+
+SPAN_KINDS = {
+    QUERY: "CHAIN",
+    LINKING: "CHAIN",
+    ROUTING: "CHAIN",
+    BUDGET: "CHAIN",
+    TEXT2CYPHER: "CHAIN",
+    FUSION: "CHAIN",
+    TRAVERSAL: "RETRIEVER",
+    TEXT_SEARCH: "RETRIEVER",
+    LEXICAL: "RETRIEVER",
+    DENSE: "RETRIEVER",
+    GENERATION: "LLM",
+}
+
+register_span_kinds(SPAN_KINDS)
+
 # ── Attribute names ──────────────────────────────────────────────────────────
+
+#: OpenInference's name, not ours, and on purpose: Phoenix shows the model
+#: on an LLM span only under this key. It is the one piece of the LLM
+#: convention this project can fill honestly — `llm.token_count.*` would
+#: have to come from the provider's usage report, and `LlmClient` does not
+#: surface one, so the only numbers available are the chars/4 estimates the
+#: budget span already carries under a name that says they are estimates.
+#: Publishing an estimate under a key that means "what was billed" is the
+#: provenance failure this project keeps finding, so the cost stays $0 and
+#: says nothing rather than saying something false.
+LLM_MODEL_NAME = "llm.model_name"
+
+#: Keys that deliberately sit outside the `graphrag.` namespace, and the
+#: whole list of them. Everything this project records is prefixed so that
+#: "show me what this project wrote" is one Phoenix filter; a foreign key is
+#: a key the *viewer* defines, which is only useful spelled its way. Keeping
+#: the exceptions enumerated is what stops "the invariant has an exception"
+#: from becoming "the invariant is a suggestion".
+FOREIGN_ATTRIBUTES = frozenset({LLM_MODEL_NAME})
 
 ARM = "graphrag.arm"
 QUESTION = "graphrag.question"
@@ -86,6 +143,9 @@ PLAN_EXPANSIONS = "graphrag.plan.expansions"
 
 TEMPLATE = "graphrag.template"
 ROWS = "graphrag.rows"
+EVIDENCE_KEYS = "graphrag.evidence.keys"
+PATHS = "graphrag.paths"
+CITATION_KEYS = "graphrag.citations.keys"
 EVIDENCE_ADDED = "graphrag.evidence.added"
 EVIDENCE_TOTAL = "graphrag.evidence.total"
 EVIDENCE_CAPPED = "graphrag.evidence.capped"
@@ -124,6 +184,26 @@ CONTEXT_INCOMPLETE = "graphrag.context_incomplete"
 #: abilities. Coarse on purpose: it is what makes two traces comparable at
 #: a glance, where the full rule numbers are only comparable by reading.
 _RULE_KEY = re.compile(r"^(\d)(\d\d)")
+
+
+#: How many list entries a span carries before it says how many it left.
+#: A traversal that adds thirty rulings would otherwise put thirty strings
+#: on one attribute, which the viewer renders as a wall and nobody reads.
+SPAN_LIST_CAP = 12
+
+
+def first_n(values: Iterable[str], cap: int = SPAN_LIST_CAP) -> list[str]:
+    """The first `cap` values, followed by a count of the ones left out.
+
+    The marker is an entry rather than a separate attribute on purpose: a
+    truncated list that does not say it was truncated is a list that reads
+    as complete, and this project has already been bitten once by a number
+    that described a subset while looking like the whole.
+    """
+    items = list(values)
+    if len(items) <= cap:
+        return items
+    return [*items[:cap], f"...and {len(items) - cap} more"]
 
 
 def rule_family(key: str) -> str | None:

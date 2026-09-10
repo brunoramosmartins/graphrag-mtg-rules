@@ -139,12 +139,28 @@ def retrieve(
             subgraph.templates_run.append(call.template)
             before = len(subgraph.evidence)
             add_evidence(subgraph, to_evidence(template, rows), kind_cap=kind_cap)
+            added = subgraph.evidence[before:]
             annotate(
                 span,
                 **{
                     spans.ROWS: len(rows),
-                    spans.EVIDENCE_ADDED: len(subgraph.evidence) - before,
+                    spans.EVIDENCE_ADDED: len(added),
                     spans.EVIDENCE_CAPPED: sum(subgraph.capped.values()),
+                    # What was found, not just how much. Handles and paths
+                    # are identifiers — a rule number, a ruling id, a card
+                    # name, and the walk that reached them — which is the
+                    # half of this corpus the project publishes. The node
+                    # *text* is the half it never commits, and it stays off
+                    # the span for the same reason it stays out of the repo.
+                    spans.EVIDENCE_KEYS: spans.first_n(
+                        f"{item.kind}:{item.key}" for item in added
+                    ),
+                    # The traversal in readable form. This is the claim the
+                    # README makes — an answer is a path — and until now it
+                    # was the one thing a trace of a traversal did not show.
+                    spans.PATHS: spans.first_n(
+                        item.path for item in added if item.path
+                    ),
                 },
             )
 
@@ -174,11 +190,19 @@ def retrieve(
                 rule_search.evidence(question, chosen.expansions),
                 kind_cap=kind_cap,
             )
+            added = subgraph.evidence[before:]
             annotate(
                 span,
                 **{
                     spans.PLAN_EXPANSIONS: len(chosen.expansions),
-                    spans.EVIDENCE_ADDED: len(subgraph.evidence) - before,
+                    spans.EVIDENCE_ADDED: len(added),
+                    # Same handles as a traversal carries, and deliberately
+                    # no `paths`: text retrieval reaches a rule by matching
+                    # words, not by walking, and an attribute named `paths`
+                    # on this span would describe a walk that never happened.
+                    spans.EVIDENCE_KEYS: spans.first_n(
+                        f"{item.kind}:{item.key}" for item in added
+                    ),
                 },
             )
 

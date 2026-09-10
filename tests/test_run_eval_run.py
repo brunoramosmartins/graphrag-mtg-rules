@@ -468,3 +468,36 @@ class TestTheFixtureExercisesTheRouter:
         cards = run_eval.load_cards(namespace(cards=FIXTURE / "cards.json"))
         assert any(card.get("keywords") for card in cards)
         assert any(not card.get("keywords") for card in cards)
+
+
+class TestRecordedQuestionsGuard:
+    """`--record-questions` writes into a public artefact, so it has a gate.
+
+    A trace gets screenshotted into the README. The golden set already
+    draws the line the guard enforces: authored questions carry their text
+    inline in a versioned file, RulesGuru rows carry `null` and keep the
+    text in a gitignored cache.
+    """
+
+    def test_licensed_rows_stop_the_run(self) -> None:
+        rows = [{"id": "rg-123", "question": None}, {"id": "hand-x", "question": "What?"}]
+        with pytest.raises(SystemExit) as caught:
+            run_eval.guard_recorded_questions(rows, namespace(record_questions=True))
+        assert "rg-123" in str(caught.value)
+
+    def test_rows_the_repo_carries_are_allowed(self) -> None:
+        rows = [{"id": "hand-x", "question": "What does Flying do?"}]
+        run_eval.guard_recorded_questions(rows, namespace(record_questions=True))
+
+    def test_the_guard_is_silent_without_the_flag(self) -> None:
+        # Withholding is the default, so a batch of licensed questions is
+        # perfectly fine — it is the flag that needs justifying, not the row.
+        rows = [{"id": "rg-123", "question": None}]
+        run_eval.guard_recorded_questions(rows, namespace(record_questions=False))
+
+    def test_the_property_is_the_row_not_the_filename(self) -> None:
+        # A guard reading "not ids_v0.jsonl" would pass the moment a
+        # RulesGuru row arrived from somewhere else.
+        rows = [{"id": "anything", "question": ""}]
+        with pytest.raises(SystemExit):
+            run_eval.guard_recorded_questions(rows, namespace(record_questions=True))

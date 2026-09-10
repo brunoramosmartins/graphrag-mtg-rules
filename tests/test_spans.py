@@ -155,7 +155,28 @@ class TestAttributeNames:
     def test_every_attribute_lives_in_one_namespace(self) -> None:
         # Phoenix filters on the attribute key. One prefix is what makes
         # "show me everything this project recorded" a single query.
-        assert all(value.startswith("graphrag.") for value in attribute_constants().values())
+        ours = {
+            name: value
+            for name, value in attribute_constants().items()
+            if value not in spans.FOREIGN_ATTRIBUTES
+        }
+        assert all(value.startswith("graphrag.") for value in ours.values())
+
+    def test_the_exceptions_are_enumerated_rather_than_assumed(self) -> None:
+        # The namespace rule has exactly one class of exception: keys the
+        # viewer defines, which are only useful spelled its way. Listing
+        # them is what keeps "the invariant has an exception" from becoming
+        # "the invariant is a suggestion" — a new `llm.*` or `openinference.*`
+        # constant added without thought fails here.
+        outside = {
+            value
+            for value in attribute_constants().values()
+            if not value.startswith("graphrag.")
+        }
+        assert outside == set(spans.FOREIGN_ATTRIBUTES)
+        assert all(
+            value.startswith(("llm.", "openinference.")) for value in spans.FOREIGN_ATTRIBUTES
+        )
 
     def test_no_two_constants_name_the_same_attribute(self) -> None:
         # A copy-paste that leaves two meanings on one key does not fail
@@ -293,6 +314,129 @@ class TestGenerationTrace:
         answer(subgraph.question, subgraph, lambda system, prompt: "See [rule:999.9].")
         (generation,) = by_name(recorded, spans.GENERATION)
         assert list(generation.attributes[spans.UNKNOWN_HANDLES]) == ["rule:999.9"]
+
+
+class TestTheViewerCanRenderIt:
+    """A private vocabulary and no instrumentation look the same in Phoenix.
+
+    Until 2026-09-10 every span in this project carried rich `graphrag.*`
+    attributes and no `openinference.span.kind`, so the viewer drew each one
+    as a bare name with `kind: unknown`, no input, no output and no cost —
+    which is indistinguishable, to anyone reading the README screenshot,
+    from a pipeline nobody instrumented.
+    """
+
+    def test_every_stage_declares_a_kind(self) -> None:
+        # The guard that matters: a stage added later inherits the defect
+        # silently, because an unmapped name is not an error anywhere.
+        named = spans.GRAPH_STAGES | spans.VECTOR_STAGES | {spans.QUERY}
+        missing = sorted(named - set(spans.SPAN_KINDS))
+        assert not missing, f"no openinference.span.kind for: {missing}"
+
+    def test_the_kinds_are_ones_phoenix_knows(self) -> None:
+        assert set(spans.SPAN_KINDS.values()) <= spans.PHOENIX_KINDS
+
+    def test_only_the_generation_stage_claims_to_be_a_model_call(self) -> None:
+        # `text2cypher` is the trap: it validates and runs a generated query
+        # but makes no model call itself, and `fusion` combines two ranked
+        # lists without a reranking model. Both would render more richly
+        # under a kind that describes a thing that did not happen.
+        llm = {name for name, kind in spans.SPAN_KINDS.items() if kind == "LLM"}
+        assert llm == {spans.GENERATION}
+
+    def test_the_kind_reaches_the_span(self, recorded) -> None:
+        with spans.query_span("What does Flying do?", arm="C"):
+            retrieve("What does Flying do?", linker=linker(), run=runner())
+        (root,) = by_name(recorded, spans.QUERY)
+        (traversal, *_) = by_name(recorded, spans.TRAVERSAL)
+        assert root.attributes["openinference.span.kind"] == "CHAIN"
+        assert traversal.attributes["openinference.span.kind"] == "RETRIEVER"
+
+    def test_the_model_is_named_on_the_generation_span(self, recorded) -> None:
+        subgraph = retrieve("What does Flying do?", linker=linker(), run=runner())
+        answer(
+            subgraph.question,
+            subgraph,
+            lambda system, prompt: "See [rule:702.9].",
+            model="gpt-4o-mini",
+        )
+        (generation,) = by_name(recorded, spans.GENERATION)
+        assert generation.attributes[spans.LLM_MODEL_NAME] == "gpt-4o-mini"
+
+    def test_an_unnamed_generator_claims_no_model(self, recorded) -> None:
+        # The smoke path's generator is a function, not a model. An empty
+        # string here would read as a model whose name nobody wrote down.
+        subgraph = retrieve("What does Flying do?", linker=linker(), run=runner())
+        answer(subgraph.question, subgraph, lambda system, prompt: "See [rule:702.9].")
+        (generation,) = by_name(recorded, spans.GENERATION)
+        assert spans.LLM_MODEL_NAME not in generation.attributes
+
+    def test_no_token_count_is_published(self, recorded) -> None:
+        # LlmClient does not surface the provider's usage report, so the only
+        # numbers available are the budget span's chars/4 estimates. Under
+        # `llm.token_count.*` Phoenix would price them and show a cost that
+        # was never billed. $0 and silent beats a number that is wrong.
+        with spans.query_span("What does Flying do?", arm="C"):
+            subgraph = retrieve("What does Flying do?", linker=linker(), run=runner())
+            answer(subgraph.question, subgraph, lambda system, prompt: "See [rule:702.9].")
+        for span in recorded.get_finished_spans():
+            assert not [key for key in span.attributes if key.startswith("llm.token_count")]
+
+
+class TestTheTraceSaysWhatWasFound:
+    """Counts describe a shape; handles and paths describe a result.
+
+    Until 2026-09-10 a traversal span said `rows: 1, evidence.added: 1` and
+    the generation span said `citations: 2`. A reader could see that four
+    traversals ran and that the answer cited two things, and could not see
+    *which* two, or what any traversal walked — which is the claim the
+    README makes about this system.
+    """
+
+    def test_a_traversal_names_the_evidence_it_added(self, recorded) -> None:
+        retrieve("What does Flying do?", linker=linker(), run=runner())
+        (traversal, *_) = by_name(recorded, spans.TRAVERSAL)
+        keys = list(traversal.attributes[spans.EVIDENCE_KEYS])
+        assert keys
+        assert all(":" in key for key in keys)
+
+    def test_a_traversal_shows_the_walk(self, recorded) -> None:
+        # The path is the thesis. A trace of a graph system that cannot
+        # show a path is a trace of any other system.
+        retrieve("What does Flying do?", linker=linker(), run=runner())
+        paths = [
+            path
+            for span in by_name(recorded, spans.TRAVERSAL)
+            for path in span.attributes.get(spans.PATHS, ())
+        ]
+        assert any("-[:" in path for path in paths)
+
+    def test_the_node_text_never_reaches_a_span(self, recorded) -> None:
+        # Handles and paths are identifiers, which this project publishes.
+        # Rule text and ruling text are the licensed half, which it does
+        # not commit — and a trace is a thing that gets screenshotted.
+        with spans.query_span("What does Flying do?", arm="C"):
+            retrieve("What does Flying do?", linker=linker(), run=runner())
+        for span in recorded.get_finished_spans():
+            for value in span.attributes.values():
+                rendered = " ".join(value) if isinstance(value, tuple | list) else str(value)
+                assert "Flying is a static ability." not in rendered
+
+    def test_the_answer_names_the_handles_it_cited(self, recorded) -> None:
+        subgraph = retrieve("What does Flying do?", linker=linker(), run=runner())
+        answer(subgraph.question, subgraph, lambda system, prompt: "See [rule:702.9].")
+        (generation,) = by_name(recorded, spans.GENERATION)
+        assert list(generation.attributes[spans.CITATION_KEYS]) == ["rule:702.9"]
+        assert generation.attributes[spans.CITATIONS] == 1
+
+    def test_a_long_list_says_how_much_it_left_out(self) -> None:
+        # Silent truncation is a list that reads as complete.
+        capped = spans.first_n([str(n) for n in range(40)], cap=4)
+        assert len(capped) == 5
+        assert capped[-1] == "...and 36 more"
+
+    def test_a_short_list_is_unchanged(self) -> None:
+        assert spans.first_n(["a", "b"], cap=4) == ["a", "b"]
 
 
 class TestRootSpan:
