@@ -3549,6 +3549,76 @@ the number, so the sample is pinned here, before the first label exists.
   strata. Every figure is published naming its composition rather than as
   one homogeneous sample.
 
+#### E-011 amendment 2026-09-10c — the key-fidelity control gets its subset, its size and its instrument
+
+The control has been registered since 2026-08-15 point 6 and coded since
+`judge.py` was written — `perturbed_key` and `follows_key` exist and are
+unit-tested — and it has **never run**, because the fixture it needs was
+never built and `docs/evaluation.md` has carried it as pending ever since.
+E-011b's amendment makes it a precondition of any rubric revision, so the
+parts left unregistered are registered here, before a single perturbation
+is written.
+
+**What was already registered and is not reopened:** a registered subset of
+judged items carries a perturbed key, altered so the graded answer is
+correct-per-key and wrong in real Magic, **and the mirror**; the judge
+passes domain blindness only if it follows the supplied key on **≥ 0.90**
+of perturbed items; the rate is published beside the agreement figures;
+fixture only, and nothing perturbed enters a reported correctness
+denominator.
+
+**The subset.** Drawn from the 55 answers that already carry a frozen human
+label. No blindness is spent: the judge is stateless between calls, the
+items are fixture-only, and the human labels are not reopened. Two
+directions, 15 items each, because a judge that always answers `correct`
+passes one direction and fails the other:
+
+  | direction | source answer | the key is rewritten to | `expected` |
+  |---|---|---|---|
+  | A | human label `incorrect` | **endorse** the answer's wrong claim | `correct` |
+  | B | human label `correct` | **contradict** the answer | `incorrect` |
+
+  A key-blind judge follows the supplied key in both. A judge correcting
+  from memory says `incorrect` in A and `correct` in B — which is the same
+  shape as the ten `partial → incorrect` rows this control exists to
+  explain.
+
+**n = 30, derived rather than chosen.** At a true fidelity of 0.70 — a judge
+genuinely leaking domain knowledge — 21/30 gives [0.521, 0.833], whose
+**upper bound sits below 0.90**, so the sample separates the two hypotheses.
+n = 20 would also separate ([0.481, 0.855]); 30 buys margin at a cost of
+about thirty `gpt-4o-mini` calls.
+
+**Where the files live, and why in two places.** A perturbed key is text
+derived from a RulesGuru answer key, which is the licensed half this repo
+keeps out of git. So the split the golden set already uses applies:
+`data/golden/key_fidelity_ids.json` is **versioned** and holds the
+registered subset — the 30 ids, each item's direction, its `expected`
+label, and the seed — while `data/interim/key_fidelity.jsonl` is
+**gitignored** and holds the perturbed key text. The registered subset is
+therefore checkable by anyone; the licensed text is not redistributed.
+
+**The threshold is recorded as it stands, not repaired.** "Follows the
+supplied key on ≥ 0.90 of perturbed items" does not say whether 0.90
+applies to the point estimate or to a bound — the exact defect amendment
+2026-08-15b withdrew the hand-picked 0.90/0.85 for, surviving in the entry
+that withdrew them. It is read here as the **point estimate**, as written,
+with the Wilson interval published beside it and this ambiguity named. It
+is not reinterpreted, because choosing between the two readings after
+seeing the rate is choosing a threshold from a result.
+
+**A limitation of the instrument, stated before it runs.** `perturbed_key`
+refuses a perturbation identical to the real key, and that is all it can
+check. Whether a perturbation is *genuinely wrong about Magic* is not
+mechanically verifiable, and a perturbation that is accidentally **right**
+measures the opposite of what the item intends while looking like a passing
+item. The perturbations are therefore drafted mechanically from each
+answer's own claim and **verified by the author**, whose domain knowledge is
+the only instrument that can check that property. A fixture item that fails
+that check is replaced before the run, not after.
+
+- **Actual result:** _not run._
+
 ### E-011b — the rubric assumes one verdict; the questions have several (registered 2026-09-10, not yet run)
 
 - **Registered:** 2026-09-10, after reading the 15 disagreements and before

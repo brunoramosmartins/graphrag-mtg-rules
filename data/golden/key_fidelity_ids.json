@@ -1,0 +1,194 @@
+{
+  "purpose": "E-011 point 6 key-fidelity control: the registered subset, ids only.",
+  "registered": "2026-09-10, amendment 2026-09-10c, before any perturbation was written",
+  "seed": 20260910,
+  "per_direction": 15,
+  "pass_mark": 0.9,
+  "directions": {
+    "A": "the answer was judged incorrect by the human; the key is rewritten to endorse its wrong claim, so a key-following judge must say correct",
+    "B": "the answer was judged correct by the human; the key is rewritten to contradict it, so a key-following judge must say incorrect"
+  },
+  "note": "Perturbed key text is derived from licensed RulesGuru keys and lives in data/interim/key_fidelity.jsonl, which is gitignored. This file is the checkable half.",
+  "items": [
+    {
+      "question_id": "hand-humility-plus-counter",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "hand-indestructible-zero-toughness",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-1015",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-134",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-2066",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-2208",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-241",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-32",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-320",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-3859",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-4825",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-539",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-5610",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-6461",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-7749",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "hand-doubling-season-planeswalker",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "rg-1154",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "rg-1660",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "rg-1951",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "rg-48",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "rg-503",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "rg-6586",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "rg-66",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "rg-6817",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "rg-705",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "scry-leg-54866c25-b332-46c8-a2c5-1a71b702ddc0-pauper",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "scry-leg-65a9f643-063f-406a-8d5a-5ebbe0f04c3d-legacy",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "scry-leg-6c0c5832-416f-405f-bb44-c24be6f9d081-pioneer",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "scry-leg-b1a3b2ab-d9f8-4a0a-b2e2-aaa9989b2e41-modern",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    },
+    {
+      "question_id": "scry-leg-c6a606af-ea08-4cd9-bfd9-60d76e232e85-modern",
+      "direction": "B",
+      "source_human_label": "correct",
+      "expected": "incorrect"
+    }
+  ]
+}
