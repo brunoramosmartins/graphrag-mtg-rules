@@ -31,6 +31,7 @@ import argparse
 import json
 from pathlib import Path
 
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, load_bulk
 from graphrag_mtg.extraction.linker import Lexicon, scan_ruling
 
 TODO_PATH = Path("data/interim/extraction_annotation_todo.jsonl")
@@ -93,7 +94,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--todo", type=Path, default=TODO_PATH)
     parser.add_argument(
-        "--cards", type=Path, default=Path("data/raw/scryfall_oracle_cards.json")
+        "--cards", type=Path, default=bulk_path(ORACLE_CARDS_STEM)
     )
     parser.add_argument("--out", type=Path, default=DRAFT_PATH)
     parser.add_argument("--force", action="store_true", help="overwrite an existing draft")
@@ -103,8 +104,7 @@ def main() -> int:
         print(f"{args.out} already exists — it may hold annotation work. Use --force to redo.")
         return 1
 
-    with args.cards.open(encoding="utf-8") as fh:
-        cards = json.load(fh)
+    cards = load_bulk(args.cards)
     lexicon = Lexicon.build((c["name"], c["oracle_id"]) for c in cards)
     name_by_id = {c["oracle_id"]: c["name"] for c in cards}
 

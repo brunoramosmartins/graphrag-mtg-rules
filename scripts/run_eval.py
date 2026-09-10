@@ -81,7 +81,13 @@ from contextlib import ExitStack
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, RULINGS_STEM, bulk_path, iter_bulk
+from graphrag_mtg.etl.bulk import (
+    ORACLE_CARDS_STEM,
+    RULINGS_STEM,
+    bulk_path,
+    iter_bulk,
+    load_bulk,
+)
 from graphrag_mtg.etl.cr_parser import CR_TXT_PATH, parse_cr
 from graphrag_mtg.evaluation.arm_c import VectorRuleSearch
 from graphrag_mtg.evaluation.baseline_vector import build_arm
@@ -731,8 +737,7 @@ def load_cards(args: argparse.Namespace) -> list[dict]:
 def load_corpus(args: argparse.Namespace) -> list:
     """Build arm A's document set from the raw sources."""
     cr = parse_cr(args.cr)
-    rulings = json.loads(args.rulings.read_text(encoding="utf-8"))
-    return build_corpus(cr, load_cards(args), rulings)
+    return build_corpus(cr, load_cards(args), load_bulk(args.rulings))
 
 
 def index(args: argparse.Namespace) -> int:

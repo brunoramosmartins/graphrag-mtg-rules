@@ -44,7 +44,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
-from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk, load_bulk
 from graphrag_mtg.etl.cr_parser import CR_TXT_PATH, parse_cr
 from graphrag_mtg.evaluation.baseline_vector import (
     BM25_B,
@@ -197,7 +197,7 @@ def main() -> int:
     documents = build_corpus(
         parse_cr(args.cr),
         list(iter_bulk(bulk_path(ORACLE_CARDS_STEM))),
-        json.loads(args.rulings.read_text(encoding="utf-8")),
+        load_bulk(args.rulings),
     )
     vectors = VectorCache(args.vectors).load(
         corpus_hash=corpus_sha256(documents),

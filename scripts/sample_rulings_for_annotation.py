@@ -30,6 +30,7 @@ import random
 import re
 from pathlib import Path
 
+from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, RULINGS_STEM, bulk_path, load_bulk
 from graphrag_mtg.extraction.linker import Lexicon, scan_ruling
 from graphrag_mtg.graph.loader import ruling_id as make_ruling_id
 
@@ -61,9 +62,9 @@ def classify(ruling: dict, lexicon: Lexicon) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rulings", type=Path, default=Path("data/raw/scryfall_rulings.json"))
+    parser.add_argument("--rulings", type=Path, default=bulk_path(RULINGS_STEM))
     parser.add_argument(
-        "--cards", type=Path, default=Path("data/raw/scryfall_oracle_cards.json")
+        "--cards", type=Path, default=bulk_path(ORACLE_CARDS_STEM)
     )
     parser.add_argument(
         "--limit",
@@ -78,11 +79,9 @@ def main() -> int:
         print(f"{SAMPLE_IDS_PATH} already exists — the sample is frozen. Refusing to redraw.")
         return 1
 
-    with args.cards.open(encoding="utf-8") as fh:
-        cards = json.load(fh)
+    cards = load_bulk(args.cards)
     lexicon = Lexicon.build((c["name"], c["oracle_id"]) for c in cards)
-    with args.rulings.open(encoding="utf-8") as fh:
-        rulings = json.load(fh)
+    rulings = load_bulk(args.rulings)
     if args.limit is not None:
         rulings = rulings[: args.limit]
 

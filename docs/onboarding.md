@@ -55,6 +55,26 @@ model and a gate. Without them retrieval works and reaches fewer rules
 from a ruling; the bootstrap says so rather than leaving you to interpret
 Neo4j's warnings about relationship types it has never seen.
 
+## The container's code is a build artifact, not a mount
+
+Only `./data` and `./runs` are bind-mounted. `src/`, `scripts/` and `tests/`
+are `COPY`ed at build time, so **editing a file on the host does not change
+what `docker compose exec app` runs** — it keeps running the code the image
+was built from, with no warning that the two have diverged. Rebuild after a
+code change:
+
+```bash
+docker compose --profile app up -d --build app
+```
+
+The bind mounts are deliberate and the copies are too: the sources and the
+run artefacts are the same bytes the host venv reads, so nobody downloads
+196 MB twice, while the code in the image is pinned to whatever produced it.
+The cost is this failure mode, which is the same shape as any other stale
+binding — the thing you edited is not the thing that ran, and nothing fails
+to tell you so. It surfaces as an `unrecognized arguments` error for a flag
+you are looking at in your editor.
+
 ## What is compute and what is your connection
 
 Publishing a download time as a project fact would be publishing a fact
