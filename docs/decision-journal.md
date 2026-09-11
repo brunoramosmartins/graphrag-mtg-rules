@@ -90,6 +90,70 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-11 — The bridge material exists, and the vocabulary to cross it does not
+
+A `literature-scout` pass on the bridge problem pointed at something already
+in this repository. `graph/loader.py` documents, in the docstring of
+`keyword_definition_rows`, that the CR glossary holds **772 (term, rule)
+pairs of which 476 point at general rules** — "Ability" → 113, "Active
+Player" → 102.1 — and that they are *"deliberately not modeled: no golden-set
+question needs a general glossary node"*.
+
+Measured against today's CR: **482 pairs outside chapters 701/702**, aimed at
+100 (138), 300 (58), 600 (49), 200 (47), 500 (39), 400 (13). And measured
+against the rules the failed answers needed: **52 of the 58 missing gold
+rules (89.7%) are the target of one of those pairs.**
+
+So the deterministic bridge into chapters 100–600 was parsed, present, and
+excluded by an ontology decision whose stated reason — no question needs it —
+the error analysis had just refuted.
+
+**Then the linking side was measured, before registering anything.** That
+order is the lesson E-013 taught this morning: compute the ceiling from the
+inputs the run will actually see. It does not hold up.
+
+| bridge | recall of the 58 missing | rules pulled per question |
+|---|---|---:|
+| target side (the rule is pointed at by some term) | 52/58 = **0.897** | — |
+| linking from the **question** text, all 408 terms | 12/58 = 0.207 | 2.5 |
+| linking from the **cards'** oracle text | 13/58 = 0.224 | 14.7 |
+| multiword terms only | 1/58 = 0.017 | 0.3 |
+
+**The gap between 0.897 and 0.22 is the finding.** The rules are pointed at;
+the vocabulary that points at them is not the vocabulary anyone writes. A
+question says *"Nicholas controls a Traveling Philosopher and Ari casts
+Defeat"* — cards and player verbs, not CR defined terms. Card oracle text is
+closer to the CR's register and buys 0.017 of recall for six times the noise.
+And the terms that link at all are the ones the 2026-08 docstring warned
+about: of the 408 terms, **169 are a single word** — "X", "Pay", "Hand",
+"Day", "Case", "Move". Restricting to multiword terms collapses recall to one
+rule in fifty-eight.
+
+**So the ontology decision was right for a reason it did not state.** It was
+justified as "no question needs these"; that was wrong. What is true is that
+the link cannot be made precisely from the text either side supplies. A
+`USES_TERM` edge built from this lexicon would carry 15 rules of context per
+question to recover 13 of 58.
+
+**What this redirects.** The failure is **vocabulary, not topology.** Three
+measurements now say the same thing from different angles: `REFERENCES` gains
+one rule because the needed rules are adjacent to nothing retrieved (E-013);
+the glossary lexicon links at 0.22 because the terms are not what anyone
+writes; and the scout's reading of SearchFireSafety puts the citation-graph
+contribution at +1 to +4.6 recall points against 25–30 for dense-over-lexical.
+No edge is going to fix this. The next experiments are on the text side —
+expansion of each rule into the vocabulary questions actually use
+(Doc2Query--'s shape, with its filter, which sidesteps `extraction/gate.py`
+because nothing an LLM writes is asserted as a fact), and hierarchy as a
+retrieval signal rather than a traversal (G-DSR's shape, which reuses the
+`HAS_SUBRULE` tree this project already parses and tests).
+
+**Nothing is registered yet, on purpose.** Both candidates need their ceiling
+computed from the inputs the run will see before an entry is written. This
+entry exists so that the 89.7% figure cannot later be quoted as a ceiling for
+a bridge experiment: it is a ceiling on the target side of a link whose other
+side measures 0.22.
+
 ## 2026-09-11 — The graph reaches chapter 700 and almost nothing else
 
 The error analysis ran the same afternoon it was added to the phase, and it
