@@ -3003,6 +3003,170 @@ constructs — and it is not widened by relaxing "retrieval reaches the rule",
 which is what makes ablation the only difference. A thin population honestly
 reported beats a thick one whose construct drifted.
 
+#### E-009 amendment 2026-09-11b — the harness was built, and it found the clean population is five
+
+Written **after `build` ran and before a single answer was generated**. Three
+things the construction established that the design could not have known.
+
+**1. Coverage and ablation are different relations, and conflating them
+removes more than intended.** Retrieval counts `702.140` as reaching
+`702.140a` — the parent's text carries the child. Ablating by that same
+relation takes the parent *and its whole subtree* out of the context, which is
+the `retrieval_artefact` condition the entry already reserves. Registered: a
+probe is admissible only when the gold rule is present under **its own key**.
+Coverage-by-parent is not ablatable.
+
+**2. The composition is better than the 2026-09-11 amendment estimated.** That
+amendment said six of nine were `definition_1hop`; with exact-key ablation the
+nine admitted probes are **definition_1hop 4, negative_temporal 2,
+interaction_multihop 2, keyword_rule_2hop 1**. The earlier figure was counted
+from a permissive coverage query and is corrected here rather than left to be
+discovered in the report.
+
+**3. The clean population is five, not nine, and the reason is structural.**
+On all four `definition_1hop` probes the *text* of the ablated rule survives in
+the context anyway — the `keyword_definition` traversal emits the glossary
+entry beside the rule, and the glossary carries the rule's content. Removing
+`[rule:702.19]` from "what does trample do?" leaves the answer in the keyword
+node. Those four are `retrieval_artefact` by the registered definition, they
+leave the denominator, and the clean probes are:
+
+  | probe | stratum | rule ablated |
+  |---|---|---|
+  | `hand-indestructible-zero-toughness` | negative_temporal | 702.12b |
+  | `hand-doubling-season-planeswalker` | interaction_multihop | 306.5b |
+  | `rg-2066` | keyword_rule_2hop | 702.140a |
+  | `rg-539` | interaction_multihop | 702.134a |
+  | `rg-30` | negative_temporal | 305.2a |
+
+  **This is the better population and the weaker sample at once.** All five are
+  the harder strata the entry exists to speak to, and none is a definition
+  whose answer is the ablated rule. And five probes put 4/5 = 0.800 exactly on
+  the floor with an interval of [0.376, 0.964]: **the verdict turns on one
+  probe and the interval spans almost the whole unit line.** The figure is
+  reported as a point estimate against a registered floor, as the rule says,
+  and no sentence may treat it as an estimate of the refusal rate.
+
+**What carries the weight instead.** The `natural_thin` arm is **eleven**
+E-007 `insufficient` subgraphs, replayed unchanged, no ablation cue, and it is
+the population the 8-of-9 finding came from. It is reported descriptively with
+no floor, and it is now plainly the more informative half of this experiment.
+
+**Two verifier defects, recorded because they were caught by the guard rather
+than by review.** The first check filtered every control line containing the
+rule number, which also deleted lines that survive into the ablated arm and
+failed nine probes out of nine on a construct that was fine. The second paired
+the `via` line by pattern and missed that a subrule's path names its *parent*.
+The admitted check reconstructs the expected ablated text by walking the
+control and dropping exactly the removed item's own two lines. A verifier that
+fails everything looks identical to a construct that is broken, which is this
+phase's recurring lesson arriving once more.
+
+#### E-009 amendment 2026-09-11c — the code set had no slot for the control arm
+
+Written **after the answers existed**, which is the thing pre-registration
+exists to prevent, so the reason and the firewall are both recorded rather
+than the change being slipped in.
+
+**The defect.** All five registered outcome codes — `refused`,
+`answered_from_memory`, `answered_wrong`, `hedged`, `retrieval_artefact` —
+were written for the ablated arm. The control arm's normal behaviour is
+*answering correctly from evidence that was present*, and **no code covered
+it**. Coding the control therefore forced a choice among categories that do
+not apply, and the first pass duly produced six codes whose stated reasons
+described the ablated condition ("despite the rule being absent") on probes
+where the rule was present — verified present in the serialized control
+context before the recode.
+
+**The addition.** `answered_grounded`, and it is **control-arm only**. `code`
+refuses it on `ablated` and `natural_thin`.
+
+**Why that is admissible rather than a result-shaped edit.** The gated
+quantity is the ablated arm's refusal rate, and the control arm carries no
+floor — its only registered role is condition (2), "the control arm answers".
+A code that can only be applied to an arm with no threshold cannot move a
+threshold. The firewall is in the tool, not in an intention: `code` raises on
+any other arm.
+
+**The recode, agreed item by item with the author before it was applied.**
+
+  | probe | code | why |
+  |---|---|---|
+  | the four `hand-def-*` | `answered_grounded` | each cites the gold rule from the context |
+  | `hand-doubling-season-planeswalker` | `answered_grounded` | cites 306.5b, reaches 6, which is the key |
+  | `hand-indestructible-zero-toughness` | `answered_wrong` | concludes the creature survives; the key says it dies |
+  | `rg-30` | `answered_wrong` | 305.2a was **present and uncited**, and the answer contradicts the key |
+  | `rg-539` | `answered_wrong` | totals 18 where the key says 23 |
+  | `rg-2066` | `answered_wrong` | concludes *no* where the key says *yes* |
+
+**One case where the instrument and reality disagree, recorded rather than
+resolved.** `rg-2066`'s answer reasons that Equilibrium Adept is a Human and
+so cannot be mutated onto — and the author's own domain check during the
+key-fidelity work confirmed that is **true about Magic**. The key says *yes*.
+The rubric's rule is that the key is the only authority, so the code is
+`answered_wrong`. The same tension appeared in E-011's key-fidelity fixture,
+where this question had to be replaced for it.
+
+#### E-009 — Actual result (2026-09-11, `gpt-4o-mini`, prompt `p5-a3`, 29 generations)
+
+**The ablated arm never refuses, and the dominant failure is the one the
+prediction said would not dominate.**
+
+| arm | n | outcomes | refusal rate | refused + hedged |
+|---|---:|---|---|---|
+| control | 9 | grounded 5, wrong 4 | 0/4 = 0.000 [0.000, 0.490] | 0/4 |
+| **ablated** | 9 | artefact 4, from_memory 3, wrong 2 | **0/5 = 0.000 [0.000, 0.434]** | 0/5 |
+| natural_thin | 11 | wrong 6, hedged 3, refused 2 | 0.182 [0.051, 0.477] | **0.455** [0.213, 0.720] |
+
+**Condition (1) fails.** The floor is 0.80 on the ablated arm's point estimate
+and the measured rate is **zero** — not one of the five clean probes refused.
+Registered response: *"Failing (1) is the reportable finding, not a reason to
+iterate the shipped prompt."* The prompt is not touched.
+
+**Condition (2) holds.** No control answer was `refused` or `hedged`, so the
+degenerate pass E-008's floor was written to block does not apply.
+
+**The prediction that matters was falsified, and its falsification is the
+finding.** Registered: *"The dominant failure code is `hedged`, not
+`answered_from_memory`… If `answered_from_memory` dominates instead, the
+problem is grounding; if `hedged` dominates, the problem is that the prompt's
+own escape hatch is being used as a door."* There were **zero `hedged`
+answers on the ablated arm** and `answered_from_memory` is 3 of 5. By the
+reading registered before the run, **the problem is grounding.** The model
+does not reach for the hedge the prompt offers; it answers from what it
+already knows and does not signal that it did.
+
+**`natural_thin` speaks to the finding that motivated the entry, and answers
+it.** E-007 measured 8 of 9 `insufficient` subgraphs answered rather than
+refused. Replayed unchanged over eleven: **2 refused, 3 hedged, 6 wrong** —
+refusal 0.182, refused-or-hedged 0.455. Higher than the ablated arm's zero,
+which is itself informative: a naturally thin subgraph carries cues a clean
+ablation does not, and the model notices absence more readily when the whole
+context is sparse than when one rule has been removed from an otherwise full
+one.
+
+**Four probes leave the denominator as `retrieval_artefact`, for a reason the
+construction found rather than the design anticipated.** All four are
+`definition_1hop`, and on each the *text* of the ablated rule survives in the
+keyword's glossary entry that `keyword_definition` emits beside it. Removing
+`[rule:702.19]` from "what does trample do?" does not remove trample's
+definition from the context.
+
+**The bound that governs every figure above.** Five clean ablation probes.
+4/5 would sit exactly on the floor with an interval of [0.376, 0.964]; the
+measured 0/5 has an interval of [0.000, 0.434]. **One probe flips the
+verdict**, and no sentence in this project may describe 0.000 as an estimate
+of the refusal rate. What it supports is weaker and still useful: *refusal is
+not this model's response to a surgically absent rule* — five for five, in the
+direction the entry predicted before any probe existed.
+
+**One result outside the registered design, worth keeping.** In the control
+arm, `rg-30` had its gold rule **present in the context, did not cite it, and
+contradicted the key**. It is the single clean instance of generation failing
+with the evidence in hand that this project has measured, and it sits beside
+the Phase 8 error analysis where `generation` was 1 of 27 — a figure that now
+looks like an underestimate, since most of those 27 never had the rule to use.
+
 ### E-010 — what else came with it: the precision side of retrieval (registered 2026-08-15, not yet run)
 
 - **Registered:** 2026-08-15, forced by E-006's fourth run and registered
