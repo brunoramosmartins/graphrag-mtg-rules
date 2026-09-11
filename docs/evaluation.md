@@ -935,7 +935,7 @@ counting as a win lets the headline move with how generously it is applied
 | ~~Correctness ceiling, second blind pass~~ — **done 2026-09-09: 0.843, threshold 0.720** | — |
 | ~~Key-fidelity fixtures~~ — **done 2026-09-11: 30/30, see below** | — |
 | Judge audit at n >= 30 **per label** — 18 / 14 / 23 of 55, and **not being pursued**; see below | correctness being called *validated*, which it is not |
-| Error analysis over the 30 answers a human labelled `partial` or `incorrect` | knowing which stage to fix |
+| ~~Error analysis over the failed answers~~ — **done 2026-09-11: 74% evidence, 19% routing; see below** | — |
 | Evaluation split, 57 questions, opened once in Phase 8 | every claim about the arms |
 
 ## The judge, published ungated
@@ -1015,19 +1015,85 @@ to hedge.
 This is the number that would stop a release to actual players, and it is
 worth being explicit that no amount of work on the judge moves it. Calibrating
 the instrument further would change how precisely this is known, not what it
-is. The pending item that does move it is the error analysis over the 30
+is. The pending item that does move it is the error analysis over the 37
 answers a human labelled `partial` or `incorrect`, classifying where the chain
 broke — linking, routing, missing evidence, the token budget, or generation.
 Those labels already exist, the analysis costs nothing, and it produces a
 ranked list of repairs rather than another figure.
 
-Three candidates are already visible from work recorded elsewhere in this
-document and in the decision journal, and the error analysis is what would
-weigh them: `CITES_RULE` was withdrawn from the graph at F1 0.125, so rules
-are reached by text retrieval rather than by traversal; the router falls back
-to the text half whenever no named card carries a keyword, which serves
-multi-hop questions with the weaker arm; and the two compound-verdict strata,
-`interaction_multihop` and `negative_temporal`, are 44 of these 55 answers.
+### Where the chain breaks (2026-09-11)
+
+The analysis ran. `scripts/error_taxonomy.py` assembles each failed answer
+beside the retrieval record that produced it, and the attribution below is a
+**measurement rather than a reading**: the golden set records `gold_cr_rules`
+per question, so "was the rule this answer needed actually retrieved?" is a
+set comparison.
+
+Of the 37 answers a human labelled `partial` or `incorrect`, **27 have a
+contemporaneous retrieval record**. The other 10 are batch 2, whose answers
+and verdicts were kept and whose retrieval rows were never written; they are
+left unattributed rather than reconstructed, because re-running retrieval
+today would query a graph loaded from a different Scryfall bulk and attribute
+a stage using evidence that did not produce the answer.
+
+| stage | n | share |
+|---|---:|---|
+| **evidence** — the rule is not reachable from any card or keyword | 20 | 74.1% |
+| **routing** — reachable by an edge the router never plans | 5 | 18.5% |
+| generation — everything needed was in context, answer still wrong | 1 | 3.7% |
+| key — no gold rules recorded, not attributable | 1 | 3.7% |
+
+**Retrieval did not fail; it succeeded and returned the wrong rules.** All 27
+have `outcome: resolved`, every one returned evidence — 7 to 57 items — and
+**not one lost anything to the token budget** (`dropped` empty throughout).
+The budget and the generator are not where this system is losing.
+
+**The measurement.** Across the 26 questions carrying gold rules, the answers
+needed **64** CR rules and retrieval supplied **7 — 10.9%**. By chapter:
+
+| chapter | needed | retrieved |
+|---|---:|---:|
+| 100 · game concepts | 10 | 0 |
+| 200 · parts of a card | 1 | 0 |
+| 300 · card types | 4 | 0 |
+| 400 · zones | 3 | 0 |
+| 500 · turn structure | 3 | 0 |
+| 600 · spells & abilities | 30 | 1 |
+| **700 · keyword abilities** | 13 | **6** |
+
+**The graph reaches chapter 700 and essentially nothing else.** That is not a
+tuning problem, it is the shape of the edges: `Keyword -[:DEFINED_BY]-> Rule`
+lands only in 700 (257 rules), and adding `HAS_SUBRULE` to depth 2 still
+lands only in 700 (1,067 rules). The first hop that leaves 700 is
+`REFERENCES`, and the only template that walks it — `rule_neighbourhood` —
+**ran in none of the 27**.
+
+This is the consequence the decision journal predicted on 2026-08-09, when
+G3 withdrew inferred `CITES_RULE` at F1 0.125: *"roughly 87% of the CR rules
+`interaction_multihop` needs sit in chapters with no deterministic edge from
+any card. `CITES_RULE` was going to be that bridge. It is gone."* Measured
+here: **89.1%**.
+
+### The repairs, in the order the measurement ranks them
+
+Of the **52 distinct** gold rules that were needed and not retrieved:
+
+1. **18 (34.6%) are reachable with edges that already exist**, one
+   `REFERENCES` hop from a keyword-defined rule. The template exists and the
+   router never plans it. This is a routing change over the current graph —
+   no model call, no new data — and it is where the next experiment should
+   go. It is a ceiling, not a promise: reaching a rule is not citing it
+   correctly.
+2. **34 (65.4%) are not reachable at all.** These need a bridge from card or
+   question to rules outside chapter 700, which is the problem `CITES_RULE`
+   was withdrawn from rather than solved. Any attempt is a new experiment
+   with its own gate, and the F1 0.125 result is the prior.
+3. **Generation and budget are not on this list**, and the record says why:
+   nothing was dropped, and exactly one case had its full gold context and
+   still answered wrongly.
+
+Both repairs are measurable against this same population before any answer is
+regenerated, because "is the gold rule in the retrieved set?" needs no LLM.
 
 The judge audit needs roughly **90 audited answers** at the observed label
 mix to put 30 behind the thinnest label. That is a larger commitment than

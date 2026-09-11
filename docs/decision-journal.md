@@ -90,6 +90,59 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-11 — The graph reaches chapter 700 and almost nothing else
+
+The error analysis ran the same afternoon it was added to the phase, and it
+did not need a single judgement call: the golden set records `gold_cr_rules`
+per question, so "was the rule this answer needed actually retrieved?" is a
+set comparison against the retrieval record.
+
+**Retrieval did not fail. It succeeded and returned the wrong rules.** All 27
+attributable failures have `outcome: resolved`, every one returned between 7
+and 57 pieces of evidence, and **not one lost anything to the token budget**.
+The budget and the generator are not where this system is losing: exactly one
+case had its complete gold context and still answered wrongly.
+
+Across the 26 questions carrying gold rules, the answers needed **64** CR
+rules and retrieval supplied **7 — 10.9%**. Six of the seven are chapter 700.
+Zero came from 100, 200, 300, 400 or 500, and one of thirty from 600.
+
+The cause is structural and took one Cypher query to confirm:
+`Keyword-[:DEFINED_BY]->Rule` lands only in chapter 700, 257 rules; adding
+`HAS_SUBRULE` to depth two still lands only in 700, 1,067 rules. The first
+edge that leaves 700 is `REFERENCES`, the only template that walks it is
+`rule_neighbourhood`, and it **ran in none of the 27**.
+
+This is the consequence the journal predicted on 2026-08-09, when G3 withdrew
+inferred `CITES_RULE` at F1 0.125: *"roughly 87% of the CR rules
+`interaction_multihop` needs sit in chapters with no deterministic edge from
+any card. `CITES_RULE` was going to be that bridge. It is gone, and it was
+never good enough to be it anyway."* Measured thirteen months of project-time
+later: **89.1%**. The prediction was recorded before the retrieval existed to
+test it, and it was right to within two points.
+
+**The ranked repair, which is the point of having done this.** Of the 52
+distinct gold rules that were needed and missed, **18 (34.6%) are already
+reachable** with the edges in the graph — one `REFERENCES` hop from a
+keyword-defined rule, using a template that exists and a router that never
+plans it. No model call, no new data. The other 34 need a bridge from card to
+rules outside chapter 700, which is the problem `CITES_RULE` was withdrawn
+from rather than solved, and F1 0.125 is the prior any attempt starts from.
+
+Both are measurable against this same population before any answer is
+regenerated, because asking whether a gold rule is in a retrieved set costs
+nothing. That is the first cheap, decisive experiment this project has had in
+a while, and it exists because the author asked what would have to improve
+before showing this to a Magic player.
+
+**A gap the analysis found in the record itself.** Ten of the 37 failures are
+batch 2, whose answers and verdicts were kept and whose retrieval rows were
+never written. They are left unattributed rather than reconstructed:
+re-running retrieval today would query a graph loaded from a different
+Scryfall bulk, and attributing a stage from evidence that did not produce the
+answer is the provenance failure this project keeps finding. `run_eval.py run`
+writes all three files together, which is what stops this recurring.
+
 ## 2026-09-11 — Three ways to polish a ruler, and none of them moves the number
 
 The judge audit ended with three options: collect ~17 more labels to gate the
@@ -122,7 +175,7 @@ dissents where the human's own passes move, and the boundary is `partial`"
 tells the next person what to repair. Published limitations that do not name
 a repair are resignation with better vocabulary.
 
-And the error analysis over the 30 answers a human called `partial` or
+And the error analysis over the 37 answers a human called `partial` or
 `incorrect` goes into the Phase 8 deliverables **ahead of the demo**. It uses
 labels that already exist, costs nothing, and produces a ranked list of
 repairs. I had spent the day offering better rulers because the phase gate
