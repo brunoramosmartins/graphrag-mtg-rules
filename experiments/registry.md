@@ -3755,8 +3755,64 @@ that check is replaced before the run, not after.
 - **Cost.** Re-judging 55 answers with `gpt-4o-mini` is about \$0.01. The
   expensive step is the fresh blind pass, and this entry exists to decide
   whether to spend it.
-- **Actual result:** _not run — superseded before running by the amendment
-  below. The hypothesis, the prediction and the decision rule above are
+- **Actual result (2026-09-11): the rubric revision was never run; diagnostics
+  2 and 3 of the amendment were, and they answer the question the revision was
+  going to guess at.**
+
+  **Diagnostic 3 — the judge against the human's own second pass.** Both human
+  passes are frozen and were labelled blind to the judge, so this costs
+  nothing and spends no blindness. Splitting the 55 rows by whether the
+  human's two passes agreed:
+
+  | rows | n | judge agrees with pass 1 |
+  |---|---:|---|
+  | human **stable** (p1 = p2) | 46 | 37/46 = **0.804** [0.668, 0.893] |
+  | human **moved** (p1 ≠ p2) | 9 | 3/9 = **0.333** [0.121, 0.646] |
+
+  **Six of the fifteen disagreements sit on nine rows — 40% of the dissent on
+  16% of the sample.** Where the human could reproduce their own label, the
+  judge agrees at 0.804, well above the pooled 0.727 that failed the gate.
+  And on the nine unstable rows the judge matches the human's **second** pass
+  more often than their first (5/9 against 3/9): it is not applying an alien
+  rule there, it is landing where the human landed on the second look. Seven
+  of the nine rows the human moved on started at `partial`, which E-011a had
+  already reported from the other side.
+
+  **Diagnostic 2 — what each dissent appeals to.** Coding the fifteen
+  rationales by what they cite: **11 cite a contradiction the answer key
+  actually contains**, 4 are omissions scored under tie-break 3 or 5, and
+  **none appeals to anything outside the supplied key**. That is the same
+  answer the key-fidelity control gave from the other direction, and the two
+  were measured independently.
+
+  **The conclusion, and it is not the one the entry predicted.** The
+  disagreement is not domain leakage (30/30 fidelity, zero rationales
+  appealing outside the key), and it is not caused by compound verdicts (that
+  effect was a batch effect). It concentrates on **the `partial` boundary,
+  which both readers find hard** — the human's own passes move there, and the
+  judge's dissents cluster on exactly those rows. The textual defect the
+  amendment preserved is the mechanism: `partial` says "reaches the key's
+  verdict … by reasoning the key contradicts" and `incorrect` says "asserts
+  something the key contradicts", an answer can satisfy both, and no
+  precedence rule separates them. Ten of the fifteen disagreements are
+  `partial → incorrect`.
+
+  **What this does not license.** It does not say the judge is accurate
+  enough to gate: 0.804 on the stable rows has a lower bound of 0.668, still
+  under the 0.720 threshold, and that figure is a post-hoc split. It does not
+  license adopting a revised rubric on this evidence either — a `p6-c2`
+  scored on these same 55 rows remains in-sample, the tooling still refuses a
+  cross-rubric comparison, and a new rubric needs a new ceiling. What it does
+  establish is that **a rubric revision aimed at `partial` would be aimed at
+  something real**, which is more than the withdrawn hypothesis could say.
+
+  **A limitation of diagnostic 2 itself.** The coding is mine, single-coder,
+  with no blind second pass — the very instrument property this project
+  measures everywhere else. It is reported as a reading of fifteen rationales,
+  not as an annotation with a ceiling.
+
+- **Superseded hypothesis:** _not run — superseded before running by the
+  amendment below. The hypothesis, the prediction and the decision rule above are
   withdrawn; they are kept in place because a withdrawn prediction that is
   deleted cannot be counted against the person who made it._
 
