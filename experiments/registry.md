@@ -4180,3 +4180,83 @@ uniform; a judge-level Magic question composes effects that are not the same
 shape. The depth effect measured here is a floor on the depth effect there,
 not an estimate of it. And this measures the generator given good retrieval:
 no figure in this entry is an end-to-end system score.
+
+---
+
+## E-013 — the rules the graph cannot reach, and whether an edge it already has gets to them (registered 2026-09-11, not yet run)
+
+- **Registered:** 2026-09-11, after the Phase 8 error analysis and **before any
+  change to the router or any re-run**. The ceiling below is arithmetic over
+  the existing graph and is stated now precisely so the run cannot be read as
+  having discovered it.
+- **Where this comes from.** A human labelled 37 of 55 answers `partial` or
+  `incorrect`. Attributing the 27 with a contemporaneous retrieval record gave
+  **74% evidence, 19% routing, 4% generation**: retrieval resolved every time,
+  returned 7–57 items every time, and dropped nothing to the token budget.
+  Across the 26 questions carrying gold rules the answers needed **64** CR
+  rules and retrieval supplied **7 (10.9%)**, six of them in chapter 700.
+- **The structural cause, already measured.** `Keyword-[:DEFINED_BY]->Rule`
+  reaches only chapter 700 (257 rules); adding `HAS_SUBRULE` to depth two
+  still reaches only 700 (1,067). The first edge that leaves the chapter is
+  `REFERENCES`, and the only template that walks it — `rule_neighbourhood` —
+  ran in **none** of the 27, because the routed plan starts from cards and
+  keywords and that template takes a rule number.
+- **Objective.** Decide whether adding a `REFERENCES` expansion to the routed
+  plan — after the keyword→rule hop, over the graph exactly as it stands —
+  raises the fraction of gold CR rules that reach the context, and at what
+  cost in precision and budget.
+- **The ceiling, computed before the run.** Of the **52 distinct** gold rules
+  needed and missed, **18 are reachable** by one `REFERENCES` hop from a
+  keyword-defined rule and **34 are not**. So gold-rule recall can rise from
+  **7/64 = 10.9%** to at most **25/64 = 39.1%** and no further. Anything above
+  that is a bug in the measurement, not a result.
+- **Primary metric, and it costs nothing.** *Gold-rule recall* — the fraction
+  of each question's `gold_cr_rules` present in the retrieved evidence,
+  pooled over the 26 questions, reported with a Wilson interval. No model call
+  is involved: `retrieve` writes the evidence and the golden set already
+  records the gold rules. **No answer is regenerated in this experiment.**
+- **Secondary metrics, registered because the repair can pay for itself
+  badly.** Context precision proxy: evidence items retrieved per gold rule
+  reached, before and after. Budget pressure: the share of questions whose
+  `dropped` or `capped` becomes non-empty. The current population drops
+  nothing at a 6,000-token budget and a kind cap of 25, and E-012 measured
+  that a longer context hurts the generator — so a change that fills the
+  budget is not free even when recall rises.
+- **Prediction, recorded before the run.** Gold-rule recall rises to between
+  **0.25 and 0.39**, the upper end being the ceiling; the gains are spread
+  across chapters rather than concentrated — the 18 reachable rules sit in
+  600 (7), 700 (5), 500 (3), 300 (2) and 400 (1), so **11 of the 18 are
+  outside chapter 700**, which is the point of the repair; and
+  **`dropped` becomes non-empty on at least one question**, because the
+  expansion adds rules to contexts that already run to 3,500 tokens. If recall
+  rises *and* nothing is ever dropped, suspect the expansion did not fire.
+- **Falsifiable outcome that would end this line.** If gold-rule recall stays
+  below **0.15** — that is, the expansion fires and brings back fewer than a
+  quarter of the 18 reachable rules — then the reachable set is reachable only
+  in principle, and the routing repair is abandoned in favour of the bridge
+  problem. Registered now so it cannot be renegotiated afterwards.
+- **Decision rule.** Recall at or above 0.25 with no new drops: adopt the
+  expansion and *then* spend on regenerating answers to measure whether
+  correctness follows. Recall at or above 0.25 with new drops: the change is
+  not adopted as-is, and the follow-up is the budget, not the router. Below
+  0.15: abandoned as above. Between 0.15 and 0.25: reported and not adopted,
+  because a change this cheap should not need a close reading to justify.
+- **Threat that bounds the whole entry.** The repair was chosen **after**
+  looking at these 26 questions, so recall measured on them is optimistic by
+  an unknown amount — the same in-sample relationship this project already
+  runs on retrieval, one level up. The 57-question evaluation split is the
+  only clean confirmation, it opens once, and this experiment does not touch
+  it. Any figure from E-013 is a development figure and is labelled one.
+- **Second threat: reaching a rule is not citing it.** Gold-rule recall is a
+  retrieval metric. It cannot say the answer improves, and the 74/19/4 split
+  says nothing about whether an answer given the right rule uses it. The
+  decision rule spends on generation only after retrieval moves, in that
+  order, because the reverse cannot separate the two.
+- **What it does not test.** The 34 unreachable rules. Those need a bridge
+  from card or question to chapters outside 700, which is the problem G3
+  withdrew inferred `CITES_RULE` from at F1 0.125 rather than solved. That is
+  its own experiment with its own gate, and 0.125 is the prior it starts from.
+- **Cost.** Zero model calls for the primary and secondary metrics. The
+  generation follow-up, if the decision rule reaches it, is 26 answers plus
+  judging.
+- **Actual result:** _not run._
