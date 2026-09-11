@@ -1,0 +1,952 @@
+{
+  "purpose": "E-010 (a): the registered seeded sample, ids only.",
+  "seed": 20260911,
+  "per_question_per_arm": 4,
+  "n": 180,
+  "arms": [
+    "A",
+    "B",
+    "C"
+  ],
+  "blinding_subsample": [
+    "s0001",
+    "s0006",
+    "s0010",
+    "s0013",
+    "s0014",
+    "s0035",
+    "s0041",
+    "s0043",
+    "s0046",
+    "s0047",
+    "s0052",
+    "s0053",
+    "s0066",
+    "s0069",
+    "s0072",
+    "s0074",
+    "s0078",
+    "s0082",
+    "s0086",
+    "s0096",
+    "s0099",
+    "s0101",
+    "s0102",
+    "s0105",
+    "s0106",
+    "s0109",
+    "s0115",
+    "s0122",
+    "s0129",
+    "s0144",
+    "s0146",
+    "s0167",
+    "s0171",
+    "s0172",
+    "s0173",
+    "s0174"
+  ],
+  "blind_claim_withdrawn_above": 0.7,
+  "slots": [
+    {
+      "slot": "s0000",
+      "question_id": "hand-def-defender",
+      "arm": "B"
+    },
+    {
+      "slot": "s0001",
+      "question_id": "hand-def-trample",
+      "arm": "B"
+    },
+    {
+      "slot": "s0002",
+      "question_id": "hand-def-trample",
+      "arm": "C"
+    },
+    {
+      "slot": "s0003",
+      "question_id": "rg-2333",
+      "arm": "B"
+    },
+    {
+      "slot": "s0004",
+      "question_id": "rg-2066",
+      "arm": "B"
+    },
+    {
+      "slot": "s0005",
+      "question_id": "rg-539",
+      "arm": "A"
+    },
+    {
+      "slot": "s0006",
+      "question_id": "hand-def-trample",
+      "arm": "C"
+    },
+    {
+      "slot": "s0007",
+      "question_id": "rg-1951",
+      "arm": "C"
+    },
+    {
+      "slot": "s0008",
+      "question_id": "hand-def-defender",
+      "arm": "A"
+    },
+    {
+      "slot": "s0009",
+      "question_id": "rg-2333",
+      "arm": "A"
+    },
+    {
+      "slot": "s0010",
+      "question_id": "rg-705",
+      "arm": "B"
+    },
+    {
+      "slot": "s0011",
+      "question_id": "hand-def-defender",
+      "arm": "B"
+    },
+    {
+      "slot": "s0012",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "B"
+    },
+    {
+      "slot": "s0013",
+      "question_id": "rg-2066",
+      "arm": "B"
+    },
+    {
+      "slot": "s0014",
+      "question_id": "hand-def-trample",
+      "arm": "A"
+    },
+    {
+      "slot": "s0015",
+      "question_id": "rg-7749",
+      "arm": "C"
+    },
+    {
+      "slot": "s0016",
+      "question_id": "rg-2333",
+      "arm": "B"
+    },
+    {
+      "slot": "s0017",
+      "question_id": "rg-2569",
+      "arm": "A"
+    },
+    {
+      "slot": "s0018",
+      "question_id": "rg-2569",
+      "arm": "A"
+    },
+    {
+      "slot": "s0019",
+      "question_id": "rg-2066",
+      "arm": "A"
+    },
+    {
+      "slot": "s0020",
+      "question_id": "rg-7749",
+      "arm": "B"
+    },
+    {
+      "slot": "s0021",
+      "question_id": "rg-705",
+      "arm": "C"
+    },
+    {
+      "slot": "s0022",
+      "question_id": "rg-705",
+      "arm": "B"
+    },
+    {
+      "slot": "s0023",
+      "question_id": "rg-2569",
+      "arm": "C"
+    },
+    {
+      "slot": "s0024",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "C"
+    },
+    {
+      "slot": "s0025",
+      "question_id": "rg-30",
+      "arm": "A"
+    },
+    {
+      "slot": "s0026",
+      "question_id": "hand-def-deathtouch",
+      "arm": "A"
+    },
+    {
+      "slot": "s0027",
+      "question_id": "rg-30",
+      "arm": "C"
+    },
+    {
+      "slot": "s0028",
+      "question_id": "rg-2569",
+      "arm": "B"
+    },
+    {
+      "slot": "s0029",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "A"
+    },
+    {
+      "slot": "s0030",
+      "question_id": "hand-def-indestructible",
+      "arm": "B"
+    },
+    {
+      "slot": "s0031",
+      "question_id": "rg-705",
+      "arm": "B"
+    },
+    {
+      "slot": "s0032",
+      "question_id": "rg-2066",
+      "arm": "C"
+    },
+    {
+      "slot": "s0033",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "C"
+    },
+    {
+      "slot": "s0034",
+      "question_id": "rg-2333",
+      "arm": "A"
+    },
+    {
+      "slot": "s0035",
+      "question_id": "hand-def-trample",
+      "arm": "A"
+    },
+    {
+      "slot": "s0036",
+      "question_id": "hand-def-defender",
+      "arm": "A"
+    },
+    {
+      "slot": "s0037",
+      "question_id": "rg-705",
+      "arm": "A"
+    },
+    {
+      "slot": "s0038",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "C"
+    },
+    {
+      "slot": "s0039",
+      "question_id": "rg-7749",
+      "arm": "A"
+    },
+    {
+      "slot": "s0040",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "A"
+    },
+    {
+      "slot": "s0041",
+      "question_id": "hand-def-deathtouch",
+      "arm": "A"
+    },
+    {
+      "slot": "s0042",
+      "question_id": "hand-def-deathtouch",
+      "arm": "B"
+    },
+    {
+      "slot": "s0043",
+      "question_id": "rg-1951",
+      "arm": "A"
+    },
+    {
+      "slot": "s0044",
+      "question_id": "rg-7749",
+      "arm": "B"
+    },
+    {
+      "slot": "s0045",
+      "question_id": "rg-30",
+      "arm": "B"
+    },
+    {
+      "slot": "s0046",
+      "question_id": "hand-def-indestructible",
+      "arm": "B"
+    },
+    {
+      "slot": "s0047",
+      "question_id": "hand-def-indestructible",
+      "arm": "C"
+    },
+    {
+      "slot": "s0048",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "C"
+    },
+    {
+      "slot": "s0049",
+      "question_id": "hand-def-trample",
+      "arm": "B"
+    },
+    {
+      "slot": "s0050",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "B"
+    },
+    {
+      "slot": "s0051",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "B"
+    },
+    {
+      "slot": "s0052",
+      "question_id": "rg-2066",
+      "arm": "A"
+    },
+    {
+      "slot": "s0053",
+      "question_id": "rg-2333",
+      "arm": "C"
+    },
+    {
+      "slot": "s0054",
+      "question_id": "rg-7749",
+      "arm": "A"
+    },
+    {
+      "slot": "s0055",
+      "question_id": "hand-def-indestructible",
+      "arm": "A"
+    },
+    {
+      "slot": "s0056",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "C"
+    },
+    {
+      "slot": "s0057",
+      "question_id": "rg-1951",
+      "arm": "B"
+    },
+    {
+      "slot": "s0058",
+      "question_id": "rg-539",
+      "arm": "C"
+    },
+    {
+      "slot": "s0059",
+      "question_id": "hand-def-deathtouch",
+      "arm": "C"
+    },
+    {
+      "slot": "s0060",
+      "question_id": "rg-2569",
+      "arm": "C"
+    },
+    {
+      "slot": "s0061",
+      "question_id": "rg-539",
+      "arm": "B"
+    },
+    {
+      "slot": "s0062",
+      "question_id": "rg-2569",
+      "arm": "A"
+    },
+    {
+      "slot": "s0063",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "B"
+    },
+    {
+      "slot": "s0064",
+      "question_id": "hand-def-trample",
+      "arm": "B"
+    },
+    {
+      "slot": "s0065",
+      "question_id": "rg-1951",
+      "arm": "B"
+    },
+    {
+      "slot": "s0066",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "B"
+    },
+    {
+      "slot": "s0067",
+      "question_id": "rg-705",
+      "arm": "C"
+    },
+    {
+      "slot": "s0068",
+      "question_id": "rg-2333",
+      "arm": "C"
+    },
+    {
+      "slot": "s0069",
+      "question_id": "hand-def-indestructible",
+      "arm": "B"
+    },
+    {
+      "slot": "s0070",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "B"
+    },
+    {
+      "slot": "s0071",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "C"
+    },
+    {
+      "slot": "s0072",
+      "question_id": "hand-def-defender",
+      "arm": "C"
+    },
+    {
+      "slot": "s0073",
+      "question_id": "rg-30",
+      "arm": "B"
+    },
+    {
+      "slot": "s0074",
+      "question_id": "hand-def-defender",
+      "arm": "B"
+    },
+    {
+      "slot": "s0075",
+      "question_id": "hand-def-defender",
+      "arm": "A"
+    },
+    {
+      "slot": "s0076",
+      "question_id": "hand-def-trample",
+      "arm": "C"
+    },
+    {
+      "slot": "s0077",
+      "question_id": "hand-def-indestructible",
+      "arm": "C"
+    },
+    {
+      "slot": "s0078",
+      "question_id": "rg-1951",
+      "arm": "C"
+    },
+    {
+      "slot": "s0079",
+      "question_id": "rg-2066",
+      "arm": "B"
+    },
+    {
+      "slot": "s0080",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "B"
+    },
+    {
+      "slot": "s0081",
+      "question_id": "rg-1951",
+      "arm": "B"
+    },
+    {
+      "slot": "s0082",
+      "question_id": "rg-539",
+      "arm": "B"
+    },
+    {
+      "slot": "s0083",
+      "question_id": "rg-2569",
+      "arm": "B"
+    },
+    {
+      "slot": "s0084",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "B"
+    },
+    {
+      "slot": "s0085",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "C"
+    },
+    {
+      "slot": "s0086",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "A"
+    },
+    {
+      "slot": "s0087",
+      "question_id": "hand-def-deathtouch",
+      "arm": "C"
+    },
+    {
+      "slot": "s0088",
+      "question_id": "rg-539",
+      "arm": "A"
+    },
+    {
+      "slot": "s0089",
+      "question_id": "hand-def-trample",
+      "arm": "C"
+    },
+    {
+      "slot": "s0090",
+      "question_id": "rg-7749",
+      "arm": "C"
+    },
+    {
+      "slot": "s0091",
+      "question_id": "rg-7749",
+      "arm": "B"
+    },
+    {
+      "slot": "s0092",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "C"
+    },
+    {
+      "slot": "s0093",
+      "question_id": "rg-2333",
+      "arm": "C"
+    },
+    {
+      "slot": "s0094",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "B"
+    },
+    {
+      "slot": "s0095",
+      "question_id": "rg-1951",
+      "arm": "C"
+    },
+    {
+      "slot": "s0096",
+      "question_id": "rg-705",
+      "arm": "C"
+    },
+    {
+      "slot": "s0097",
+      "question_id": "rg-30",
+      "arm": "C"
+    },
+    {
+      "slot": "s0098",
+      "question_id": "rg-2333",
+      "arm": "B"
+    },
+    {
+      "slot": "s0099",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "A"
+    },
+    {
+      "slot": "s0100",
+      "question_id": "rg-705",
+      "arm": "A"
+    },
+    {
+      "slot": "s0101",
+      "question_id": "rg-539",
+      "arm": "B"
+    },
+    {
+      "slot": "s0102",
+      "question_id": "hand-def-defender",
+      "arm": "A"
+    },
+    {
+      "slot": "s0103",
+      "question_id": "hand-def-defender",
+      "arm": "C"
+    },
+    {
+      "slot": "s0104",
+      "question_id": "rg-30",
+      "arm": "C"
+    },
+    {
+      "slot": "s0105",
+      "question_id": "rg-2066",
+      "arm": "C"
+    },
+    {
+      "slot": "s0106",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "A"
+    },
+    {
+      "slot": "s0107",
+      "question_id": "rg-2066",
+      "arm": "A"
+    },
+    {
+      "slot": "s0108",
+      "question_id": "rg-705",
+      "arm": "C"
+    },
+    {
+      "slot": "s0109",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "A"
+    },
+    {
+      "slot": "s0110",
+      "question_id": "rg-2066",
+      "arm": "B"
+    },
+    {
+      "slot": "s0111",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "B"
+    },
+    {
+      "slot": "s0112",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "A"
+    },
+    {
+      "slot": "s0113",
+      "question_id": "rg-30",
+      "arm": "B"
+    },
+    {
+      "slot": "s0114",
+      "question_id": "hand-def-deathtouch",
+      "arm": "B"
+    },
+    {
+      "slot": "s0115",
+      "question_id": "hand-def-indestructible",
+      "arm": "C"
+    },
+    {
+      "slot": "s0116",
+      "question_id": "rg-30",
+      "arm": "B"
+    },
+    {
+      "slot": "s0117",
+      "question_id": "rg-30",
+      "arm": "C"
+    },
+    {
+      "slot": "s0118",
+      "question_id": "rg-2066",
+      "arm": "C"
+    },
+    {
+      "slot": "s0119",
+      "question_id": "rg-2333",
+      "arm": "A"
+    },
+    {
+      "slot": "s0120",
+      "question_id": "rg-30",
+      "arm": "A"
+    },
+    {
+      "slot": "s0121",
+      "question_id": "rg-7749",
+      "arm": "C"
+    },
+    {
+      "slot": "s0122",
+      "question_id": "hand-def-defender",
+      "arm": "C"
+    },
+    {
+      "slot": "s0123",
+      "question_id": "rg-705",
+      "arm": "A"
+    },
+    {
+      "slot": "s0124",
+      "question_id": "hand-def-defender",
+      "arm": "B"
+    },
+    {
+      "slot": "s0125",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "C"
+    },
+    {
+      "slot": "s0126",
+      "question_id": "rg-7749",
+      "arm": "B"
+    },
+    {
+      "slot": "s0127",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "C"
+    },
+    {
+      "slot": "s0128",
+      "question_id": "rg-7749",
+      "arm": "C"
+    },
+    {
+      "slot": "s0129",
+      "question_id": "rg-30",
+      "arm": "A"
+    },
+    {
+      "slot": "s0130",
+      "question_id": "rg-539",
+      "arm": "B"
+    },
+    {
+      "slot": "s0131",
+      "question_id": "hand-def-indestructible",
+      "arm": "B"
+    },
+    {
+      "slot": "s0132",
+      "question_id": "rg-2569",
+      "arm": "C"
+    },
+    {
+      "slot": "s0133",
+      "question_id": "hand-def-deathtouch",
+      "arm": "B"
+    },
+    {
+      "slot": "s0134",
+      "question_id": "hand-def-indestructible",
+      "arm": "A"
+    },
+    {
+      "slot": "s0135",
+      "question_id": "rg-539",
+      "arm": "C"
+    },
+    {
+      "slot": "s0136",
+      "question_id": "hand-indestructible-zero-toughness",
+      "arm": "A"
+    },
+    {
+      "slot": "s0137",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "B"
+    },
+    {
+      "slot": "s0138",
+      "question_id": "rg-1951",
+      "arm": "A"
+    },
+    {
+      "slot": "s0139",
+      "question_id": "rg-705",
+      "arm": "B"
+    },
+    {
+      "slot": "s0140",
+      "question_id": "rg-705",
+      "arm": "A"
+    },
+    {
+      "slot": "s0141",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "A"
+    },
+    {
+      "slot": "s0142",
+      "question_id": "hand-def-trample",
+      "arm": "A"
+    },
+    {
+      "slot": "s0143",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "A"
+    },
+    {
+      "slot": "s0144",
+      "question_id": "rg-539",
+      "arm": "A"
+    },
+    {
+      "slot": "s0145",
+      "question_id": "hand-def-deathtouch",
+      "arm": "A"
+    },
+    {
+      "slot": "s0146",
+      "question_id": "rg-2569",
+      "arm": "A"
+    },
+    {
+      "slot": "s0147",
+      "question_id": "rg-2066",
+      "arm": "C"
+    },
+    {
+      "slot": "s0148",
+      "question_id": "rg-539",
+      "arm": "C"
+    },
+    {
+      "slot": "s0149",
+      "question_id": "hand-def-deathtouch",
+      "arm": "C"
+    },
+    {
+      "slot": "s0150",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "C"
+    },
+    {
+      "slot": "s0151",
+      "question_id": "rg-7749",
+      "arm": "A"
+    },
+    {
+      "slot": "s0152",
+      "question_id": "rg-2333",
+      "arm": "A"
+    },
+    {
+      "slot": "s0153",
+      "question_id": "hand-def-deathtouch",
+      "arm": "C"
+    },
+    {
+      "slot": "s0154",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "A"
+    },
+    {
+      "slot": "s0155",
+      "question_id": "hand-def-trample",
+      "arm": "A"
+    },
+    {
+      "slot": "s0156",
+      "question_id": "rg-1951",
+      "arm": "C"
+    },
+    {
+      "slot": "s0157",
+      "question_id": "hand-def-defender",
+      "arm": "C"
+    },
+    {
+      "slot": "s0158",
+      "question_id": "hand-def-deathtouch",
+      "arm": "A"
+    },
+    {
+      "slot": "s0159",
+      "question_id": "rg-1951",
+      "arm": "B"
+    },
+    {
+      "slot": "s0160",
+      "question_id": "hand-def-trample",
+      "arm": "B"
+    },
+    {
+      "slot": "s0161",
+      "question_id": "rg-2333",
+      "arm": "C"
+    },
+    {
+      "slot": "s0162",
+      "question_id": "hand-humility-plus-counter",
+      "arm": "A"
+    },
+    {
+      "slot": "s0163",
+      "question_id": "rg-2066",
+      "arm": "A"
+    },
+    {
+      "slot": "s0164",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "C"
+    },
+    {
+      "slot": "s0165",
+      "question_id": "rg-7749",
+      "arm": "A"
+    },
+    {
+      "slot": "s0166",
+      "question_id": "hand-def-indestructible",
+      "arm": "C"
+    },
+    {
+      "slot": "s0167",
+      "question_id": "rg-2333",
+      "arm": "B"
+    },
+    {
+      "slot": "s0168",
+      "question_id": "rg-1951",
+      "arm": "A"
+    },
+    {
+      "slot": "s0169",
+      "question_id": "rg-539",
+      "arm": "A"
+    },
+    {
+      "slot": "s0170",
+      "question_id": "hand-def-deathtouch",
+      "arm": "B"
+    },
+    {
+      "slot": "s0171",
+      "question_id": "rg-1951",
+      "arm": "A"
+    },
+    {
+      "slot": "s0172",
+      "question_id": "rg-539",
+      "arm": "C"
+    },
+    {
+      "slot": "s0173",
+      "question_id": "hand-doubling-season-planeswalker",
+      "arm": "B"
+    },
+    {
+      "slot": "s0174",
+      "question_id": "rg-30",
+      "arm": "A"
+    },
+    {
+      "slot": "s0175",
+      "question_id": "hand-def-indestructible",
+      "arm": "A"
+    },
+    {
+      "slot": "s0176",
+      "question_id": "rg-2569",
+      "arm": "C"
+    },
+    {
+      "slot": "s0177",
+      "question_id": "rg-2569",
+      "arm": "B"
+    },
+    {
+      "slot": "s0178",
+      "question_id": "hand-def-indestructible",
+      "arm": "A"
+    },
+    {
+      "slot": "s0179",
+      "question_id": "rg-2569",
+      "arm": "B"
+    }
+  ]
+}

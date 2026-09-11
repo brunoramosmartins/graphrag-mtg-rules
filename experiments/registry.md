@@ -3207,6 +3207,55 @@ looks like an underestimate, since most of those 27 never had the rule to use.
   **narrows or inverts** on `interaction_multihop`, where the graph's
   traversal caps and hub expansion pull in rules nobody needed.
 
+#### E-010 — Actual result, part (b) (2026-09-11, dress rehearsal, deterministic)
+
+Part (b) is the deterministic proxy: no annotator, no model call, no blinding
+problem, computed from output already produced. It is registered to run on the
+E-001 **evaluation** run; this is the dress rehearsal on the 20 development
+questions and is labelled one. Part (a), the human relevance pass, is built and
+unrun.
+
+| arm | retrieved rule numbers | in gold | rule-number precision | **token-normalised** |
+|---|---:|---:|---|---|
+| A (vector) | 70 | 29 | **0.414** [0.306, 0.531] | **0.032** |
+| B (graph) | 125 | 29 | 0.232 [0.167, 0.313] | **0.116** |
+| C (hybrid) | 134 | 33 | 0.246 [0.181, 0.326] | 0.100 |
+
+**The two figures disagree in direction, and that is the result.** Rule-number
+precision says arm A is the most precise retriever by a wide margin.
+Token-normalised precision — relevant tokens over total context tokens, which
+amendment item 2 registered as *"the quantity that is actually invariant to
+unit size"* — says arm A is **3.5× worse** than the graph arms.
+
+**Why they disagree, and it is not a tie to be split.** Arm A retrieves 575
+evidence items of which only 56 are rules; its payload is 258 cards and 406
+rulings. A denominator of rule numbers therefore asks *"of the few rules it
+brought, how many were gold"* and ignores everything else it charged the token
+budget for. The graph arms bring three times as many rule numbers — whole
+subrule subtrees — and are penalised for exactly the structure that makes them
+reach the rule at all.
+
+**This is the unit-size defect the 2026-08-15b amendment was written about,
+reappearing in a different guise.** That amendment fixed *passage versus rule
+item*; this is *rule numbers versus everything retrieved*. Same disease, one
+level up: a denominator chosen without reference to what each arm actually
+spends its budget on will flatter one of them, and which one depends on the
+choice rather than on the retrieval.
+
+**The registered prediction is confirmed on the figure that was registered to
+carry it.** Amendment item 3 restated the prediction as *"arm A's
+token-normalised precision is lower than arm B's"* — 0.032 against 0.116. The
+withdrawn version, precision over retrieved items, would have been read the
+other way.
+
+**Bounds.** `gold_cr_rules` is a lower bound on relevance: a rule can be useful
+without being in the key, so the proxy understates precision for every arm and
+is comparable across arms rather than absolute. Token counts here are
+whitespace word counts over the evidence text, not the budgeted figure the
+retrieval row records. And this is the development split, where both arms sit
+at their fitted optimum — the reason amendment item 6 registered two
+instruments in the first place.
+
 ### E-011 — the judge, and the ceiling it is read against (registered 2026-08-15, not yet run)
 
 - **Registered:** 2026-08-15, before `judge.py` exists and before any judge
