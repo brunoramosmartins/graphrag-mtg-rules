@@ -1095,6 +1095,55 @@ Of the **52 distinct** gold rules that were needed and not retrieved:
 Both repairs are measurable against this same population before any answer is
 regenerated, because "is the gold rule in the retrieved set?" needs no LLM.
 
+### The floor: nothing available here reaches these rules (2026-09-11)
+
+Repair 1 was run and is recorded as E-013: the `REFERENCES` hop gains **one**
+rule, and the ceiling registered for it was mis-specified — recomputed from
+each question's own retrieved rules it is zero. Then two more measurements
+closed off the cheap alternatives.
+
+**The glossary bridge.** The CR's own glossary holds **482 (term, rule) pairs
+outside chapters 701/702**, aimed at 100 (138), 300 (58), 600 (49), 200 (47),
+500 (39), 400 (13) — and **52 of the 58 missing gold rules (89.7%) are the
+target of one**. `graph/loader.py` excludes them deliberately, on the stated
+grounds that no golden-set question needs a general glossary node. That
+ground was wrong. But the linking side does not hold: matching those terms
+against the question text recovers **12 of 58 (0.207)**, against the cards'
+oracle text **13 of 58 (0.224) at 14.7 rules pulled per question**, and
+restricting to multiword terms — dropping "X", "Pay", "Hand" — collapses it
+to **1 of 58**. The rules are pointed at; the vocabulary that points at them
+is not the vocabulary anyone writes.
+
+**A plain lexical retriever over all 3,308 rules**, queried with the question
+text, on the same population:
+
+| retriever | gold-rule recall |
+|---|---|
+| the graph, as shipped | 7/64 = 0.109 [0.054, 0.209] |
+| lexical, top-25 | 6/64 = 0.094 [0.044, 0.190] |
+| lexical, top-50 | 11/64 = 0.172 [0.099, 0.282] |
+| lexical, top-100 | 12/64 = 0.188 [0.111, 0.300] |
+
+**At a realistic context size the full-corpus lexical search does worse than
+the graph, and even pulling a hundred rules per question it reaches 12 of
+64.** So the failure is not that the graph is the wrong instrument. On this
+population, *no retriever this project has* finds the rules the answers need.
+
+**The bound on that claim, stated because it is easy to overread.** These 26
+questions are the ones where the pipeline already failed — a population
+selected for retrieval being hard. The measurement says what nothing reaches
+*here*; it does not estimate retrieval quality overall, and the comparison
+that would is a run over the successes too.
+
+**What it points at.** Three measurements now say the same thing from
+different directions — the `REFERENCES` hop is empty, the glossary links at
+0.22, and full-corpus lexical retrieval tops out at 0.188. The gap is
+**vocabulary, not topology**: a question names cards and player verbs, a rule
+is written in defined terms, and nothing in the current design bridges the
+register. Approaches that make the *rule* carry the question's language are
+the only family these measurements have not ruled out, and 0.188 is the floor
+any of them has to beat.
+
 The judge audit needs roughly **90 audited answers** at the observed label
 mix to put 30 behind the thinnest label. That is a larger commitment than
 the registered "20% of judged answers" implied, and it follows from gating

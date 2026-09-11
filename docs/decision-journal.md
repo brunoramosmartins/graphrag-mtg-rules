@@ -90,6 +90,49 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-11 — Nothing reaches these rules, and that is a different problem than a wrong graph
+
+The last cheap alternative got measured. A plain lexical index over all 3,308
+CR rules, queried with the question text, on the same 26 failed questions:
+
+| retriever | gold-rule recall |
+|---|---|
+| the graph, as shipped | 7/64 = 0.109 |
+| lexical, top-25 | 6/64 = **0.094** |
+| lexical, top-100 | 12/64 = 0.188 |
+
+**At a realistic context size, full-corpus lexical search does worse than the
+graph.** Pulling a hundred rules per question — far past any token budget —
+it reaches twelve of sixty-four.
+
+That closes a line of thinking I had been carrying since the error analysis:
+that the 74%-evidence attribution meant *the graph is the wrong instrument and
+text retrieval is the right one*. It does not. On this population no retriever
+this project has finds the rules the answers need. The graph is not losing to
+text; both are losing to the same thing.
+
+The same thing is **vocabulary**. Three measurements, three directions, one
+answer: the `REFERENCES` hop is empty because the needed rules are adjacent to
+nothing retrieved (E-013); the glossary links at 0.22 because the terms that
+point at the rules are not the terms anyone writes; and lexical retrieval tops
+out at 0.188 because a question naming cards and player verbs shares little
+surface with a rule written in defined terms.
+
+**The bound, written before it gets overread.** These 26 are the questions
+where the pipeline already failed — a population selected for retrieval being
+hard. This says what nothing reaches *here*. It is not an estimate of
+retrieval quality overall, and the run that would give one covers the
+successes too.
+
+**What it does to Phase 8.** The phase's remaining deliverables are a demo, a
+portfolio README and v1.0.0, and the number a human measured — between 0.250
+and 0.474 of answers correct — is not moved by anything on the phase's list.
+The measurements above say it is not moved by one experiment either. That is
+now a scoping decision rather than an engineering one, and it belongs to the
+author: ship Phase 8 as a documented, honestly-limited system, or pull the
+vocabulary work forward first. Recording it here so the decision is dated
+whichever way it goes.
+
 ## 2026-09-11 — The bridge material exists, and the vocabulary to cross it does not
 
 A `literature-scout` pass on the bridge problem pointed at something already
