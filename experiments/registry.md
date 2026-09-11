@@ -3607,6 +3607,19 @@ with the Wilson interval published beside it and this ambiguity named. It
 is not reinterpreted, because choosing between the two readings after
 seeing the rate is choosing a threshold from a result.
 
+**One item replaced during authoring, 2026-09-10.** `rg-2208` is out and
+`rg-47` is in. The generated answer for `rg-2208` addresses Valakut while
+the question and the real key are about Thieves' Auction, so a key rewritten
+to endorse that answer would not be an answer to the question asked, and the
+judge could return `void` — which is neither following the supplied key nor
+failing to. The item could not measure what the control measures. The
+replacement was taken from **the next id in the same seeded sequence** over
+the same `incorrect` pool rather than chosen by hand, and
+`key_fidelity_ids.json` records the removal, the reason and the method
+beside the subset. A swap made for a validity reason before any judging is
+not the same act as a swap made after seeing a result, and the difference is
+only checkable if the first kind is written down.
+
 **A limitation of the instrument, stated before it runs.** `perturbed_key`
 refuses a perturbation identical to the real key, and that is all it can
 check. Whether a perturbation is *genuinely wrong about Magic* is not
@@ -3617,7 +3630,59 @@ answer's own claim and **verified by the author**, whose domain knowledge is
 the only instrument that can check that property. A fixture item that fails
 that check is replaced before the run, not after.
 
-- **Actual result:** _not run._
+- **Actual result (2026-09-11, two runs, `gpt-4o-mini`, rubric `p6-c1 @
+  dfcfb0851c8c`, judge prompt `p6-j1`): the judge follows the supplied key.**
+
+  | run | direction A | direction B | pooled |
+  |---|---|---|---|
+  | 1 (fixture defective in A) | 10/15 = 0.667 | **15/15 = 1.000** [0.796, 1.000] | 25/30 = 0.833 |
+  | 2 (A repaired) | 15/15 = 1.000 [0.796, 1.000] | 15/15 = 1.000 [0.796, 1.000] | **30/30 = 1.000** [0.886, 1.000] |
+
+  **Run 1's direction A is void, and the reason is recorded rather than the
+  run deleted.** Five perturbed keys endorsed their answer's *verdict* while
+  giving *different reasoning*, and rubric tie-break 3 scores that `partial`,
+  not `correct` — so the fixture expected a label the rubric does not
+  prescribe. Every one of the five judge rationales cited **the supplied
+  key**; not one appealed to how Magic works. The items measured the
+  author's ability to write matching reasoning, not the judge's fidelity.
+  `rg-2066` was replaced rather than repaired after the author's domain check
+  found the perturbation true in Magic and a rewrite could not imply
+  `correct` without inventing reasoning the answer did not share.
+
+  **The uncontaminated half is direction B.** Its fifteen items were never
+  touched and scored 15/15 in both runs: handed a key that contradicts an
+  answer the human called correct, the judge returned `incorrect` every time.
+  A judge correcting from memory fails exactly there, and it did not.
+  Direction A's run-2 figure is reported beside it rather than merged,
+  because those items were rewritten after reading run 1's rationales — the
+  repair followed a tie-break that predates the run, but the disclosure
+  belongs in the record either way.
+
+  **Read against the registered mark.** 1.000 clears 0.90 on the point
+  estimate, which is how the entry is written. On the interval it does not:
+  [0.886, 1.000] has a lower bound below 0.90 even at a perfect score, which
+  is what a 30-item fixture buys. The ambiguity the 2026-09-10c amendment
+  recorded — the entry never said point or bound — is therefore *load
+  bearing* at this n, and it is still not repaired after the fact.
+
+  **What this licenses, and what it does not.** The domain-leakage
+  explanation for E-011b's fifteen judge–human disagreements is now the
+  weakest of the three, not the best supported: the judge followed a
+  deliberately wrong key thirty times out of thirty. It does **not** say the
+  judge is accurate — agreement with the human remains 0.727 [0.598, 0.827],
+  and fidelity to a key is a different property from matching a human's
+  reading of one. It speaks for this model, this rubric version and this
+  judge prompt only.
+
+  **An unregistered finding worth keeping.** Run 1's five dissents were
+  themselves evidence: the judge applied tie-break 3 strictly against a
+  synthetic key with no human in the loop. Together with all fifteen
+  human–judge disagreements running in the same direction, that supports
+  reading the judge as a **literal rubric follower**, which shifts weight
+  toward the amendment's uncomfortable hypothesis — that the human drifted
+  from the rubric — and away from the rubric being ambiguous. Neither is
+  established here; diagnostics 2 and 3 of the E-011b amendment are what
+  decide it.
 
 ### E-011b — the rubric assumes one verdict; the questions have several (registered 2026-09-10, not yet run)
 

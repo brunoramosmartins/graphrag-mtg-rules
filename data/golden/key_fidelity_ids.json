@@ -35,13 +35,7 @@
       "expected": "correct"
     },
     {
-      "question_id": "rg-2066",
-      "direction": "A",
-      "source_human_label": "incorrect",
-      "expected": "correct"
-    },
-    {
-      "question_id": "rg-2208",
+      "question_id": "rg-1704",
       "direction": "A",
       "source_human_label": "incorrect",
       "expected": "correct"
@@ -66,6 +60,12 @@
     },
     {
       "question_id": "rg-3859",
+      "direction": "A",
+      "source_human_label": "incorrect",
+      "expected": "correct"
+    },
+    {
+      "question_id": "rg-47",
       "direction": "A",
       "source_human_label": "incorrect",
       "expected": "correct"
@@ -189,6 +189,22 @@
       "direction": "B",
       "source_human_label": "correct",
       "expected": "incorrect"
+    }
+  ],
+  "replacements": [
+    {
+      "removed": "rg-2208",
+      "added": "rg-47",
+      "on": "2026-09-10",
+      "reason": "The generated answer addresses Valakut while the question and the real key are about Thieves' Auction, so a key rewritten to endorse the answer would not be an answer to the question asked. The judge could return `void`, which is neither following the supplied key nor failing to — the item cannot measure what the control measures.",
+      "how": "Replacement taken from the next id in the same seeded sequence over the same `incorrect` pool, not chosen by hand. The removed id stays recorded here."
+    },
+    {
+      "removed": "rg-2066",
+      "added": "rg-1704",
+      "on": "2026-09-10",
+      "reason": "The author's domain check found the perturbation true in Magic: Equilibrium Adept is a Human, so Illuna cannot mutate onto it and the answer's reasoning holds. A rewrite that kept the verdict and changed the reason was scored `incorrect` by the judge for citing a different reason than the key, so the item cannot be made to imply `correct` without inventing a key whose reasoning the answer does not share.",
+      "how": "Next id in the same seeded sequence over the same `incorrect` pool."
     }
   ]
 }

@@ -15,6 +15,8 @@ nothing.
 
 from __future__ import annotations
 
+import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -95,3 +97,80 @@ class TestRegisteredConstants:
 
     def test_fifteen_per_direction(self) -> None:
         assert kf.PER_DIRECTION == 15
+
+
+class TestVerificationIsRecorded:
+    """The one check a machine cannot make is the one that must be logged."""
+
+    def test_an_unverified_row_stops_the_score(self, tmp_path, monkeypatch) -> None:
+        # The guard that fired on the author's first run. It is the whole
+        # reason the fixture has a `verified` field: `perturbed_key` can
+        # only catch a perturbation identical to the key, and a
+        # perturbation that is accidentally right about Magic is invisible
+        # to every mechanical check in this file.
+        fixture = tmp_path / "fixture.jsonl"
+        subset = tmp_path / "subset.json"
+        subset.write_text(
+            json.dumps({"items": [{"question_id": "rg-1", "direction": "A",
+                                   "expected": "correct"}]}),
+            encoding="utf-8",
+        )
+        fixture.write_text(
+            json.dumps({"question_id": "rg-1", "real_key": "It dies.",
+                        "perturbed": "It survives.", "question": "q",
+                        "answer": "a", "verified": False}) + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(kf, "SUBSET_PATH", subset)
+        monkeypatch.setattr(kf, "FIXTURE_PATH", fixture)
+        with pytest.raises(SystemExit) as caught:
+            kf.score(argparse.Namespace(model=None, max_tokens=400, dry_run=True))
+        assert "unverified" in str(caught.value)
+
+    def test_a_rejection_keeps_its_reason(self, tmp_path, monkeypatch) -> None:
+        # A rejected item that records no reason is an item that will be
+        # rewritten into the same mistake.
+        fixture = tmp_path / "fixture.jsonl"
+        subset = tmp_path / "subset.json"
+        subset.write_text(
+            json.dumps({"items": [{"question_id": "rg-1", "direction": "A",
+                                   "expected": "correct"}]}),
+            encoding="utf-8",
+        )
+        fixture.write_text(
+            json.dumps({"question_id": "rg-1", "real_key": "k", "perturbed": "p",
+                        "question": "q", "answer": "a", "verified": True}) + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(kf, "SUBSET_PATH", subset)
+        monkeypatch.setattr(kf, "FIXTURE_PATH", fixture)
+        kf.mark(argparse.Namespace(question_id=["rg-1"], accept=False,
+                                   why="the perturbation is true in Magic"))
+        row = kf.load_fixture()["rg-1"]
+        assert row["verified"] is False
+        assert row["rejected_why"] == "the perturbation is true in Magic"
+
+
+class TestTheToolDoesNotNameACauseItCannotSee:
+    """It did once, and it was wrong.
+
+    On 2026-09-10 the first run printed "the judge scored against its own
+    knowledge of Magic" over five items whose rationales all cited the
+    supplied key. The perturbed keys endorsed each answer's verdict while
+    contradicting its reasoning, which the rubric scores `partial` by
+    tie-break 3, so the fixture expected the wrong label — and the tool
+    blamed the judge for its own defect.
+    """
+
+    def test_a_low_rate_names_both_explanations(self, capsys) -> None:
+        verdict = Verdict("rg-1", Correctness.INCORRECT, "contradicts the key", "fake")
+        kf.report([(item(), verdict)])
+        printed = capsys.readouterr().out
+        assert "does not actually imply the label" in printed
+        assert "own knowledge of Magic" in printed
+        assert "Read each rationale" in printed
+
+    def test_a_passing_rate_claims_nothing_about_the_bound(self, capsys) -> None:
+        verdict = Verdict("rg-1", Correctness.CORRECT, "follows the key", "fake")
+        assert kf.report([(item(), verdict)]) == 0
+        assert "lower bound" in capsys.readouterr().out

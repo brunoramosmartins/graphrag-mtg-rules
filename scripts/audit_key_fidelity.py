@@ -187,10 +187,29 @@ def report(verdicts: list[tuple[Item, Verdict]]) -> int:
         print("The interval's lower bound is printed above; it is what a reader")
         print("should weigh, and on a 30-item fixture it is well below the mark.")
         return 0
-    print("\nFAILS domain blindness. The judge scored against its own knowledge of")
-    print("Magic on the items above, which no agreement figure can detect and which")
-    print("systematically favours whichever arm resembles what it already believes.")
-    print("Every correctness figure produced by this judge inherits that.")
+
+    # This script cannot name the cause, and said so wrongly once. On
+    # 2026-09-10 it printed "the judge scored against its own knowledge of
+    # Magic" over five items whose rationales every one cited the supplied
+    # key: the perturbed keys endorsed each answer's verdict while giving
+    # different reasoning, which rubric tie-break 3 scores `partial`, not
+    # `correct`. The fixture expected the wrong label and the tool blamed
+    # the judge — an instrument accusing its subject of its own defect.
+    #
+    # Distinguishing the two requires reading the rationales, so that is
+    # what it asks for now.
+    print("\nBELOW the registered mark. Two explanations produce this, and the rate")
+    print("alone does not separate them:")
+    print("  1. the judge scored from its own knowledge of Magic — which no agreement")
+    print("     figure can detect, and which favours whichever arm resembles what it")
+    print("     already believes;")
+    print("  2. a perturbed key does not actually imply the label the fixture expects —")
+    print("     most often because it endorses the answer's verdict while contradicting")
+    print("     its reasoning, which the rubric scores `partial` by tie-break 3.")
+    print("\nRead each rationale above. One that cites the supplied key is case 2 and the")
+    print("item is void; one that appeals to how Magic works is case 1 and is the finding.")
+    print("A direction that scores perfectly while the other does not is itself evidence:")
+    print("a judge correcting from memory has no reason to fail in only one of them.")
     return 1
 
 
@@ -317,6 +336,91 @@ def build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _write_fixture(rows: dict[str, dict]) -> None:
+    order = [entry["question_id"] for entry in load_subset()]
+    with FIXTURE_PATH.open("w", encoding="utf-8") as handle:
+        for qid in order:
+            handle.write(json.dumps(rows[qid], ensure_ascii=False) + "\n")
+
+
+def show(args: argparse.Namespace) -> int:
+    """One item, laid out so the check is the only thing left to do.
+
+    The check is a single question — *is the perturbed key wrong about
+    Magic?* — and everything printed here exists to answer it. The
+    expected label is printed too, because a perturbation that is wrong
+    about Magic but does not actually imply that label is the other way
+    the item can be void.
+    """
+    rows = load_fixture()
+    subset = load_subset()
+    # A rejected item is unverified too, but it is waiting on a rewrite, not
+    # on another look. Leaving it in the queue puts it back at the top for
+    # ever, indistinguishable from one nobody has read.
+    rejected = [e for e in subset if rows[e["question_id"]].get("rejected_why")]
+    pending = [
+        e
+        for e in subset
+        if not rows[e["question_id"]].get("verified")
+        and not rows[e["question_id"]].get("rejected_why")
+    ]
+    if args.question_id:
+        pending = [e for e in subset if e["question_id"] == args.question_id]
+    if not pending:
+        print("Nothing left to review.")
+        if rejected:
+            print(f"{len(rejected)} item(s) rejected and awaiting a rewrite:")
+            for entry in rejected:
+                why = rows[entry["question_id"]]["rejected_why"]
+                print(f"  {entry['question_id']}: {why}")
+        return 0
+
+    for entry in pending[: args.limit]:
+        row = rows[entry["question_id"]]
+        source, expected = DIRECTIONS[entry["direction"]]
+        print(RULE)
+        print(f"{entry['question_id']}   direction {entry['direction']}")
+        print(f"  the human called the answer {source.value}; a key-following judge "
+              f"must return {expected.value}")
+        print(f"\nQUESTION\n  {' '.join(row['question'].split())}")
+        print(f"\nREAL KEY\n  {' '.join(row['real_key'].split())}")
+        # The answer's own conclusion, because the check has two halves and
+        # only one of them is visible from the keys. Direction A needs the
+        # perturbed key to *endorse* what the answer claimed — a key that is
+        # wrong about Magic but disagrees with the answer anyway earns
+        # `partial`, not `correct`, and the item measures nothing.
+        tail = " ".join(row["answer"].split())[-320:]
+        print(f"\nWHAT THE ANSWER CONCLUDED (its last 320 characters)\n  ...{tail}")
+        print(f"\nPERTURBED KEY  <- wrong about Magic? and does it imply "
+              f"{expected.value} for that answer?\n  "
+              f"{' '.join(row['perturbed'].split())}")
+    print(RULE)
+    print(f"{len(pending)} item(s) left to review, {len(rejected)} awaiting a rewrite, "
+          f"{sum(1 for r in rows.values() if r.get('verified'))} verified.")
+    print("  verify <id> [<id> ...]   accept — the perturbation is wrong about Magic")
+    print("  reject <id> --why '...'  send it back to be rewritten or replaced")
+    return 0
+
+
+def mark(args: argparse.Namespace) -> int:
+    rows = load_fixture()
+    for qid in args.question_id:
+        if qid not in rows:
+            raise SystemExit(f"{qid} is not in the fixture.")
+        if args.accept:
+            rows[qid]["verified"] = True
+            rows[qid].pop("rejected_why", None)
+        else:
+            rows[qid]["verified"] = False
+            rows[qid]["rejected_why"] = args.why
+    _write_fixture(rows)
+    remaining = [q for q, r in rows.items() if not r.get("verified")]
+    verb = "verified" if args.accept else "rejected"
+    print(f"{verb}: {', '.join(args.question_id)}")
+    print(f"{len(remaining)} item(s) still unverified.")
+    return 0
+
+
 def score(args: argparse.Namespace) -> int:
     subset = load_subset()
     fixture = load_fixture()
@@ -399,6 +503,20 @@ def main() -> int:
         help="discard perturbations already written; without it they are kept",
     )
     builder.set_defaults(func=build)
+
+    shower = sub.add_parser("show", help="one unverified item, with its real and perturbed key")
+    shower.add_argument("question_id", nargs="?", default=None)
+    shower.add_argument("--limit", type=int, default=1, help="how many to print (default 1)")
+    shower.set_defaults(func=show)
+
+    accepter = sub.add_parser("verify", help="accept: the perturbation is wrong about Magic")
+    accepter.add_argument("question_id", nargs="+")
+    accepter.set_defaults(func=mark, accept=True, why="")
+
+    rejecter = sub.add_parser("reject", help="send an item back to be rewritten or replaced")
+    rejecter.add_argument("question_id", nargs="+")
+    rejecter.add_argument("--why", required=True, help="what is right about it")
+    rejecter.set_defaults(func=mark, accept=False)
 
     scorer = sub.add_parser("score", help="judge the fixture and report key fidelity")
     scorer.add_argument("--model", default=None, help="defaults to LLM_MODEL")
