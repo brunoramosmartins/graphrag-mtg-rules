@@ -854,6 +854,11 @@ reads, so "the judge uses the same rubric" is a property of there being one
 object rather than a promise. Every verdict carries the rubric hash, the
 prompt version and the model.
 
+> This section records how the judge was built and measured through
+> 2026-09-09. **[The judge, published ungated](#the-judge-published-ungated)**
+> below carries the 2026-09-11 close: the key-fidelity result, where the
+> disagreement actually sits, and why no further auditing is planned.
+
 ### The ceiling (E-011a, both passes complete 2026-09-09)
 
 Two blind human passes, five days apart as registered.
@@ -928,9 +933,101 @@ counting as a win lets the headline move with how generously it is applied
 | pending | blocks |
 |---|---|
 | ~~Correctness ceiling, second blind pass~~ — **done 2026-09-09: 0.843, threshold 0.720** | — |
-| Judge audit at n >= 30 **per label** — currently 18 / 14 / 23 of 55 | any correctness figure being called validated |
-| Key-fidelity fixtures (perturbed keys, hand-written) | the domain-blindness rate published beside agreement |
+| ~~Key-fidelity fixtures~~ — **done 2026-09-11: 30/30, see below** | — |
+| Judge audit at n >= 30 **per label** — 18 / 14 / 23 of 55, and **not being pursued**; see below | correctness being called *validated*, which it is not |
+| Error analysis over the 30 answers a human labelled `partial` or `incorrect` | knowing which stage to fix |
 | Evaluation split, 57 questions, opened once in Phase 8 | every claim about the arms |
+
+## The judge, published ungated
+
+The judge is not gated, will not be gated in this phase, and this section is
+what replaces the gate. The `sufficiency` precedent applies: E-011's amendment
+registered that a label whose audit falls short is **reported descriptively
+with its ceiling beside it**, and that is what follows.
+
+**Agreement with a human.** 40/55 = **0.727 [0.598, 0.827]**, against a
+threshold of **0.720** — the lower bound of the human's own correctness
+ceiling, which is the only mapping E-011 permits. The interval's lower bound
+is 0.598, so the judge does not pass. Per label: `correct` 13/18, `partial`
+4/14, `incorrect` 23/23. Every label is below the registered floor of 30
+answers and 30 clusters, so each is descriptive and gates nothing.
+
+**Why more auditing is not the answer.** The threshold sits essentially on
+the point estimate. If the true agreement is 0.727, no achievable sample
+gates it — n = 5000 still yields a lower bound of 0.714. At n = 90 the judge
+would need 0.822. Only `incorrect` is reachable: it is 23/23 today, about 17
+answers short of the floor, and would pass at 28/30. That is a real and cheap
+measurement, and it is recorded here as available rather than done.
+
+**The judge reads the key, not its own knowledge of Magic.** E-011 point 6's
+key-fidelity control ran on 2026-09-11 over 30 items carrying deliberately
+wrong keys — 15 rewritten to endorse an answer the human called incorrect, 15
+to contradict one they called correct. The judge followed the supplied key
+**30/30 = 1.000 [0.886, 1.000]**, both directions perfect. A judge correcting
+from memory fails the second direction, and it did not. Note the interval:
+even a perfect score on 30 items has a lower bound below the registered 0.90,
+so that mark is read as a point estimate, as the entry wrote it.
+
+**Where the disagreement actually is.** Splitting the 55 pairs by whether the
+human's own two blind passes agreed:
+
+| rows | n | judge agrees |
+|---|---:|---|
+| human stable (pass 1 = pass 2) | 46 | **0.804** [0.668, 0.893] |
+| human moved (pass 1 ≠ pass 2) | 9 | **0.333** [0.121, 0.646] |
+
+Six of the fifteen disagreements sit on those nine rows — 40% of the dissent
+on 16% of the sample — and on them the judge matches the human's **second**
+pass more often than their first (5/9 against 3/9). Seven of the nine started
+at `partial`. Coding what each dissent appeals to: 11 cite a contradiction the
+key actually contains, 4 are omissions under tie-break 3 or 5, and **none**
+appeals to anything outside the key.
+
+**So the limitation has a name and a location.** `partial` and `incorrect`
+overlap textually — `partial` is "reaches the key's verdict … by reasoning the
+key contradicts" and `incorrect` is "asserts something the key contradicts",
+an answer can satisfy both, and no precedence rule separates them. Ten of the
+fifteen disagreements are `partial → incorrect`. The human's own passes are
+unstable on the same boundary. Anyone repairing this instrument should start
+there, and the repair is a new rubric version with a newly measured ceiling,
+not an edit.
+
+**What this does not excuse.** Two-way collapses — `correct` against
+everything else — do not depend on the unreliable boundary, and the headline
+`run_eval.py report` computes is exactly that. Three-way figures produced by
+this judge carry the limitation above wherever they appear.
+
+## What a human says the answers are worth
+
+The section above is about a measuring instrument. This one is about the
+system, and it needs no judge at all: a human read the answers.
+
+| batch | correct | partial | incorrect | correct rate |
+|---|---:|---:|---:|---|
+| b1 — E-007 pool, 36 answers, incompleteness notice live | 9 | 11 | 16 | **0.250** [0.138, 0.411] |
+| b2 — E-001 dev split, arm C-tfidf, 19 answers | 9 | 3 | 7 | **0.474** [0.273, 0.683] |
+
+**Between a quarter and a half of the answers are right**, and the intervals
+are wide enough that the gap between the batches is not itself a finding —
+they differ in arm, in question pool, and in whether the generator was invited
+to hedge.
+
+This is the number that would stop a release to actual players, and it is
+worth being explicit that no amount of work on the judge moves it. Calibrating
+the instrument further would change how precisely this is known, not what it
+is. The pending item that does move it is the error analysis over the 30
+answers a human labelled `partial` or `incorrect`, classifying where the chain
+broke — linking, routing, missing evidence, the token budget, or generation.
+Those labels already exist, the analysis costs nothing, and it produces a
+ranked list of repairs rather than another figure.
+
+Three candidates are already visible from work recorded elsewhere in this
+document and in the decision journal, and the error analysis is what would
+weigh them: `CITES_RULE` was withdrawn from the graph at F1 0.125, so rules
+are reached by text retrieval rather than by traversal; the router falls back
+to the text half whenever no named card carries a keyword, which serves
+multi-hop questions with the weaker arm; and the two compound-verdict strata,
+`interaction_multihop` and `negative_temporal`, are 44 of these 55 answers.
 
 The judge audit needs roughly **90 audited answers** at the observed label
 mix to put 30 behind the thinnest label. That is a larger commitment than

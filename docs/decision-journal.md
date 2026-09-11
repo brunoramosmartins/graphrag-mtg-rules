@@ -90,6 +90,45 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-11 — Three ways to polish a ruler, and none of them moves the number
+
+The judge audit ended with three options: collect ~17 more labels to gate the
+one reachable label, revise the rubric's `partial` boundary, or publish
+ungated with the decomposition beside it. The author asked the right question
+about all three — *if this were a product for Magic players, wouldn't we have
+to improve performance before shipping?*
+
+**The answer is yes, and none of the three options does that.** A, B and C
+are all about the judge, and the judge is a measuring instrument. Pick any of
+them, spend two afternoons, and not one answer a player would read has
+changed.
+
+The number that decides shippability was produced without the judge at all: a
+human read the answers and called **0.250 [0.138, 0.411]** of batch 1 and
+**0.474 [0.273, 0.683]** of batch 2 correct. Between a quarter and a half.
+That is what would stop a release, it was already measured, and it is
+insensitive to every option on the table.
+
+So: **C**, and not as resignation. The instrument is understood well enough to
+stop measuring it — key fidelity 30/30, agreement 0.804 where the human is
+stable and 0.333 where they are not, the weakness named as the `partial`
+boundary where `partial` and `incorrect` overlap with no precedence rule. More
+calibration buys precision about a ruler nobody is going to ship.
+
+The condition that keeps C from being an excuse is that the limitation has to
+be **actionable**. "Agreement is 0.727, moving on" is resignation. "Agreement
+is 0.727, the judge follows a deliberately wrong key 30 times out of 30, it
+dissents where the human's own passes move, and the boundary is `partial`"
+tells the next person what to repair. Published limitations that do not name
+a repair are resignation with better vocabulary.
+
+And the error analysis over the 30 answers a human called `partial` or
+`incorrect` goes into the Phase 8 deliverables **ahead of the demo**. It uses
+labels that already exist, costs nothing, and produces a ranked list of
+repairs. I had spent the day offering better rulers because the phase gate
+asked about the gate; the author's question is what moved the work back to the
+system.
+
 ## 2026-09-10 — The judge audit's first finding was a batch effect I reported as structural
 
 Phase 8's first task was the judge audit to n ≥ 30 per label. It produced
