@@ -2961,6 +2961,48 @@ bound and does **not** state "no parametric leakage".
     is a subgraph that came back thin on its own. This entry measures the
     cleaner case and says nothing directly about the messier one.
 
+#### E-009 amendment 2026-09-11 — the probe population is nine, and six of them are definitions
+
+Written **before the first probe is generated**, because E-013 spent a day
+proving that a ceiling computed from the wrong inputs is worse than no ceiling.
+
+**How many probes exist.** The construct requires a question whose
+`gold_cr_rules` are populated *and* currently reached by retrieval, so that
+ablation is the only difference. Counted against the dev-split retrieval
+records: arm C reaches a gold rule on **9 of 20** questions, arm B on 7, arm
+A on 7. Nine is the population, not a sample of it.
+
+**What nine probes can decide.** The 2026-08-15b amendment put the 0.80 floor
+on the **point estimate**, so the run does yield a verdict: 8/9 = 0.889 passes,
+7/9 = 0.778 fails. But the interval at 8/9 is **[0.565, 0.980]**, 0.415 wide,
+and **one probe flips the verdict**. Excluding 0.80 by an interval would need
+roughly 40 probes at a true rate of 0.95; the corpus does not contain them.
+The figure is therefore reported as a point estimate with its interval printed
+beside it, and **no sentence anywhere may describe it as establishing the
+refusal rate**.
+
+**The composition, which matters more than the n.** Six of the nine are
+`hand-def-*` — `definition_1hop` questions whose answer *is* the ablated rule.
+Removing 702.19 from "what does trample do?" is a different probe from
+removing a layer rule from a three-card interaction, and the deployment
+condition E-009 exists to explain is the second. The per-probe stratum is
+recorded and the two groups are reported apart; the aggregate is published
+naming its composition, as E-011a already requires of every figure here.
+
+**Consequence for the `natural_thin` arm.** It becomes the more informative
+half rather than the supporting one. E-007's `insufficient` subgraphs are
+replayed unchanged, they carry no ablation cue, and the 8-of-9 that motivated
+this entry is exactly that population. The 0.80 floor does not apply to it, by
+the 2026-08-15b amendment, and that is now a feature: the arm with the thin
+population is the one carrying a threshold, and the arm speaking to the
+original finding is the one reported descriptively.
+
+**What is not done to fix this.** The probe pool is not widened by pooling
+arms — a probe from arm A's retrieval and one from arm C's are different
+constructs — and it is not widened by relaxing "retrieval reaches the rule",
+which is what makes ablation the only difference. A thin population honestly
+reported beats a thick one whose construct drifted.
+
 ### E-010 — what else came with it: the precision side of retrieval (registered 2026-08-15, not yet run)
 
 - **Registered:** 2026-08-15, forced by E-006's fourth run and registered

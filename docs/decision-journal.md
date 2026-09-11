@@ -90,6 +90,34 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-11 — Phase 8 ships as planned, and the measurement is the deliverable
+
+Decision taken by the author after the floor measurement: **close Phase 8 as
+scoped** — demo, portfolio README, `v1.0.0` — rather than pull the vocabulary
+work forward. The alternative was named and declined, which is what makes this
+a decision rather than a default.
+
+The reasoning worth keeping: three independent measurements say the remaining
+gap is vocabulary and that no single experiment on the table closes it. Holding
+the release for an uncertain fix is the perfectionism the roadmap's own risk
+register warns about, with a 6-day timebox as its registered mitigation. And
+what the phase actually has to show is unusual on its own terms — a system
+whose limits were measured, whose causes were named from three directions, and
+which published where it loses.
+
+**What this commits the phase to, and it is not a softer bar.** Shipping
+honestly is more work than shipping quietly. The README has to state the
+correctness a human measured (0.250–0.474), has to say the judge is not gated
+and why, and has to carry the three convergent measurements rather than a
+sentence about "limitations". A release that omits those would be the same
+release with the evidence removed.
+
+**The sequence, in the order the registry forces.** E-009 and E-010 are
+registered and unrun, and both are prerequisites of opening the evaluation
+split; the split opens once and the head-to-head table the README needs comes
+from it. So: E-009 and E-010, then the split, then the table, then the demo
+built over numbers that will not move, then README and tag.
+
 ## 2026-09-11 — Nothing reaches these rules, and that is a different problem than a wrong graph
 
 The last cheap alternative got measured. A plain lexical index over all 3,308
