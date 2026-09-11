@@ -523,3 +523,39 @@ class TestKeysAndPathsLineUp:
     def test_an_empty_path_holds_its_place(self) -> None:
         # The alignment cannot depend on every template filling in a path.
         assert spans.first_n(["a", "", "c"]) == ["a", "", "c"]
+
+
+class TestTheReferenceHop:
+    """E-013's repair, kept off and kept measured.
+
+    Gold-rule recall moved 0.094 to 0.109 over 26 questions against a
+    registered ceiling of 18, and the ceiling was wrong: recomputed from the
+    rules each question actually retrieved, zero of the 58 missing rules
+    were one hop away. These tests pin the behaviour, not the hypothesis.
+    """
+
+    def test_it_is_off_by_default(self, recorded) -> None:
+        # Off is what the measurement supports, and a default that drifts on
+        # would change the shipped system without a run saying so.
+        retrieve("What does Flying do?", linker=linker(), run=runner())
+        assert "rule_neighbourhood" not in names(recorded)
+
+    def test_it_runs_as_its_own_traversal_span(self, recorded) -> None:
+        retrieve("What does Flying do?", linker=linker(), run=runner(), reference_hop=True)
+        templates = [
+            span.attributes.get(spans.TEMPLATE) for span in by_name(recorded, spans.TRAVERSAL)
+        ]
+        assert "rule_neighbourhood" in templates
+
+    def test_a_question_with_no_rule_takes_no_hop(self, recorded) -> None:
+        # Ten of E-013's 26 questions had no rule to seed from. Expanding
+        # nothing is the honest behaviour, and it must not invent a span.
+        empty = {"keyword_definition": [{"keyword": "Flying", "glossary": "g",
+                                         "rule_number": None, "rule_text": None,
+                                         "subrules": []}]}
+        retrieve("What does Flying do?", linker=linker(), run=runner(empty),
+                 reference_hop=True)
+        templates = [
+            span.attributes.get(spans.TEMPLATE) for span in by_name(recorded, spans.TRAVERSAL)
+        ]
+        assert "rule_neighbourhood" not in templates

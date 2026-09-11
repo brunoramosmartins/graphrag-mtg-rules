@@ -4259,4 +4259,54 @@ no figure in this entry is an end-to-end system score.
 - **Cost.** Zero model calls for the primary and secondary metrics. The
   generation follow-up, if the decision rule reaches it, is 26 answers plus
   judging.
-- **Actual result:** _not run._
+- **Actual result (2026-09-11): the repair gains 1 gold rule of a registered
+  ceiling of 18, and the ceiling was the wrong quantity.**
+
+  | | gold-rule recall | evidence/question | tokens/question | dropped |
+  |---|---|---:|---:|---:|
+  | as shipped | 6/64 = 0.094 [0.044, 0.190] | 20.0 | 1,253 | 0/26 |
+  | with the `REFERENCES` hop | 7/64 = 0.109 [0.054, 0.209] | 25.0 | 1,483 | 0/26 |
+
+  **The registered decision rule fires: below 0.15, the routing repair is
+  abandoned in favour of the bridge problem.** It is applied as written.
+
+  **But the ceiling that made 0.15 look like a low bar was mis-specified, and
+  the error is mine.** The reachability query asked *"is this rule one
+  `REFERENCES` hop from **any** keyword-defined rule in the graph"* and the
+  answer, 18, was registered as if it meant *"from the rules **this question**
+  retrieved"*. Those are different quantities and only the second is one this
+  experiment could reach. Recomputed against each question's own retrieved
+  rules: **0 of the 58 missing gold rules are one hop away.** The single rule
+  gained — `rg-241`'s `303.4f` — came from a seed beyond the eight the
+  implementation expands or an inbound edge the recomputation did not count.
+  The honest ceiling was one, not eighteen, and the experiment was never
+  capable of the 0.25 its decision rule asked for.
+
+  **The negative result is stronger than the positive one would have been.**
+  The hop is not weak here, it is empty: the rules these answers need are not
+  adjacent to anything the graph retrieves for these questions. Combined with
+  the 20 of 26 whose rules are unreachable in principle, the bridge from card
+  or question to chapters outside 700 is not one repair among several — it is
+  the whole problem. Nothing cheap sits between the current graph and the
+  rules its answers need.
+
+  **Two secondary readings, as registered.** The expansion is cheap and
+  harmless: +5 evidence items and +230 tokens per question, and **nothing was
+  dropped on any of the 26** at a 6,000-token budget, so the prediction that
+  `dropped` would become non-empty was wrong too — the contexts had room. And
+  `rule_neighbourhood` entered the plan on only **16 of 26** questions; the
+  other ten had no rule in their evidence to take a hop from, which is the
+  seedless-routing case arriving one layer further down.
+
+  **What stays in the code.** `retrieve(reference_hop=...)` remains, off by
+  default, with the measurement recorded in its docstring. The implementation
+  is not what failed, and a flag whose result is written down is cheaper to
+  reason about than a deletion that leaves the next person to rediscover this.
+
+  **Lesson recorded against the pre-registration, not the result.** A ceiling
+  is a claim about the experiment, and this one was computed over the graph
+  rather than over the experiment. Registering it early did exactly what
+  pre-registration is for — it is on the record, in the wrong, and legible —
+  but it did not protect against the quantity being mis-specified in the first
+  place. The check that would have caught it is cheap: compute the ceiling
+  from the same inputs the run will see.
