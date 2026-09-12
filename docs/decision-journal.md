@@ -90,6 +90,43 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-12 — The 3x gate fired, so the retrieval comparison is confounded
+
+E-010 part (b) ran on the split it was always registered for. Two things came
+out of it and both change what has already been written today.
+
+**Amendment item 7 fired.** Median retrieved items per question: A 40.5, B 12.0
+— **3.38×**, above the registered 3×. The consequence was pinned in August:
+E-001's retrieval comparison is published as **budget-confounded** and the
+headline retrieval statement is the token-normalised figure (A 0.030 vs B
+0.112). I had written E-001's result earlier today without applying this, which
+is the ordinary way a registered consequence gets lost — it lives in one
+entry's amendment and bites on a different entry's result. It is now recorded in
+both, and `run_e010.py proxy` applies the gate itself rather than leaving it to
+be remembered.
+
+Token parity stays the registered choice. It is what both arms face at
+generation, and this is the price it charges, named before the run.
+
+**A fourth denominator picked by one arm.** The per-question mean printed "over
+N questions", and N differs per arm because it counts only questions where that
+arm retrieved at least one rule number. So the mean was over whichever
+questions an arm chose to speak about, flattering the quietest one. Printed as
+N-of-M it says **arm A retrieves no CR rule number at all on 17 of 42
+questions**. The fix is one line of formatting; the reason it matters is that
+this is the same defect as passage-vs-rule-item, rule-numbers-vs-everything,
+and scorable-vs-relevant — a denominator is a claim about what counts, and this
+experiment has now got it wrong four times in four different disguises.
+
+**An observation I am deliberately not promoting to a finding.** Arm A leads on
+`interaction_multihop` (0.41 vs 0.27) while bringing zero rules on 40% of
+questions and spending 88% of its budget on cards and rulings. The arm winning
+the multi-hop stratum is not reasoning over rules — it is reading rulings, the
+CR already applied to a card in the register the question uses. That fits the
+vocabulary-not-topology finding from 2026-09-11 exactly, which is precisely why
+it needs saying that it is a correlation between two measurements on one run
+and was not tested.
+
 ## 2026-09-12 — E-001 returns four inconclusives, and that is the result
 
 The single draw ran. Three arms, 57 questions, applied by

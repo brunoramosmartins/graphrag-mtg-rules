@@ -84,7 +84,7 @@ def test_a_stray_guess_outside_the_subsample_is_refused() -> None:
 
 
 def test_unbalanced_arms_are_refused() -> None:
-    sample = make(SLOTS + [("s4", "q3", "A")], ["s0"])
+    sample = make([*SLOTS, ("s4", "q3", "A")], ["s0"])
     items = dict(ITEMS, s4={"slot": "s4", "kind": "rule", "tokens": 10})
     rows = complete_rows()
     rows["s4"] = {"slot": "s4", "relevance": "relevant"}

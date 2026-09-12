@@ -253,7 +253,6 @@ def main() -> int:
     sample, items, rows = load()
     guard(sample, items, rows, interim=args.interim)
 
-    by_slot = {s["slot"]: s for s in sample["slots"]}
     questions = sorted({s["question_id"] for s in sample["slots"]})
     arms = sorted({s["arm"] for s in sample["slots"]})
     stratum = strata()
@@ -298,7 +297,7 @@ def main() -> int:
             _, clo, chi = paired_diff(cell, questions, left, right, index, alpha_corrected)
             results[(left, right, index)] = (point, lo, hi)
             crosses = "crosses 0" if lo <= 0 <= hi else "excludes 0"
-            print(f"    {left} − {right}  {point:+.3f} pp  95% [{lo:+.3f}, {hi:+.3f}] {crosses}"
+            print(f"    {left} - {right}  {point:+.3f} pp  95% [{lo:+.3f}, {hi:+.3f}] {crosses}"
                   f"   corrected [{clo:+.3f}, {chi:+.3f}]")
     print(RULE)
 
@@ -310,8 +309,8 @@ def main() -> int:
             print(f"  ** {name} is named in the registered prediction and is ABSENT "
                   "from the sample **")
     print(f"  clusters: {len(questions)}, against the 20 development questions the entry names")
-    print(f"  ceiling (amendment item 5: a blind second pass over >= 50 judgements on")
-    print(f"  >= 10 questions): NOT RUN. The entry calls it mandatory.")
+    print("  ceiling (amendment item 5: a blind second pass over >= 50 judgements on")
+    print("  >= 10 questions): NOT RUN. The entry calls it mandatory.")
     print(RULE)
 
     if args.interim:
@@ -331,7 +330,7 @@ def main() -> int:
     point, lo, hi = results[("A", "B", 1)]
     print("  [amendment item 3] prediction: arm A's token-normalised precision is")
     print("  LOWER than arm B's, in aggregate over question clusters.")
-    print(f"    -> A − B = {point:+.3f} pp, 95% [{lo:+.3f}, {hi:+.3f}]")
+    print(f"    -> A - B = {point:+.3f} pp, 95% [{lo:+.3f}, {hi:+.3f}]")
     direction = "CONFIRMED in direction" if point < 0 else "FALSIFIED in direction"
     certainty = "and the interval excludes 0" if hi < 0 else "but the interval crosses 0"
     print(f"    -> {direction}, {certainty}.")

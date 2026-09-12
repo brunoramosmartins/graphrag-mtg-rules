@@ -1043,6 +1043,17 @@ multiple-comparison correction when strata are tested jointly.
   +4/−2, p = 0.6875, diff +0.035 [−0.053, +0.123]. `keyword_rule_2hop` holds 2
   questions and carries no claim, as the 2026-08-09 amendment said it would not.
 
+  **The retrieval comparison is budget-confounded, by a rule registered before
+  this split opened.** E-010 amendment item 7 set a 3× gate on the median
+  retrieved-item count at matched token budget; the evaluation run reads A 40.5
+  against B 12.0, **3.38×**. So E-001's retrieval comparison is published as
+  budget-confounded and **the headline retrieval statement is the
+  token-normalised one** — A 0.030 against B 0.112. Token parity was the
+  registered choice and it is the right one for what both arms face at
+  generation; this is the price it charges, named in advance and paid here.
+  The correctness comparison above is unaffected: it is scored per question
+  against the answer key and does not depend on context shape.
+
   **What E-001 is now allowed to say.** Not "the graph beat the vector arm",
   and not "the vector arm beat the graph". At 57 questions, with a judge whose
   audit was published ungated, the three arms are indistinguishable in
@@ -3358,6 +3369,57 @@ whitespace word counts over the evidence text, not the budgeted figure the
 retrieval row records. And this is the development split, where both arms sit
 at their fitted optimum — the reason amendment item 6 registered two
 instruments in the first place.
+
+#### E-010 — Actual result, part (b), THE REGISTERED RUN (2026-09-12, evaluation split)
+
+Part (b) was registered to run on the E-001 **evaluation** run and could not
+until that split was opened. It has now. Deterministic, computed from output
+already produced — not a second draw. `run_e010.py proxy --side eval`.
+
+| arm | rule numbers | in gold | rule-number precision | **token-normalised** | median items/question |
+|---|---:|---:|---|---|---:|
+| A (vector) | 131 | 55 | **0.420** [0.339, 0.505] | **0.030** | 40.5 |
+| B (graph) | 327 | 73 | 0.223 [0.181, 0.271] | **0.112** | 12.0 |
+| C (hybrid) | 344 | 74 | 0.215 [0.175, 0.262] | 0.072 | 14.5 |
+
+**The dress rehearsal replicated on held-out data, contradiction included.**
+Development split read A 0.414 / 0.032, B 0.232 / 0.116, C 0.246 / 0.100;
+the evaluation split reads A 0.420 / 0.030, B 0.223 / 0.112, C 0.215 / 0.072.
+Both figures reproduce to within about 0.01 on A and B — and so does the fact
+that **the two denominators disagree in direction**. Rule-number precision says
+arm A is the most precise retriever by nearly 2×; token-normalised precision
+says it is **3.7× worse** than the graph arm. That was the headline of the
+rehearsal and it is not an artefact of 20 questions.
+
+**The registered prediction is confirmed on the evaluation split**, on the
+figure amendment item 3 registered to carry it: arm A's token-normalised
+precision (0.030) is below arm B's (0.112).
+
+**Amendment item 7 fired.** Median retrieved items per question: A 40.5, B 12.0,
+C 14.5 — **A/B = 3.38×**, above the registered 3× gate. The registered
+consequence, written before any arm ran on this split: **E-001's retrieval
+comparison is published as budget-confounded, and the headline retrieval
+statement is the token-normalised one.** Recorded in E-001's own result entry,
+not only here.
+
+**New, and not something the rehearsal showed: arm A retrieves no CR rule
+number at all on 17 of the 42 questions that carry one.** B misses 8, C misses
+4. Forty percent of the time the vector arm's entire context contains zero
+rules. This surfaced only because the per-question mean is now printed as
+N-of-M: it had been printed as a bare N, which makes it a mean over *whichever
+questions the arm chose to say something about* and flatters the arm that stays
+silent most. That is the **fourth** denominator in this experiment quietly
+selected by one arm, after passage-vs-rule-item, rule-numbers-vs-everything-
+retrieved, and scorable-by-the-key-vs-relevant.
+
+**Read against E-001, and bounded as an observation rather than a test.** Arm A
+scores 0.41 on `interaction_multihop` — ahead of the graph's 0.27 — while
+bringing no rule number on 40% of questions and spending 88% of its payload on
+cards and rulings. The arm that wins the multi-hop stratum is not answering
+from the rules; it is answering from rulings, which are the CR already applied
+to a specific card in the register the question is asked in. That is consistent
+with the 2026-09-11 finding that the gap is vocabulary rather than topology,
+and it is a correlation across two measurements, not a tested claim.
 
 #### E-010 — Actual result, part (a) (2026-09-12, human relevance pass, 180/180)
 

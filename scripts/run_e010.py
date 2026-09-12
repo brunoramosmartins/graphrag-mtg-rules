@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """E-010 — what else came with it: the precision side of retrieval.
 
-Entity recall is `|gold ∩ retrieved| / |gold|`, so a spurious entity **cannot
+Entity recall is `|gold AND retrieved| / |gold|`, so a spurious entity **cannot
 lower it**. E-006 read 1.000 with three linking defects present and 1.000 with
 them fixed. The headline metric of Phase 4 is structurally incapable of seeing
 noise, and E-001 compares a graph arm against a retriever whose failure mode is
@@ -68,11 +68,28 @@ SAMPLE = Path("data/golden/e010_sample.json")
 ITEMS = Path("data/interim/e010_items.jsonl")
 LABELS = Path("data/interim/e010_labels.jsonl")
 
-ARMS = {
-    "A": Path("runs/e001_A-hybrid_retrieval_dev.jsonl"),
-    "B": Path("runs/e001_B_retrieval_dev.jsonl"),
-    "C": Path("runs/e001_C-vector-hybrid-routed_retrieval_dev.jsonl"),
-}
+SLUGS = {"A": "A-hybrid", "B": "B", "C": "C-vector-hybrid-routed"}
+
+#: Part (a) drew from the development split and its sample is frozen there.
+#: Part (b) is **registered to run on the evaluation run** and could not until
+#: that split was opened, so the side is a parameter rather than a constant —
+#: and every run prints which side it read, because a proxy computed on the
+#: rehearsal and a proxy computed on the single draw are different claims
+#: wearing the same table.
+ARMS: dict[str, Path] = {}
+
+
+def use_side(side: str) -> None:
+    ARMS.clear()
+    ARMS.update(
+        {
+            arm: Path(f"runs/e001_{slug}_retrieval_{side}.jsonl")
+            for arm, slug in SLUGS.items()
+        }
+    )
+
+
+use_side("dev")
 
 #: The annotator guesses between these, not between the three arms: B and C
 #: share a retrieval core and telling them apart is not what blinding is for.
@@ -122,20 +139,90 @@ def rule_numbers(item: dict) -> list[str]:
     return sorted(set(RULE_NUMBER.findall(item.get("text") or "")))
 
 
+#: Amendment item 7: the ratio above which E-001's retrieval comparison is
+#: published as budget-confounded. Registered before any arm ran on the
+#: evaluation split, so it decides rather than describes.
+BUDGET_CONFOUND_RATIO = 3.0
+
+
+def median(values: list[int]) -> float:
+    ordered = sorted(values)
+    n = len(ordered)
+    if not n:
+        return 0.0
+    mid = n // 2
+    return float(ordered[mid]) if n % 2 else (ordered[mid - 1] + ordered[mid]) / 2
+
+
+def budget_confound(item_counts: dict[str, list[int]]) -> bool:
+    """Amendment item 7, applied — it binds E-010 to E-001 or changes nothing.
+
+    Token parity was the registered choice, and it buys item-count disparity:
+    at a shared budget a passage retriever keeps dozens of short documents
+    where a traversal keeps a handful of long ones. Past a 3x median ratio the
+    two arms are no longer answering from comparably shaped contexts, and the
+    registered consequence is that E-001's retrieval comparison is published as
+    **budget-confounded** with the token-normalised figure as the headline.
+    """
+    print("AMENDMENT ITEM 7 — median retrieved items per question, and the")
+    print(f"registered {BUDGET_CONFOUND_RATIO:.0f}x gate on E-001's retrieval comparison")
+    medians = {arm: median(counts) for arm, counts in item_counts.items()}
+    for arm, value in sorted(medians.items()):
+        print(f"  arm {arm}  median {value:.1f} item(s)")
+    # An arm whose median is zero retrieved nothing on half its questions.
+    # That is a defect to report, not a denominator to divide by — and
+    # silently skipping it would let the gate return "not confounded" for the
+    # most confounded run this harness can produce.
+    silent = [arm for arm, value in medians.items() if not value]
+    if silent:
+        print(f"  ** arm(s) {silent} have a median of 0 items: they retrieved nothing")
+        print("     on half their questions. The ratio is not computable against them")
+        print("     and that is a larger problem than the gate was written for. **")
+
+    worst = 0.0
+    pair = ("", "")
+    for left, left_median in medians.items():
+        for right, right_median in medians.items():
+            if left != right and right_median and left_median / right_median > worst:
+                worst, pair = left_median / right_median, (left, right)
+    if not pair[0]:
+        print("  no comparable pair of arms; the gate does not apply")
+        return bool(silent)
+    print(f"  largest ratio: {pair[0]} / {pair[1]} = {worst:.2f}x")
+    if worst > BUDGET_CONFOUND_RATIO:
+        print(f"  ** ABOVE {BUDGET_CONFOUND_RATIO:.0f}x: per amendment item 7, E-001's "
+              "retrieval comparison is")
+        print("     published as BUDGET-CONFOUNDED and the headline retrieval")
+        print("     statement is the token-normalised one. **")
+        return True
+    print(f"  at or below {BUDGET_CONFOUND_RATIO:.0f}x: E-001's retrieval comparison "
+          "is not flagged confounded.")
+    return False
+
+
 def proxy(args: argparse.Namespace) -> int:
     """Part (b): deterministic, no annotator, no blinding problem."""
+    use_side(args.side)
     gold = gold_rules()
-    print("E-010 (b) — deterministic proxy. No annotator, no model call.")
-    print("Registered to run on the E-001 evaluation run; on the dev split it is")
-    print("a dress-rehearsal figure and is labelled one.")
+    print(f"E-010 (b) — deterministic proxy, **{args.side} split**. "
+          "No annotator, no model call.")
+    if args.side == "dev":
+        print("Registered to run on the E-001 evaluation run; this is the")
+        print("dress-rehearsal figure and is labelled one.")
+    else:
+        print("This is the registered run: the E-001 evaluation split, computed")
+        print("from output already produced. Not a second draw.")
     print(RULE)
+    item_counts: dict[str, list[int]] = {}
     for arm in ARMS:
         rows = rows_for(arm)
         hits = total = tokens = items = 0
         per_question = []
+        counts: list[int] = []
         for qid, row in rows.items():
             if qid not in gold:
                 continue
+            counts.append(len(row["evidence"]))
             numbers = {n for item in row["evidence"] for n in rule_numbers(item)}
             relevant = {n for n in numbers if any(covers(w, n) for w in gold[qid])}
             hits += len(relevant)
@@ -165,12 +252,22 @@ def proxy(args: argparse.Namespace) -> int:
         if interval:
             print(f"    rule-number precision {hits}/{total} = {hits/total:.3f} "
                   f"[{interval.low:.3f}, {interval.high:.3f}]")
+        # The denominator is printed as N-of-M, not as N. `per_question` only
+        # collects questions where the arm retrieved at least one rule number,
+        # and that count differs per arm — so a bare mean is a mean over
+        # *whichever questions this arm chose to say something about*, and it
+        # flatters the arm that stays silent more often. Third time this
+        # experiment has met a denominator quietly picked by one arm.
         print(f"    mean per-question precision {sum(per_question)/len(per_question):.3f} "
-              f"over {len(per_question)} question(s)")
+              f"over {len(per_question)} of {len(counts)} question(s) — the other "
+              f"{len(counts) - len(per_question)} retrieved no CR rule number at all")
         print(f"    evidence items {items}, context tokens {tokens}")
         print(f"    **token-normalised** {relevant_tokens}/{total_tokens} = "
               f"{(relevant_tokens/total_tokens if total_tokens else 0):.3f}"
               "   <- the figure invariant to unit size")
+        item_counts[arm] = counts
+    print(RULE)
+    budget_confound(item_counts)
     print(RULE)
     print("`gold_cr_rules` is a lower bound on relevance: a rule can be useful")
     print("without being in the key. This proxy therefore **understates** precision")
@@ -358,7 +455,7 @@ def show(args: argparse.Namespace) -> int:
         if slot in needs_guess and not done.get(slot, {}).get("guess"):
             print(f"\n  ** blinding subsample — run `guess {slot} <A|graph>` FIRST **")
         elif slot in needs_guess:
-            print(f"\n  (blinding subsample; guess already recorded — label only)")
+            print("\n  (blinding subsample; guess already recorded — label only)")
         else:
             print("\n  (not in the blinding subsample — label only, no guess)")
         print(f"\nITEM\n  {item['rendered'][:900]}")
@@ -589,6 +686,8 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("proxy", help="(b) deterministic precision proxy")
+    p.add_argument("--side", choices=("eval", "dev"), default="dev",
+                   help="which E-001 retrieval run to read; `eval` is the registered one")
     p.set_defaults(func=proxy)
 
     b = sub.add_parser("build", help="(a) draw and blind the seeded sample")

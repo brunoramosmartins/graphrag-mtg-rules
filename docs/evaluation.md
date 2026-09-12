@@ -1245,6 +1245,38 @@ are both graph-derived disagrees 14%. It is the same property that made E-010's
 blinding unachievable — the arms differ in kind, not only in quality — and it
 is still a three-number observation, now made twice.
 
+### The retrieval comparison is budget-confounded, by a gate set in advance
+
+E-010's amendment registered, before this split opened, that if one arm's
+median retrieved-item count exceeds the other's by more than **3×** at matched
+token budget, E-001's retrieval comparison is published as budget-confounded
+and the headline retrieval statement becomes the token-normalised one.
+
+Median items per question on the evaluation run: **A 40.5, B 12.0, C 14.5** —
+**A/B = 3.38×**. The gate fired. The headline retrieval figure is therefore
+token-normalised precision: **A 0.030, B 0.112, C 0.072**.
+
+Token parity was the registered choice and remains the right one — it is the
+constraint both arms actually face at generation. This is the price it charges,
+named before the run and paid here. The **correctness** comparison above is
+unaffected: it is scored per question against the answer key and does not
+depend on the shape of the context.
+
+### Arm A wins the multi-hop stratum without retrieving rules
+
+E-010 part (b) on this same run shows arm A retrieving **no CR rule number at
+all on 17 of the 42 questions that carry one** — B misses 8, C misses 4 — while
+spending 88% of its payload on cards and rulings. Yet A scores 0.41 on
+`interaction_multihop` against the graph's 0.27.
+
+The arm ahead on the multi-hop stratum is not answering from the rules. It is
+answering from **rulings**: the Comprehensive Rules already applied to a
+specific card, written in the register the question is asked in. That is
+consistent with the 2026-09-11 finding that the gap is vocabulary rather than
+topology. It is a correlation across two measurements on one run, not a tested
+claim, and it is written here as an observation so it cannot later be read as
+something this experiment established.
+
 ### What E-001 is allowed to say
 
 Not "the graph beat the vector arm", and not the reverse. At 57 questions, with
@@ -1253,6 +1285,39 @@ a judge published ungated, the three arms are indistinguishable in aggregate
 directional pattern — graph ahead on 1-hop, behind on multi-hop — is the
 opposite of the registered stratification and is reported as a direction, not
 as a result.
+
+## The precision proxy on the registered run (E-010b, 2026-09-12)
+
+Part (b) was registered to run on the E-001 evaluation split and could not
+until that split opened. It is deterministic, computed from output already
+produced, and is not a second draw.
+
+| arm | rule numbers | in gold | rule-number precision | token-normalised | median items |
+|---|---:|---:|---|---|---:|
+| A (vector) | 131 | 55 | **0.420** [0.339, 0.505] | **0.030** | 40.5 |
+| B (graph) | 327 | 73 | 0.223 [0.181, 0.271] | **0.112** | 12.0 |
+| C (hybrid) | 344 | 74 | 0.215 [0.175, 0.262] | 0.072 | 14.5 |
+
+**The rehearsal replicated, contradiction and all.** The development split read
+A 0.414 / 0.032, B 0.232 / 0.116, C 0.246 / 0.100. The two figures reproduce to
+within about 0.01 on A and B — and so does the disagreement between them.
+Rule-number precision says arm A is the most precise retriever by nearly 2×;
+token-normalised precision says it is 3.7× worse than the graph. A denominator
+chosen without reference to what each arm spends its budget on decides the
+answer, and which arm it flatters depends on the choice rather than on the
+retrieval. That was the rehearsal's headline and it is not an artefact of 20
+questions.
+
+The registered prediction — arm A's token-normalised precision below arm B's —
+is **confirmed on held-out data**.
+
+**A fourth quietly-selected denominator, found by printing one honestly.** The
+per-question mean had been printed as "over N questions". N differs per arm,
+because it counts only the questions where that arm retrieved at least one rule
+number — so the mean was taken over *whichever questions the arm chose to say
+something about*, flattering whichever stays silent most. Printed as N-of-M it
+reads: **arm A retrieves no CR rule number at all on 17 of 42 questions**, B on
+8, C on 4.
 
 ## Precision, and why it is published unblinded (E-010a, 2026-09-12)
 

@@ -217,7 +217,7 @@ def differs_only_by(control: str, ablated: str, rule: str) -> str | None:
     control_lines = control.splitlines()
     expected: list[str] = []
     skip_next = False
-    for index, line in enumerate(control_lines):
+    for line in control_lines:
         if skip_next:
             skip_next = False
             continue
@@ -442,7 +442,11 @@ def _codes() -> dict[tuple[str, str], dict]:
 
 
 def show(args: argparse.Namespace) -> int:
-    answers = [json.loads(l) for l in ANSWERS.read_text(encoding="utf-8").splitlines() if l.strip()]
+    answers = [
+        json.loads(line)
+        for line in ANSWERS.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     done = _codes()
     pending = [a for a in answers if (a["question_id"], a["arm"]) not in done]
     if args.question_id:
@@ -491,8 +495,9 @@ def report(args: argparse.Namespace) -> int:
     if not coded:
         raise SystemExit("Nothing coded yet.")
     answers = {
-        (json.loads(l)["question_id"], json.loads(l)["arm"]): json.loads(l)
-        for l in ANSWERS.read_text(encoding="utf-8").splitlines() if l.strip()
+        (json.loads(line)["question_id"], json.loads(line)["arm"]): json.loads(line)
+        for line in ANSWERS.read_text(encoding="utf-8").splitlines()
+        if line.strip()
     }
     print(f"prompt {PROMPT_VERSION}   floor {FLOOR:.2f} on the point estimate, ablated arm only")
     print(RULE)
