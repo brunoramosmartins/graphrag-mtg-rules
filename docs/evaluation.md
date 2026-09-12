@@ -1152,8 +1152,78 @@ reason (a judge perfect on `incorrect` and hopeless on `partial` passes an
 aggregate and should not) whose sample-size cost was never computed when it
 was registered.
 
+## Precision, and why it is published unblinded (E-010a, 2026-09-12)
+
+Entity recall cannot fall when a retriever brings something spurious, so the
+headline metric of Phase 4 is structurally blind to noise. E-010 measures the
+other side. Part (b) is deterministic and ran on 2026-09-11; part (a) is the
+human pass — **180 relevance judgements, 15 question clusters, 60 slots per
+arm**, each item judged against the question *and its answer key*, pooled
+across arms and rendered without anything that names the producing system.
+
+**The blinding check fired.** On a seeded 36-slot subsample the annotator
+recorded a guess at the producing arm *before* labelling relevance:
+**28/36 = 0.778** [0.619, 0.883], above the 0.70 registered in advance. Per the
+registered rule the blind claim is withdrawn and everything below is an
+**unblinded** comparison.
+
+**The reason it fired is not a formatting leak, and this is the part worth
+reading.** A classifier that sees *only the evidence kind* — fitted on the 144
+slots outside the subsample, scored on the 36 inside — reaches **0.722**, above
+the threshold by itself. Twenty-six of the twenty-eight correct guesses need no
+information beyond *rule*, *term*, *card*, or *ruling*. The normalisation had
+already stripped `template`, `path`, handle syntax and chunk boundaries and
+mapped `glossary` and `keyword` onto a shared `term`; none of it mattered,
+because the vector arm returns cards and rulings and the graph arms return
+rules and terms. **That difference is the treatment under test.** A
+normalisation strong enough to hide it would hide what is being compared, so
+item-level blinding here is not badly implemented — it is unachievable, and is
+withdrawn as a goal rather than retried.
+
+| arm | item precision | token-normalised |
+|---|---|---|
+| A (vector) | 19/60 = 0.317 [0.213, 0.442] | **0.400** |
+| B (graph) | 24/60 = 0.400 [0.286, 0.526] | **0.452** |
+| C (hybrid) | 25/60 = 0.417 [0.301, 0.543] | 0.343 |
+
+**Every paired contrast crosses zero.** Cluster bootstrap over the 15
+questions, 10 000 resamples: A−B token-normalised **−0.051** [−0.344, +0.250],
+A−C **+0.057** [−0.248, +0.349], B−C **+0.109** [−0.091, +0.297]. Item
+precision A−B **−0.083** [−0.283, +0.117]. Before and after Bonferroni.
+
+That null was registered in advance. The 2026-08-15b amendment stated that 20
+development questions cannot carry this comparison and built the deterministic
+proxy for that reason. The prediction it registered — arm A's token-normalised
+precision below arm B's — is **confirmed in direction and unconfirmable in
+magnitude** at this n.
+
+**The two instruments agree on the sign and disagree on the size, and that
+bounds the proxy.** Part (b) read 0.032 against 0.116, a 3.5× gap; the human
+pass reads 0.400 against 0.452, 1.13×. The proxy scores relevance by
+`gold_cr_rules`, which **cannot score a card or a ruling** — and **508 of arm
+A's 575** retrieved items on these questions are cards (133) and rulings (375),
+against 56 rules. It therefore penalises arm A for
+retrieving a kind of evidence its own oracle is unable to credit. **Part (b)'s
+3.5× is an upper bound on the gap**, and the honest statement is that the graph
+arms retrieve a denser payload in direction, by an amount these 15 questions
+cannot pin down.
+
+Two registered items are outstanding and are not quietly dropped: the
+`legality_1hop` stratum is **absent** from part (a)'s sample — `build()`
+inherited a `gold_cr_rules` filter the human pass does not need, which removed
+all five `scry-leg-*` questions — and the mandatory second-annotator ceiling
+(≥ 50 judgements over ≥ 10 questions) **has not run**, so these precision
+figures carry no annotator-reliability bound.
+
 ## Limitations, stated because they bound every number above
 
+- **Part (a)'s precision figures are unblinded and unbounded by a second
+  annotator.** The blind claim was withdrawn by the registered rule, and the
+  reliability ceiling that would bound them is outstanding. They are one
+  reader's judgements, published as such.
+- **`legality_1hop` is unmeasured for precision.** A filter part (a) did not
+  need removed the whole stratum, so the registered per-stratum prediction can
+  be read on `definition_1hop` only, and the aggregate carries the rest.
 - **The retrieval metric cannot see the evidence the arms retrieve on the
   stratum that carries the hypothesis.** Pin 6 grades at rule-number
   granularity against `gold_cr_rules`. All 8 development

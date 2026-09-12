@@ -3228,8 +3228,14 @@ amendment item 2 registered as *"the quantity that is actually invariant to
 unit size"* — says arm A is **3.5× worse** than the graph arms.
 
 **Why they disagree, and it is not a tie to be split.** Arm A retrieves 575
-evidence items of which only 56 are rules; its payload is 258 cards and 406
-rulings. A denominator of rule numbers therefore asks *"of the few rules it
+evidence items on these questions, of which only 56 are rules; its payload is
+133 cards and 375 rulings (plus 11 glossary entries). *(Corrected 2026-09-12:
+this line first read "258 cards and 406 rulings", which are the counts over all
+20 development questions, beside an item total computed over the 15 that carry
+`gold_cr_rules`. The two do not belong in one sentence — 258 + 406 + 56 is 720,
+not 575 — and the mismatch was visible in the arithmetic. The conclusion is
+unchanged and strengthened: cards and rulings are **508 of 575**, 88% of the
+payload.)* A denominator of rule numbers therefore asks *"of the few rules it
 brought, how many were gold"* and ignores everything else it charged the token
 budget for. The graph arms bring three times as many rule numbers — whole
 subrule subtrees — and are penalised for exactly the structure that makes them
@@ -3255,6 +3261,89 @@ whitespace word counts over the evidence text, not the budgeted figure the
 retrieval row records. And this is the development split, where both arms sit
 at their fitted optimum — the reason amendment item 6 registered two
 instruments in the first place.
+
+#### E-010 — Actual result, part (a) (2026-09-12, human relevance pass, 180/180)
+
+Applied by `scripts/e010_analysis.py`, which hard-fails its validity guards
+before printing a number. 180 slots, 15 question clusters, 60 slots per arm, a
+36-slot seeded blinding subsample, all labelled and all guessed.
+
+**The blinding rule fired, and the mechanism is not a formatting tell.**
+
+| check | value |
+|---|---|
+| guess accuracy | **28/36 = 0.778** [0.619, 0.883] |
+| majority-class baseline ("always graph") | 0.583 |
+| kind-only baseline, fitted on the other 144 slots | **0.722** |
+| arm A identified | 14/15 = 0.933 |
+| graph identified | 14/21 = 0.667 |
+
+0.778 is above the registered 0.70, so per amendment item 4 **the blind claim
+is withdrawn and part (a) is published as an unblinded comparison.** The
+interval reaches below 0.70; the rule was registered on the accuracy, not on
+its lower bound, and is applied as written.
+
+**The held-out kind baseline is the finding.** A rule that looks only at the
+evidence kind — `rule`→graph, `term`→graph, `card`→graph, `ruling`→A, fitted on
+the 144 slots outside the subsample — scores 0.722 on the subsample. Twenty-six
+of the annotator's twenty-eight correct guesses need no tell beyond *what type
+of thing this is*. Amendment item 4 stripped `template`, `path`, handle syntax
+and chunk boundaries, and mapped `glossary`/`keyword` to a shared `term`; none
+of that touches the signature, because **the arms do not differ only in how
+they render evidence, they differ in what kinds of evidence they return**. Arm
+A's payload is cards and rulings; the graph arms' is rules and terms. Hiding
+that would hide the treatment. Item-level blinding is therefore not achievable
+for this comparison — not badly implemented, unachievable — and the honest
+report is the unblinded one, permanently.
+
+**Per arm, and every paired contrast crosses zero.**
+
+| arm | item precision | token-normalised |
+|---|---|---|
+| A (vector) | 19/60 = 0.317 [0.213, 0.442] | **0.400** |
+| B (graph) | 24/60 = 0.400 [0.286, 0.526] | **0.452** |
+| C (hybrid) | 25/60 = 0.417 [0.301, 0.543] | 0.343 |
+
+Paired cluster bootstrap over the 15 questions, 10 000 resamples, seed
+20260912 — A−B token-normalised **−0.051** [−0.344, +0.250]; A−C **+0.057**
+[−0.248, +0.349]; B−C **+0.109** [−0.091, +0.297]. Item precision: A−B
+**−0.083** [−0.283, +0.117]. **All six intervals cross zero**, before Bonferroni
+and after.
+
+**The null is a confirmed prediction of the design, not a disappointment.**
+Amendment item 6 registered, before any of this existed, that "20 development
+questions cannot do this job" and that "a cluster bootstrap over 4 questions
+covers most of [0, 1]". It then registered part (b) precisely so the comparison
+would not rest on part (a). The instrument behaved as its own registration said
+it would, which is the strongest thing a null result can have going for it.
+
+**The registered prediction is confirmed in direction and cannot be confirmed
+in magnitude.** A's token-normalised precision is below B's (0.400 vs 0.452),
+the direction amendment item 3 registered — with an interval that spans −0.344
+to +0.250.
+
+**Part (a) and part (b) agree on the sign and disagree on the size, and the
+disagreement bounds part (b).** Part (b) read A 0.032 against B 0.116 — a 3.5×
+gap. Part (a) reads 0.400 against 0.452 — 1.13×. The gap collapses because
+`gold_cr_rules` can only score an item that contains a gold rule number, and
+arm A's payload is 258 cards and 406 rulings out of 575 items. The proxy
+penalises arm A for retrieving a **kind of evidence its oracle cannot score**,
+which a human judging against the answer key does not. This is the
+denominator defect of amendment 2026-08-15b for the third time, one level up
+again: passage-vs-rule-item, then rule-numbers-vs-everything-retrieved, now
+**scorable-by-the-key vs relevant**. Part (b)'s 3.5× is therefore an upper
+bound on the true gap, and the two instruments together say the gap is real in
+direction and smaller than the proxy alone reports.
+
+**Deviations, enumerated.** `legality_1hop` — one of the two strata named in
+the registered prediction — is **absent from the sample**: `build()` filtered
+questions on `gold_cr_rules`, which the human pass does not need and which the
+five `scry-leg-*` questions do not have. 15 clusters, not the 20 the entry
+names. The mandatory ceiling of amendment item 5 (a blind second pass over ≥ 50
+judgements on ≥ 10 questions) is **not run**. See amendment 2026-09-12.
+
+**Nothing is gated on any of this.** The entry registered a descriptive figure
+with no threshold and that part stands.
 
 ### E-011 — the judge, and the ceiling it is read against (registered 2026-08-15, not yet run)
 
@@ -3449,6 +3538,54 @@ other's by more than 3×, the E-001 retrieval comparison is published as
 budget-confounded**, and the headline retrieval statement is the
 token-normalised one. The entry still carries **no pass/fail threshold** —
 that part was right and stays.
+
+#### E-010 amendment 2026-09-12 — a filter deleted a registered stratum, the blinding threshold ignored its own base rate, and the ceiling is outstanding
+
+Written after part (a) ran. Nothing below changes a number already published;
+the amendment records what the run exposed about the instrument.
+
+**1. `legality_1hop` was deleted by a filter part (a) does not need.** `build()`
+draws from questions present in `gold_cr_rules`. Part (b) needs that field — it
+is the relevance oracle. Part (a) does not: a human judges relevance against
+the question and its answer key, and needs no gold rule list at all. The filter
+was inherited across the two parts and silently removed all five `scry-leg-*`
+questions, which is the whole `legality_1hop` stratum and one of the two strata
+the registered prediction names. **The stratum is unmeasured for part (a) and
+the prediction is testable only in aggregate and only on `definition_1hop`.**
+This is the E-013 failure repeated: a population computed for one purpose,
+reused as the population for another, with the difference never stated. The
+build filter is not changed retroactively — the drawn sample is the registered
+sample. Registered now: **if part (a) is ever re-drawn, the filter is
+`question_id in the run` and not `question_id in gold`,** and the two parts'
+populations are printed side by side before the draw.
+
+**2. The 0.70 blinding threshold was written as though the guess were a coin
+flip.** It is not. The seeded draw produced 21 graph slots against 15 arm-A
+slots, so "always say graph" scores 0.583 for free, and the distance from
+chance to the threshold is 0.117, not 0.20. The rule still fired and the
+direction of the error is conservative — a withdrawn blind claim understates
+nothing — so the verdict stands as registered. Registered now for any future
+blinding check in this project: **the threshold is stated as a margin over the
+majority-class baseline of the realised subsample, not as an absolute
+accuracy**, and the accuracy is published beside both that baseline and a
+held-out feature baseline.
+
+**3. Item-level blinding is withdrawn as an achievable property, not just as a
+claim about this run.** The held-out kind-only baseline scores 0.722 — above
+the threshold on its own. The arms return different *kinds* of evidence, and
+that difference is the treatment under test. Any normalisation strong enough to
+hide it would also hide what is being compared. Registered: **E-010 part (a)
+and any successor are reported as unblinded comparisons**, with the kind
+baseline published as the reason, and no future amendment claims blinding by
+stripping more formatting.
+
+**4. The ceiling of amendment item 5 is outstanding and is not quietly
+dropped.** A blind second pass over ≥ 50 relevance judgements on ≥ 10 questions
+was registered as mandatory and has not run. Until it does, part (a)'s
+precision figures carry no annotator-reliability bound and are labelled so
+wherever they appear. Given item 3, the second pass is a **second annotator**
+pass rather than a blind one; "blind" in item 5 is superseded by this
+amendment's point 3.
 
 #### E-011 amendment 2026-08-15b — the thresholds violated the entry's own principle, and the ceiling was the wrong kind of quantity
 

@@ -90,6 +90,64 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-12 — The comparison publishes unblinded, and blinding it was never possible
+
+E-010 part (a) finished: 180 relevance judgements over 15 question clusters,
+with a 36-slot seeded subsample where the annotator guessed the producing arm
+before labelling. Accuracy **28/36 = 0.778**, above the 0.70 the amendment
+registered in advance, so the blind claim is **withdrawn** and part (a)
+publishes as an unblinded comparison. The rule fired mechanically; no judgement
+was required and none was exercised.
+
+What required judgement was the follow-up. A rule that looks at **nothing but
+the evidence kind** — fitted on the 144 slots outside the subsample, applied to
+the 36 inside — scores **0.722**, itself above the threshold. Twenty-six of the
+twenty-eight correct guesses need no tell beyond *what type of thing this is*.
+The amendment had stripped `template`, `path`, handle syntax and chunk
+boundaries and mapped `glossary`/`keyword` onto a shared `term`, and all of
+that was beside the point: the vector arm returns cards and rulings, the graph
+arms return rules and terms, and **that difference is the treatment**. A
+normalisation strong enough to hide it hides what is being compared.
+
+So the decision is not "fix the blinding". It is: **item-level blinding is
+withdrawn as an achievable property of this comparison**, recorded in the
+registry as such, with the kind baseline published as the reason. Stripping
+more formatting in a future round is explicitly ruled out in advance, because
+that is the move this measurement says cannot work.
+
+Two further calls, both against my own instrument:
+
+**The 0.70 threshold was written for a coin flip and the guess is not one.**
+The realised subsample is 21 graph against 15 A, so "always say graph" scores
+0.583 free; the real margin was 0.117, not 0.20. The verdict is unchanged and
+the error is conservative, so nothing is restated. Future blinding checks in
+this project state the threshold as a **margin over the realised majority
+baseline**, not as an absolute accuracy.
+
+**A filter deleted a registered stratum.** `build()` drew from questions
+carrying `gold_cr_rules`. Part (b) needs that field — it is the relevance
+oracle. Part (a) does not; a human judges against the answer key. The filter
+came across anyway and removed all five `scry-leg-*` questions, which is the
+entire `legality_1hop` stratum and one of the two strata the registered
+prediction names. Same shape as E-013's ceiling: a population computed for one
+purpose reused for another with the difference never stated. The drawn sample
+is not re-drawn — it is the registered sample — and the prediction is now
+testable only in aggregate.
+
+Every paired contrast crosses zero (A−B token-normalised **−0.051**, 95%
+[−0.344, +0.250]). That is not a disappointment: amendment item 6 registered in
+advance that 20 development questions cannot do this job and built part (b) for
+that reason. The instrument behaved as its own registration predicted, which is
+the best thing a null can have.
+
+The two parts agree on sign and disagree on size — 3.5× in the proxy, 1.13× in
+the human pass — because `gold_cr_rules` cannot score a card or a ruling, and
+cards and rulings are most of what arm A retrieves. **Part (b)'s gap is an
+upper bound**, and that is now written where the number is.
+
+The mandatory ceiling (≥ 50 judgements, ≥ 10 questions) has not run and is
+recorded as outstanding rather than dropped.
+
 ## 2026-09-11 — Phase 8 ships as planned, and the measurement is the deliverable
 
 Decision taken by the author after the floor measurement: **close Phase 8 as

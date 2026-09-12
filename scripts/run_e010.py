@@ -38,7 +38,8 @@ reported as unblinded.
 Usage:
     python scripts/run_e010.py proxy            # free, runs now
     python scripts/run_e010.py build --per-question 4
-    python scripts/run_e010.py show
+    python scripts/run_e010.py show 10          # ten slots and a paste-back template
+    python scripts/run_e010.py batch < verdicts.txt
     python scripts/run_e010.py guess <slot> <A|graph>
     python scripts/run_e010.py label <slot> <relevant|irrelevant>
     python scripts/run_e010.py report
@@ -328,27 +329,51 @@ def show(args: argparse.Namespace) -> int:
         if line.strip()
     }
     done = _labels()
-    pending = [s["slot"] for s in sample["slots"] if s["slot"] not in done]
-    if args.slot:
+    pending = [s["slot"] for s in sample["slots"] if not done.get(s["slot"], {}).get("relevance")]
+    limit = args.limit
+    # Slots are always `sNNNN`, so a bare integer in the positional is
+    # unambiguous — and `show 10` is what a person types when they want ten.
+    if args.slot and args.slot.isdigit():
+        limit = int(args.slot)
+    elif args.slot:
         pending = [args.slot]
     if not pending:
         print("Every slot is labelled. Run `report`.")
         return 0
 
     needs_guess = set(sample["blinding_subsample"])
-    for slot in pending[: args.limit]:
+    batch = pending[:limit]
+    for slot in batch:
         item = items[slot]
         print(RULE)
         print(f"{slot}   question {item['question_id']}")
         question, key = question_and_key(item["question_id"])
         print(f"\nQUESTION\n  {question}")
         print(f"\nANSWER KEY\n  {' '.join(key.split())[:700] or '(none recorded)'}")
+        # Stated positively either way. Printing the marker only when a guess
+        # is needed makes its *absence* the signal, and an absent line is not
+        # a line anyone reads — the author chained `guess && label` on a slot
+        # outside the subsample, the guess exited non-zero, and the label
+        # silently never ran.
         if slot in needs_guess and not done.get(slot, {}).get("guess"):
-            print(f"\n  ** blinding subsample — `guess {slot} <A|graph>` BEFORE labelling **")
+            print(f"\n  ** blinding subsample — run `guess {slot} <A|graph>` FIRST **")
+        elif slot in needs_guess:
+            print(f"\n  (blinding subsample; guess already recorded — label only)")
+        else:
+            print("\n  (not in the blinding subsample — label only, no guess)")
         print(f"\nITEM\n  {item['rendered'][:900]}")
     print(RULE)
-    print(f"{len([s for s in sample['slots'] if s['slot'] not in done])} slot(s) left.")
-    print("  label <slot> <relevant|irrelevant>   — does this help answer the question?")
+    print(f"{len(pending)} slot(s) left.")
+    print("  relevance: if this item vanished, would the key's answer be harder to write?")
+    if len(batch) > 1:
+        print("\nPASTE-BACK TEMPLATE — fill each verdict, then feed it to `batch`:")
+        print("\n  python scripts/run_e010.py batch <<'EOF'")
+        for slot in batch:
+            if slot in needs_guess and not done.get(slot, {}).get("guess"):
+                print(f"  {slot} <A|graph> <relevant|irrelevant>")
+            else:
+                print(f"  {slot} <relevant|irrelevant>")
+        print("  EOF")
     return 0
 
 
@@ -381,7 +406,120 @@ def label(args: argparse.Namespace) -> int:
     row = rows.setdefault(args.slot, {"slot": args.slot})
     row["relevance"] = args.relevance
     _save(rows)
-    print(f"{args.slot} -> {args.relevance}   ({len(sample['slots']) - len(rows)} left)")
+    # Counting `rows` counts guess-only rows as done, which reads as progress
+    # that has not happened. Only a recorded relevance closes a slot.
+    left = len([s for s in sample["slots"] if not rows.get(s["slot"], {}).get("relevance")])
+    print(f"{args.slot} -> {args.relevance}   ({left} left)")
+    return 0
+
+
+RELEVANCE = ("relevant", "irrelevant")
+
+
+def _parse_batch(lines: list[str], sample: dict, rows: dict[str, dict]) -> list[dict]:
+    """One verdict per line, parsed in full before anything is written.
+
+    A batch that applies the first six lines and dies on the seventh leaves the
+    annotator guessing which six landed — the same failure as the `&&` that
+    swallowed a label. So every line is validated first and the file is written
+    only if all of them pass.
+
+    Accepted shapes::
+
+        s0003 irrelevant                 # outside the subsample, or guess on file
+        s0011 graph relevant             # subsample slot, guess first
+
+    The two-token form on a subsample slot whose guess is *not* yet recorded is
+    rejected rather than silently labelled: the guess cannot be recovered after
+    the relevance is known.
+    """
+    slots = {s["slot"] for s in sample["slots"]}
+    needs_guess = set(sample["blinding_subsample"])
+    seen: set[str] = set()
+    plan: list[dict] = []
+    errors: list[str] = []
+
+    for number, raw in enumerate(lines, start=1):
+        text = raw.split("#", 1)[0].strip()
+        if not text:
+            continue
+        parts = text.split()
+        slot, rest = parts[0], parts[1:]
+        where = f"line {number} ({text})"
+        if slot not in slots:
+            errors.append(f"{where}: no such slot")
+            continue
+        if slot in seen:
+            errors.append(f"{where}: {slot} appears twice in this batch")
+            continue
+        seen.add(slot)
+        if rows.get(slot, {}).get("relevance"):
+            errors.append(f"{where}: {slot} is already labelled "
+                          f"({rows[slot]['relevance']}); remove the line or edit {LABELS}")
+            continue
+
+        entry: dict = {"slot": slot}
+        if len(rest) == 2:
+            if slot not in needs_guess:
+                errors.append(f"{where}: {slot} is not in the blinding subsample — "
+                              "drop the guess, two tokens only")
+                continue
+            if rest[0] not in GUESSES:
+                errors.append(f"{where}: guess must be one of {GUESSES}")
+                continue
+            recorded = rows.get(slot, {}).get("guess")
+            if recorded and recorded != rest[0]:
+                errors.append(f"{where}: {slot} already guessed {recorded}; "
+                              "a guess is not revised after the item is read")
+                continue
+            entry["guess"] = rest[0]
+            rest = rest[1:]
+        elif len(rest) == 1:
+            if slot in needs_guess and not rows.get(slot, {}).get("guess"):
+                errors.append(f"{where}: {slot} is in the blinding subsample and has no "
+                              "guess on file — write `<slot> <A|graph> <relevance>`")
+                continue
+        else:
+            errors.append(f"{where}: expected `<slot> [A|graph] <relevant|irrelevant>`")
+            continue
+
+        if rest[0] not in RELEVANCE:
+            errors.append(f"{where}: relevance must be one of {RELEVANCE}")
+            continue
+        entry["relevance"] = rest[0]
+        plan.append(entry)
+
+    if errors:
+        raise SystemExit(
+            "Nothing was written. Fix these and re-run:\n  " + "\n  ".join(errors)
+        )
+    return plan
+
+
+def batch(args: argparse.Namespace) -> int:
+    sample = json.loads(SAMPLE.read_text(encoding="utf-8"))
+    rows = _labels()
+    source = (
+        Path(args.file).read_text(encoding="utf-8").splitlines()
+        if args.file
+        else sys.stdin.read().splitlines()
+    )
+    plan = _parse_batch(source, sample, rows)
+    if not plan:
+        print("No verdicts on the input; nothing written.")
+        return 0
+    for entry in plan:
+        row = rows.setdefault(entry["slot"], {"slot": entry["slot"]})
+        # Guess before relevance in the record, always — the order is the claim.
+        if "guess" in entry:
+            row["guess"] = entry["guess"]
+        row["relevance"] = entry["relevance"]
+    _save(rows)
+    left = len([s for s in sample["slots"] if not rows.get(s["slot"], {}).get("relevance")])
+    for entry in plan:
+        mark = f" (guess {entry['guess']})" if "guess" in entry else ""
+        print(f"  {entry['slot']} -> {entry['relevance']}{mark}")
+    print(f"{len(plan)} verdict(s) recorded; {left} slot(s) left.")
     return 0
 
 
@@ -458,10 +596,14 @@ def main() -> int:
     b.add_argument("--seed", type=int, default=20260911)
     b.set_defaults(func=build)
 
-    s = sub.add_parser("show", help="one unlabelled slot")
-    s.add_argument("slot", nargs="?", default=None)
+    s = sub.add_parser("show", help="unlabelled slots: a slot id, or a count")
+    s.add_argument("slot", nargs="?", default=None, help="slot id, or how many to show")
     s.add_argument("--limit", type=int, default=1)
     s.set_defaults(func=show)
+
+    ba = sub.add_parser("batch", help="many verdicts at once, all-or-nothing")
+    ba.add_argument("--file", default=None, help="read from this file instead of stdin")
+    ba.set_defaults(func=batch)
 
     g = sub.add_parser("guess", help="record the arm guess, before labelling")
     g.add_argument("slot")
