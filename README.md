@@ -187,6 +187,51 @@ Nodes are ringed when the question named them, so the picture shows where the
 walk started and how far it got. Card evidence carries its Scryfall image and
 a link out; no card image is ever stored in this repository.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph ingest["Ingestion — idempotent, SHA-256 change detection"]
+        SC["Scryfall bulk<br/>cards · rulings"]
+        CR["Comprehensive Rules<br/>parsed as a numbered tree"]
+        EX["LLM extraction<br/>behind extraction/gate.py"]
+    end
+
+    subgraph store["Neo4j — explicit ontology"]
+        G[("Card · CardFace · Format<br/>Keyword · Rule · Ruling")]
+    end
+
+    subgraph retrieve["Retrieval — one span per stage"]
+        L["linking<br/>mentions → nodes"]
+        R["routing<br/>which templates to run"]
+        T["traversal<br/>named Cypher templates"]
+        TS["text search<br/>TF-IDF or dense"]
+        B["budget<br/>token cap, per-kind cap"]
+    end
+
+    A["generation<br/>grounded, cites or refuses"]
+    V["evaluation<br/>3 arms · CIs · paired tests"]
+
+    SC --> G
+    CR --> G
+    CR --> EX --> G
+    G --> L --> R
+    R --> T --> B
+    R -.->|only when routed| TS --> B
+    B --> A --> V
+
+    style G fill:#4c78a8,color:#fff
+    style A fill:#e45756,color:#fff
+    style V fill:#54a24b,color:#fff
+```
+
+Two constraints shape this more than any technique choice. **Nothing an LLM
+extracted enters the graph without passing `extraction/gate.py`** — schema,
+evidence span, confidence, dedupe — and the CR tree itself is parsed
+deterministically, with the LLM adding only relations the parser cannot.
+**Every stage is an OpenTelemetry span**, and a traversal span carries the walk
+it made, which is what the next section shows.
+
 ## What a question does
 
 Every stage is an OpenTelemetry span, and the span for a traversal carries
@@ -318,6 +363,7 @@ Dockerfile           the application container (ETL, retrieval, evaluation)
 - [Onboarding](docs/onboarding.md) — the cold and warm paths, timed, and what each covers
 - [Hypothesis](docs/hypothesis.md) — the v0.2 thesis and a-priori predictions
 - [Evaluation](docs/evaluation.md) — metrics, results, and every limitation that bounds them
+- [Changelog](CHANGELOG.md) — what each phase shipped, and what `v1.0.0` concludes
 - [Experiment registry](experiments/registry.md) — every hypothesis, decision rule and
   amendment, dated; amendments are appended, never rewritten
 - [Decision journal](docs/decision-journal.md) — the dated calls, including the ones
