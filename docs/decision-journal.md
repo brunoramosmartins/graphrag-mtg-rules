@@ -90,6 +90,92 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-12 — E-001 returns four inconclusives, and that is the result
+
+The single draw ran. Three arms, 57 questions, applied by
+`scripts/e001_analysis.py` under the decision rule amendment 2026-08-15c pinned
+in August: B vs A on the four strata with n ≥ 7, exact McNemar, Holm at
+α = 0.05, three-valued verdict per stratum.
+
+**All four strata come back `inconclusive`.** Holm-adjusted p = 1.0000
+everywhere. Aggregate 0.60 / 0.61 / 0.65 for A / B / C. The central hypothesis
+of this project is neither confirmed nor falsified, and the registered rule
+does not offer a fourth value to round it into.
+
+The decision here was what to *call* that, and the answer is: exactly what it
+is. The temptation available was real — arm B leads on `definition_1hop` (0.91
+vs 0.73) and `legality_1hop` (0.93 vs 0.80), and a table of those two rows
+would read like a win. But `definition_1hop` is the **declared falsifier**: a
+graph lead there was registered in 2026-07-19 as the sign to *distrust the
+harness*, not to celebrate. And `legality_1hop` is the stratum the 2026-08-15b
+amendment already described as a data-availability result rather than a
+retrieval one. Quoting either as a win would be quoting the two strata the
+registration warned about in advance.
+
+**The distance to significance was known before the run and is not news.** The
+registry computed that exact McNemar needs 6 discordant pairs one way, and
+Holm's strictest step 8:0. The largest discordance observed is 5. Writing that
+down in August is what stops it being written now as an excuse.
+
+**One finding is new and is not from the registered test.** Six of arm B's
+seven refusals sit on `interaction_multihop` — the stratum carrying the thesis.
+Pin 11 suppressed the incompleteness notice precisely so B and C would not be
+invited to hedge where A cannot (`notice = 0` confirms it), and B hedges
+anyway, where its context is thinnest. Dropping the refused questions narrows
+the gap from −0.136 to −0.063. That exclusion is post-hoc and favours B, so it
+is published as an exploratory sensitivity and never as the number — but it
+locates roughly half of the graph's deficit in *declining to answer* rather
+than in answering wrongly, which is a generation problem stacked on the
+retrieval floor E-013 measured.
+
+**A hypothesis from the dress rehearsal replicated on held-out data.** In
+September this document recorded, beside the dev-split gate figures, that
+position bias plausibly rises when the two answers differ in shape — and
+labelled it "a hypothesis from three numbers, untested". The evaluation split
+returns the same ordering, the same two pairs above the 0.20 gate and the same
+one below. It is still three numbers, now observed twice, and it is the same
+kind-difference that made E-010's blinding unachievable.
+
+## 2026-09-12 — The evaluation split opens, and what was checked before it did
+
+The 57-question evaluation split is opened today, once, for E-001. `runs/`
+artefacts on the `eval` side are the single draw; there is no second one, and
+`run_eval.py` refuses `--split-side eval` without `--open-the-evaluation-split`
+and without this entry existing. Recorded here is the gate, checked rather than
+assumed.
+
+**The split is intact.** Drawn 2026-08-09 at seed 20260809: 20 dev / 57 eval,
+every dev id resolving, strata on the evaluation side
+`interaction_multihop` 22, `legality_1hop` 15, `definition_1hop` 11,
+`negative_temporal` 7, `keyword_rule_2hop` 2.
+
+**The dress rehearsal is complete and binding.** All three arms have retrieval,
+answers and verdicts on the development split, and all three pairwise
+comparisons exist. That gate was written because E-006's first run read 0.067
+from two harness bugs and was re-runnable only because it was the development
+side.
+
+**Pin 10 is satisfied, and it needed a script that did not exist.** Fifteen of
+the 57 are `legality_1hop`, whose answer is a fact about a ban list, not about
+the rules — and ingestion is a daily Scryfall bulk. The amendment registered
+that the legality keys are re-verified against the bulk the run will read, with
+any changed answer marked `key_stale` and excluded. Nothing implemented that
+check; `scripts/verify_legality_keys.py` does now, recomputing
+`sha256(oracle_id|format|status)` per question against the current bulk.
+**20/20 hold, 0 stale, 0 missing.** The script exits non-zero on any drift, so
+it can gate a run rather than be read.
+
+**The rubric is frozen here, by hash, before anything on the evaluation side is
+judged.** Version `p6-c1`, hash `dfcfb0851c8ca081`. The registered rule is that
+rubric iteration happens on dress-rehearsal and Phase 5 answers only; if
+judge–human agreement fails on the evaluation audit, the result is published
+**with the failed agreement** and the evaluation split is not rescored. Writing
+the hash down now is what makes that checkable afterwards rather than
+assertable.
+
+**The judge runs ungated**, per the 2026-09-11 decision, with its audit
+published beside its numbers.
+
 ## 2026-09-12 — The comparison publishes unblinded, and blinding it was never possible
 
 E-010 part (a) finished: 180 relevance judgements over 15 question clusters,

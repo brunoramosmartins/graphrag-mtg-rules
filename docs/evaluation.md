@@ -1152,6 +1152,108 @@ reason (a judge perfect on `incorrect` and hopeless on `partial` passes an
 aggregate and should not) whose sample-size cost was never computed when it
 was registered.
 
+## E-001 on the evaluation split — the single draw (2026-09-12)
+
+The 57 evaluation questions were opened once, on 2026-09-12, after a gate that
+was checked rather than assumed: the split intact (drawn 2026-08-09 at seed
+20260809), the dress rehearsal complete on all three arms, **pin 10's legality
+keys re-verified 20/20** against the bulk the run would read, and the rubric
+frozen at `p6-c1` @ `dfcfb0851c8c` before anything on this side was judged.
+All three arms returned 57 retrieval, 57 answer and 57 verdict rows, with no
+empty generations and `notice = 0` — pin 11 held.
+
+| stratum | n | A (vector) | B (graph) | C (hybrid) |
+|---|---:|---|---|---|
+| definition_1hop | 11 | 0.73 [0.43, 0.90] | 0.91 [0.62, 0.98] | 0.91 [0.62, 0.98] |
+| interaction_multihop | 22 | 0.41 [0.23, 0.61] | 0.27 [0.13, 0.48] | 0.36 [0.20, 0.57] |
+| legality_1hop | 15 | 0.80 [0.55, 0.93] | 0.93 [0.70, 0.99] | 0.93 [0.70, 0.99] |
+| negative_temporal | 7 | 0.43 [0.16, 0.75] | 0.57 [0.25, 0.84] | 0.57 [0.25, 0.84] |
+| keyword_rule_2hop | 2 | — | — | — |
+| **ALL** | **57** | **0.60 [0.47, 0.71]** | **0.61 [0.48, 0.73]** | **0.65 [0.52, 0.76]** |
+
+### The registered verdict is `inconclusive`, four times
+
+The primary family is B vs A on the four strata with n ≥ 7, exact McNemar,
+Holm-corrected at α = 0.05 — pinned in August, before any arm ran.
+
+| stratum | predicted | discordant | raw p | Holm p | verdict |
+|---|---|---|---|---|---|
+| definition_1hop | tie | +3/−1 | 0.6250 | 1.0000 | inconclusive |
+| interaction_multihop | fail | +2/−5 | 0.4531 | 1.0000 | inconclusive |
+| legality_1hop | lose | +3/−1 | 0.6250 | 1.0000 | inconclusive |
+| negative_temporal | fail | +1/−0 | 1.0000 | 1.0000 | inconclusive |
+
+**The central hypothesis is neither confirmed nor falsified.** The amendment
+pinned three values and forbade reading a fourth into them; the answer is the
+third one, on every stratum.
+
+**And the distance to the threshold was computed before the run.** Exact
+McNemar needs 6 discordant pairs one way for raw p < 0.05; Holm's strictest
+step needs 8:0. The largest discordance observed anywhere is **5**. This is
+what the split could support, written down in advance and confirmed.
+
+**The falsifier could not have been confirmed either.** `definition_1hop`
+predicted a tie, and ties are scored by equivalence, never by a failed test —
+TOST gives 90% [−0.091, +0.455] against the registered ±0.15, so equivalence is
+not shown, exactly as "unpowered for equivalence at n = 11" predicted. B leads
+there (+0.182), which is the falsifier's own direction: **the stratum where the
+graph looks best is the one where a graph lead was the warning sign.** Not
+close to significance, so the warning does not fire.
+
+### The direction runs against the thesis, and half of it is refusal
+
+`interaction_multihop` — the `fail` stratum, where the prediction was graph ≫
+vector — reads **B − A = −0.136** [−0.364, +0.091]. Inconclusive, and pointing
+the wrong way. It is also the largest stratum, 22 of 57, which is where the
+aggregate tie comes from: the graph's 1-hop wins are paid back on the multi-hop
+questions the thesis was written about.
+
+**Six of arm B's seven refusals land on that stratum.** Arm A refuses once,
+arm C twice. Pin 11 suppressed the incompleteness notice so B and C would not
+receive an invitation to hedge that A never gets, and `notice = 0` confirms the
+suppression — B hedges anyway, exactly where its context is thinnest. Refusals
+score as incorrect.
+
+As an **exploratory** sensitivity, labelled one because dropping refusals is a
+post-hoc exclusion that favours B: on the 16 `interaction_multihop` questions
+neither arm refused, A reads 0.438 against B's 0.375 — a gap of −0.063 against
+−0.136 overall. **Roughly half the graph's deficit on the hypothesis-carrying
+stratum is the graph declining to answer rather than answering wrongly.** That
+is a generation-side failure sitting on top of the retrieval-side floor, and it
+is the same thing E-009 found from the other direction.
+
+### The pairwise gate fired again, and the dev-split hypothesis replicated
+
+| comparison | order disagreement | |
+|---|---|---|
+| B vs A | **0.333** | withdrawn |
+| C vs A | **0.368** | withdrawn |
+| C vs B | 0.140 | reportable |
+
+Two of three above the registered 0.20, so those win rates are not the
+head-to-head — the per-stratum table above is, as the 2026-07-19 decision rule
+always said.
+
+The dress rehearsal produced 0.368 / 0.368 / 0.158 and this document recorded a
+guess beside it: position bias plausibly rises when the two answers differ in
+shape, *"a hypothesis from three numbers, untested"*. The evaluation split
+returns 0.333 / 0.368 / 0.140 — the same ordering, the same two pairs above the
+gate, and the same pair below it. **The untested hypothesis now has held-out
+support**: the contrasts that put a vector answer beside a graph answer disagree
+with themselves about a third of the time, while the contrast whose two answers
+are both graph-derived disagrees 14%. It is the same property that made E-010's
+blinding unachievable — the arms differ in kind, not only in quality — and it
+is still a three-number observation, now made twice.
+
+### What E-001 is allowed to say
+
+Not "the graph beat the vector arm", and not the reverse. At 57 questions, with
+a judge published ungated, the three arms are indistinguishable in aggregate
+(0.60 / 0.61 / 0.65) and every registered per-stratum test is inconclusive. The
+directional pattern — graph ahead on 1-hop, behind on multi-hop — is the
+opposite of the registered stratification and is reported as a direction, not
+as a result.
+
 ## Precision, and why it is published unblinded (E-010a, 2026-09-12)
 
 Entity recall cannot fall when a retriever brings something spurious, so the

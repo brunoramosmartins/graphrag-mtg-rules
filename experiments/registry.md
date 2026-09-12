@@ -952,7 +952,104 @@ multiple-comparison correction when strata are tested jointly.
      E-010's precision metric reads, and the ablation is what stops the
      choice of parity from silently deciding which arm looks precise.
 
-- **Actual result:** _pending (Phase 8)._
+- **Actual result (2026-09-12, evaluation split, the single registered draw):**
+
+  Gate cleared first and recorded in the decision journal: split intact (20/57,
+  seed 20260809), dress rehearsal complete on all three arms, **pin 10
+  re-verified 20/20** by `scripts/verify_legality_keys.py`, rubric frozen at
+  `p6-c1` @ `dfcfb0851c8c` before anything on the evaluation side was judged.
+  All three arms produced 57 retrieval, 57 answer and 57 verdict rows; no empty
+  generations; `notice = 0` on every arm, so pin 11 held. Applied by
+  `scripts/e001_analysis.py`.
+
+  | stratum | n | A (vector) | B (graph) | C (hybrid) |
+  |---|---:|---|---|---|
+  | definition_1hop | 11 | 0.73 [0.43, 0.90] | 0.91 [0.62, 0.98] | 0.91 [0.62, 0.98] |
+  | interaction_multihop | 22 | 0.41 [0.23, 0.61] | 0.27 [0.13, 0.48] | 0.36 [0.20, 0.57] |
+  | legality_1hop | 15 | 0.80 [0.55, 0.93] | 0.93 [0.70, 0.99] | 0.93 [0.70, 0.99] |
+  | negative_temporal | 7 | 0.43 [0.16, 0.75] | 0.57 [0.25, 0.84] | 0.57 [0.25, 0.84] |
+  | keyword_rule_2hop | 2 | 1.00 | 0.50 | 0.50 |
+  | **ALL** | **57** | **0.60 [0.47, 0.71]** | **0.61 [0.48, 0.73]** | **0.65 [0.52, 0.76]** |
+
+  **Primary family — B vs A, exact McNemar, Holm at α = 0.05. Four strata,
+  four verdicts, and every one of them is `inconclusive`.**
+
+  | stratum | predicted | discordant | raw p | Holm p | verdict |
+  |---|---|---|---|---|---|
+  | definition_1hop | tie | +3/−1 | 0.6250 | 1.0000 | inconclusive |
+  | interaction_multihop | fail | +2/−5 | 0.4531 | 1.0000 | inconclusive |
+  | legality_1hop | lose | +3/−1 | 0.6250 | 1.0000 | inconclusive |
+  | negative_temporal | fail | +1/−0 | 1.0000 | 1.0000 | inconclusive |
+
+  **The central hypothesis is neither confirmed nor falsified.** Amendment
+  2026-08-15c pinned three values and forbade reading a fourth into them; the
+  answer on all four strata is the third one.
+
+  **The data never approached the registered threshold, and the registry said
+  in advance how far away it was.** Exact McNemar needs ≥ 6 discordant pairs one
+  way for raw p < 0.05, and Holm's strictest step needs 8:0. The largest
+  discordance observed in any stratum is **5**. This is not a near miss that
+  more questions would have resolved at these effect sizes — it is the
+  measurement the split could support, computed before the run and confirmed by
+  it.
+
+  **The falsifier could not have been confirmed, and it did not fire.**
+  `definition_1hop` predicted `tie`; TOST gives 90% [−0.091, +0.455] against the
+  registered ±0.15, so equivalence is **not shown** — exactly as the amendment
+  registered in advance ("unpowered for equivalence at n = 11"). B leads there
+  (+0.182, +3/−1), which is the falsifier's *own* direction: the stratum where
+  the graph looks best is the stratum where a graph lead was the warning sign,
+  not the win. Nowhere near significance, so the warning does not fire either.
+
+  **On the stratum that carries the thesis the point estimate has the wrong
+  sign.** `interaction_multihop` — the `fail` stratum, where the prediction was
+  graph ≫ vector — reads **B − A = −0.136** [−0.364, +0.091], +2/−5. Inconclusive,
+  and pointing away from the hypothesis. It is also the largest stratum (22 of
+  57), so this is where the aggregate tie comes from: the graph's wins on the
+  1-hop strata are paid back on the multi-hop one.
+
+  **Six of arm B's seven refusals are on that stratum** (A refuses once, in
+  `definition_1hop`; C twice). Pin 11 suppressed the incompleteness notice so
+  that arms B and C would not be handed an invitation to hedge that A never
+  receives, and `notice = 0` confirms the suppression — **B hedges anyway, and
+  it hedges precisely where its context is thinnest.** Refusals score as
+  incorrect. As an exploratory sensitivity, and labelled one because dropping
+  refusals is a post-hoc exclusion that favours B: on the 16 `interaction_multihop`
+  questions neither arm refused, A 0.438 against B 0.375, a gap of −0.063 against
+  −0.136 overall. **Roughly half of the graph's deficit on the hypothesis-carrying
+  stratum is the graph declining to answer, not answering wrongly.** That is the
+  same failure E-009 reached from the other side, and it is a generation-side
+  problem sitting on top of the retrieval-side floor E-013 measured.
+
+  **The secondary head-to-head is withdrawn on both contrasts that matter**, by
+  E-011's gate registered before a single pair existed.
+
+  | pair | tally | order disagreement | |
+  |---|---|---|---|
+  | B vs A | A 11 / tie 42 / B 4 | **0.333** | WITHDRAWN |
+  | C vs A | C 6 / tie 47 / A 4 | **0.368** | WITHDRAWN |
+  | C vs B | C 6 / tie 50 / B 1 | 0.140 | reportable |
+
+  The one pair that survives is the one the 2026-08-15 amendment already
+  flagged as confounded (C vs B measures a handicapped text component). Note
+  the pattern the gate exposes: the two pairs that put a *vector* answer beside
+  a *graph* answer disagree with themselves a third of the time, while the pair
+  whose answers are both graph-derived disagrees 14%. The judge's position bias
+  is worst when the two answers differ **in kind** — the same property that made
+  E-010's blinding unachievable.
+
+  **Exploratory, and registered as unable to confirm or falsify anything:**
+  C vs A +9/−6, uncorrected p = 0.6072, diff +0.053 [−0.070, +0.193]; C vs B
+  +4/−2, p = 0.6875, diff +0.035 [−0.053, +0.123]. `keyword_rule_2hop` holds 2
+  questions and carries no claim, as the 2026-08-09 amendment said it would not.
+
+  **What E-001 is now allowed to say.** Not "the graph beat the vector arm",
+  and not "the vector arm beat the graph". At 57 questions, with a judge whose
+  audit was published ungated, the three arms are indistinguishable in
+  aggregate (0.60 / 0.61 / 0.65) and every registered per-stratum test is
+  inconclusive. The directional pattern — graph ahead on 1-hop, behind on
+  multi-hop — is the opposite of the registered stratification, and it is
+  reported as a direction, not a result.
 
 ## E-002 — MetaQA calibration
 
