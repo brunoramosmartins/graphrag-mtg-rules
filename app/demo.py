@@ -42,10 +42,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from examples import resolve  # noqa: E402  (app-local)
 from paths import build_graph, has_path  # noqa: E402  (app-local)
+
 from graphrag_mtg.etl.cr_parser import CR_TXT_PATH
+from graphrag_mtg.extraction.llm import LlmClient
 from graphrag_mtg.generation.answerer import answer as generate_answer
 from graphrag_mtg.graph.connection import driver_session
-from graphrag_mtg.extraction.llm import LlmClient
 from graphrag_mtg.retrieval.pipeline import neo4j_runner, retrieve
 from graphrag_mtg.retrieval.subgraph import DEFAULT_KIND_CAP, DEFAULT_TOKEN_BUDGET, Outcome
 
@@ -74,9 +75,8 @@ def load_stack():
     reads it itself. A second full pass to collect image URLs would double a
     cold start for data already in memory.
     """
-    from run_e007 import build_stack
-
     from graphrag_mtg.etl.bulk import ORACLE_CARDS_STEM, bulk_path, iter_bulk
+    from run_e007 import build_stack
 
     cards = list(iter_bulk(bulk_path(ORACLE_CARDS_STEM)))
     # Keyed by **name**, because that is what card evidence carries: the
