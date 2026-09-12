@@ -936,7 +936,9 @@ counting as a win lets the headline move with how generously it is applied
 | ~~Key-fidelity fixtures~~ — **done 2026-09-11: 30/30, see below** | — |
 | Judge audit at n >= 30 **per label** — 18 / 14 / 23 of 55, and **not being pursued**; see below | correctness being called *validated*, which it is not |
 | ~~Error analysis over the failed answers~~ — **done 2026-09-11: 74% evidence, 19% routing; see below** | — |
-| Evaluation split, 57 questions, opened once in Phase 8 | every claim about the arms |
+| ~~Evaluation split, 57 questions, opened once in Phase 8~~ — **opened 2026-09-12; the gate is recorded in the decision journal** | — |
+| E-010's reliability ceiling: a second pass over >= 50 relevance judgements on >= 10 questions, **not before 2026-09-19** | E-010a's precision figures carrying any annotator-reliability bound |
+| E-010a's `legality_1hop` stratum, removed from the sample by a filter the human pass did not need | the registered per-stratum precision prediction, which is now readable on `definition_1hop` only |
 
 ## The judge, published ungated
 
