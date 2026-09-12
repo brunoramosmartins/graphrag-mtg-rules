@@ -82,18 +82,24 @@ FRIENDLY = {
     "Format": "format",
 }
 
-TOOLTIP_CHARS = 320
+#: The hover card is rendered by vis.js inside the canvas and is **clipped**
+#: at the widget boundary — a long ruling came out ending mid-sentence in the
+#: first screenshot. So the tooltip identifies the node and the panel under
+#: the graph reads it. A tooltip is a label, not a document.
+TOOLTIP_CHARS = 110
 
 
 @dataclass(frozen=True)
 class GraphNode:
     """One node as the viewer meets it, not as the schema names it.
 
-    `id` keeps the schema identity so edges join correctly; `label` is what
-    is drawn. They differ because a ruling's identity is a 32-character UUID
-    and drawing that teaches the viewer nothing — the graph in the first
-    screenshot read `539a01a4ff17f48d5e9e…`, which is the node saying its
-    primary key out loud.
+    `id` keeps the schema identity so edges join correctly; `label` is what is
+    drawn. They differ because a ruling's identity is a 32-character UUID and
+    drawing that teaches the viewer nothing — the first screenshot read
+    `539a01a4ff17f48d5e9e…`, the node reciting its primary key.
+
+    `text` is carried so the page can show the whole thing on click without
+    searching the evidence list again for a node it already has.
     """
 
     id: str
@@ -101,14 +107,22 @@ class GraphNode:
     kind: str
     title: str
     seed: bool
+    text: str = ""
 
 
-def _title(kind: str, name: str, text: str) -> str:
+def _title(kind: str, label: str, text: str) -> str:
+    """A one-line hover card: what this is, and enough to recognise it.
+
+    Named by its **label**, never by its key — "official ruling — Ruling 1",
+    not "official ruling — 539a01a4ff17f48d5e9e5ee063d3e3ba". Making the label
+    friendly and leaving the UUID in the tooltip fixes half the problem and
+    looks like all of it.
+    """
     head = FRIENDLY.get(kind, kind)
     body = " ".join((text or "").split())
     if len(body) > TOOLTIP_CHARS:
-        body = body[:TOOLTIP_CHARS].rsplit(" ", 1)[0] + "…"
-    return f"{head} — {name}\n\n{body}" if body else f"{head} — {name}"
+        body = body[:TOOLTIP_CHARS].rsplit(" ", 1)[0] + "… (click to read)"
+    return f"{head} — {label}\n\n{body}" if body else f"{head} — {label}"
 
 
 def build_graph(
@@ -154,26 +168,30 @@ def build_graph(
                 label = f"Rule {name}"
             else:
                 label = name
+            text = item.text if terminal else ""
             candidate = GraphNode(
                 id=node_id,
                 label=label,
                 kind=kind,
-                title=_title(kind, name, item.text if terminal else ""),
+                title=_title(kind, label, text),
                 seed=terminal and getattr(item, "distance", 1) == 0,
+                text=text,
             )
             existing = nodes.get(node_id)
             if existing is None:
                 nodes[node_id] = candidate
             else:
-                # Seen from two paths: keep whichever visit knows more. A
-                # node that is a seed on one path stays a seed, and a
-                # tooltip already filled is not overwritten with a blank.
+                # Seen from two paths: keep whichever visit knows more. A node
+                # that is a seed on one path stays a seed, and text already
+                # collected is not overwritten by a later visit that passed
+                # through without retrieving it.
                 nodes[node_id] = GraphNode(
                     id=node_id,
                     label=existing.label,
                     kind=kind,
-                    title=existing.title if "\n\n" in existing.title else candidate.title,
+                    title=existing.title if existing.text else candidate.title,
                     seed=existing.seed or candidate.seed,
+                    text=existing.text or candidate.text,
                 )
         for left, right, relation in links:
             if left < len(ids) and right < len(ids):
@@ -182,3 +200,43 @@ def build_graph(
                     seen.add(edge)
                     edges.append(edge)
     return list(nodes.values()), edges
+
+
+def widest_level(nodes: list[GraphNode], edges: list[tuple[str, str, str]]) -> int:
+    """How many nodes sit on the most crowded rank of a left-to-right layout.
+
+    In a hierarchical layout the canvas height is set by the widest rank, not
+    by the node count: eight nodes arranged three-deep need four rows, not
+    eight. Sizing by the total produced a canvas twice as tall as the drawing
+    and a screenful of white space under it.
+
+    Depth is measured from the nodes with no incoming edge — the roots of the
+    drawn tree, which is what vis.js ranks from. A cycle cannot lengthen the
+    walk because each node is ranked once, on first arrival.
+    """
+    if not nodes:
+        return 0
+    targets = {target for _, target, _ in edges}
+    children: dict[str, list[str]] = {}
+    for source, target, _ in edges:
+        children.setdefault(source, []).append(target)
+
+    depth = {node.id: 0 for node in nodes if node.id not in targets}
+    frontier = list(depth)
+    if not frontier:  # every node has a parent: take an arbitrary start
+        frontier = [nodes[0].id]
+        depth[frontier[0]] = 0
+    while frontier:
+        nxt: list[str] = []
+        for node_id in frontier:
+            for child in children.get(node_id, []):
+                if child not in depth:
+                    depth[child] = depth[node_id] + 1
+                    nxt.append(child)
+        frontier = nxt
+
+    counts: dict[int, int] = {}
+    for node in nodes:
+        rank = depth.get(node.id, 0)
+        counts[rank] = counts.get(rank, 0) + 1
+    return max(counts.values())

@@ -22,7 +22,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 
-from paths import build_graph, has_path, parse_path
+from paths import GraphNode, build_graph, has_path, parse_path, widest_level
 
 
 @dataclass(frozen=True)
@@ -179,3 +179,56 @@ class TestBuildGraph:
     def test_text_retrieved_evidence_contributes_nothing(self) -> None:
         nodes, edges = build_graph([Ev("hybrid retrieval over the shared corpus", "k", "t")])
         assert (nodes, edges) == ([], [])
+
+
+class TestWidestLevel:
+    """Canvas height follows the widest rank, not the node count."""
+
+    def test_a_chain_is_one_node_wide(self) -> None:
+        nodes, edges = build_graph([
+            Ev("(:Card {X})-[:HAS_KEYWORD]->(:Keyword {flying})"
+               "-[:DEFINED_BY]->(:Rule {702.9})", "702.9"),
+        ])
+        assert len(nodes) == 3
+        assert widest_level(nodes, edges) == 1
+
+    def test_a_fan_is_as_wide_as_its_fan(self) -> None:
+        nodes, edges = build_graph([
+            Ev("(:Card {X})-[:HAS_RULING]->(:Ruling)", "a"),
+            Ev("(:Card {X})-[:HAS_RULING]->(:Ruling)", "b"),
+            Ev("(:Card {X})-[:HAS_RULING]->(:Ruling)", "c"),
+        ])
+        assert widest_level(nodes, edges) == 3
+
+    def test_two_components_share_a_rank(self) -> None:
+        # The real case: a keyword branch and a card branch drawn side by
+        # side. Eight nodes, four rows — sizing by the count doubled the
+        # canvas.
+        nodes, edges = build_graph([
+            Ev("(:Keyword {Counter})", "Counter", "kw", distance=0),
+            Ev("(:Keyword {Counter})-[:DEFINED_BY]->(:Rule {701.6})", "701.6", "c"),
+            Ev("(:Rule {701.6})-[:HAS_SUBRULE*]->(:Rule)", "701.6a", "a"),
+            Ev("(:Rule {701.6})-[:HAS_SUBRULE*]->(:Rule)", "701.6b", "b"),
+            Ev("(:Card {Humility})", "Humility", "card", distance=0),
+            Ev("(:Card {Humility})-[:HAS_RULING]->(:Ruling)", "r1", "1"),
+            Ev("(:Card {Humility})-[:HAS_RULING]->(:Ruling)", "r2", "2"),
+            Ev("(:Card {Humility})-[:HAS_RULING]->(:Ruling)", "r3", "3"),
+        ])
+        assert len(nodes) == 8
+        assert widest_level(nodes, edges) == 4
+
+    def test_an_empty_graph_is_zero(self) -> None:
+        assert widest_level([], []) == 0
+
+    def test_a_lone_node_is_one(self) -> None:
+        nodes, edges = build_graph([Ev("(:Card {X})", "X")])
+        assert widest_level(nodes, edges) == 1
+
+    def test_a_cycle_terminates(self) -> None:
+        # Nothing in the traversal templates emits one today, but a layout
+        # helper that hangs on unexpected input takes the page with it.
+        nodes = [
+            GraphNode(id="A", label="A", kind="Rule", title="", seed=False),
+            GraphNode(id="B", label="B", kind="Rule", title="", seed=False),
+        ]
+        assert widest_level(nodes, [("A", "B", "R"), ("B", "A", "R")]) >= 1

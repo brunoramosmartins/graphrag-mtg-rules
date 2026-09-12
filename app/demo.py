@@ -41,7 +41,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from examples import resolve  # noqa: E402  (app-local)
-from paths import build_graph, has_path  # noqa: E402  (app-local)
+from paths import FRIENDLY, build_graph, has_path, widest_level  # noqa: E402  (app-local)
 
 from graphrag_mtg.etl.cr_parser import CR_TXT_PATH
 from graphrag_mtg.extraction.llm import LlmClient
@@ -141,7 +141,7 @@ def render_graph(subgraph) -> None:
         Node(
             id=node.id,
             label=node.label,
-            title=node.title,  # hover text: the node's own words
+            title=node.title,  # hover: identifies the node, does not hold it
             size=26 if node.seed else 16,
             color=COLOURS.get(node.kind, "#9d9d9d"),
             # A seed is what the question itself named. Ringing it is what
@@ -149,14 +149,44 @@ def render_graph(subgraph) -> None:
             # the viewer can see where the walk started and how far it got.
             borderWidth=4 if node.seed else 1,
             borderWidthSelected=5,
+            font={"size": 16, "face": "sans-serif"},
         )
         for node in nodes
     ]
-    agraph(
+
+    # These subgraphs are traversal trees rooted at the seeds, so a
+    # left-to-right hierarchy is the shape they actually have. The force
+    # layout drew them as a clump in one corner of a wide canvas — half the
+    # screen empty and the reading order invented by the physics engine.
+    config = Config(
+        # Sized by the widest rank, not the node count: eight nodes three deep
+        # need four rows. Sizing by the total gave a canvas twice as tall as
+        # the drawing and a screenful of white space under it.
+        height=max(320, min(720, 120 + 86 * widest_level(nodes, edges))),
+        width=820,
+        directed=True,
+        physics=False,
+        hierarchical=True,
+        direction="LR",
+        sortMethod="directed",
+        levelSeparation=210,
+        nodeSpacing=110,
+        treeSpacing=120,
+    )
+    # `Config` stores width as "<n>px"; vis.js accepts a percentage and then
+    # the canvas follows the browser instead of a number picked here.
+    config.width = "100%"
+    clicked = agraph(
         nodes=drawn,
         edges=[Edge(source=a, target=b, label=rel) for a, b, rel in edges],
-        config=Config(width=820, height=460, directed=True, physics=True),
+        config=config,
     )
+
+    # The hover card is clipped by the widget, so the full text lives here.
+    selected = next((node for node in nodes if node.id == clicked), None)
+    if selected is not None and selected.text:
+        st.markdown(f"**{selected.label}** — {FRIENDLY.get(selected.kind, selected.kind)}")
+        st.write(selected.text)
 
     present = sorted({node.kind for node in nodes})
     swatches = " ".join(
@@ -168,7 +198,8 @@ def render_graph(subgraph) -> None:
     st.markdown(
         f"<div style='font-size:0.85em;opacity:0.8'>{swatches}"
         "<b>thick ring</b> = named by the question &nbsp; · &nbsp; "
-        "hover a node to read it</div>",
+        "arrows run left to right, from what the question named to what the "
+        "traversal reached &nbsp; · &nbsp; <b>click a node</b> to read it</div>",
         unsafe_allow_html=True,
     )
 
