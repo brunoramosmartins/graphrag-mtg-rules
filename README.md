@@ -161,6 +161,13 @@ python scripts/fetch_samples.py   # licensing-gate sanity
 
 ## The demo
 
+![The demo answering "What does deathtouch do?": the question is picked from the development split, retrieval returns 8 evidence items in 321 tokens with outcome RESOLVED, the subgraph draws Deathtouch linked by DEFINED_BY to rule 702.2 and on to its six subrules, the evidence list shows 8 traversed and 0 text-retrieved, and the generated answer cites 6 of the 8 items.](docs/images/demo.gif)
+
+*Arm C against a live Neo4j, `What does deathtouch do?` from the development
+split. The keyword the question named is ringed; `DEFINED_BY` reaches rule
+702.2; `HAS_SUBRULE*` walks down to its six subrules. Eight citable nodes, each
+with the path that reached it — and the answer cites six of them.*
+
 A question, the answer it produced, and the subgraph that produced it — live
 against Neo4j, not a replay.
 

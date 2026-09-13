@@ -165,7 +165,15 @@ def render_graph(subgraph) -> None:
         height=max(320, min(720, 120 + 86 * widest_level(nodes, edges))),
         width=820,
         directed=True,
-        physics=False,
+        # Physics stays ON, with the solver that respects ranks. Not for the
+        # animation: vis.js runs `stabilization.fit` — the call that zooms the
+        # view to the drawing — only as part of the physics pass, so turning
+        # physics off silently turns off auto-fit too. The graph then renders
+        # at default zoom wherever the layout engine left it, which is how a
+        # seven-node tree ended up occupying the middle third of a 1280px
+        # canvas with white on both sides.
+        physics=True,
+        solver="hierarchicalRepulsion",
         hierarchical=True,
         direction="LR",
         sortMethod="directed",

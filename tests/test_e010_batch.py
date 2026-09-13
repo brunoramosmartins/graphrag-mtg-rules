@@ -28,7 +28,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import run_e010 as e010
 
-
 SAMPLE = {
     "blinding_subsample": ["s0001"],
     "blind_claim_withdrawn_above": 0.70,

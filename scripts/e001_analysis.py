@@ -256,7 +256,7 @@ def main() -> int:
                 [correct[CONTROL][q] for q in qids],
                 TOST_ALPHA,
             )
-            inside = -TOST_BOUND <= lo90 and hi90 <= TOST_BOUND
+            inside = lo90 >= -TOST_BOUND and hi90 <= TOST_BOUND
             print(f"    TOST 90% [{lo90:+.3f}, {hi90:+.3f}] vs +/-{TOST_BOUND:.2f}  ->  "
                   f"{'EQUIVALENCE SHOWN' if inside else 'equivalence NOT shown'}")
             verdict = "confirmed" if inside else "inconclusive"
