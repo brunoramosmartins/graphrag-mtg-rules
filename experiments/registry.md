@@ -5975,3 +5975,147 @@ chose. The price of choosing is unmeasured, and E-016 is the precedent for how
 large that price can be: its ceiling was 0.920 and the best oracle-free arm
 returned 0.120. Every number in this entry is a numerator whose denominator has
 not been measured.
+
+---
+
+## E-018 — does the governing rule *cause* the answer, or do easy questions get it? (registered 2026-09-13, not yet run)
+
+- **Registered:** 2026-09-13, after the Magic-side audit and **before any
+  injected context is built**.
+
+- **Where this comes from.** An exploratory cut of E-001's evaluation run: on
+  the 42 questions carrying `gold_cr_rules`, every arm sits near **0.80** when
+  retrieval brought a gold rule and near **0.35** when it did not, and every
+  arm brings one on about a third of the questions.
+
+  | arm | gold rule retrieved | correct when present | when absent |
+  |---|---:|---:|---:|
+  | A vector | 14/42 | 0.786 | 0.393 |
+  | B graph | 16/42 | 0.812 | 0.308 |
+  | C hybrid | 17/42 | 0.824 | 0.360 |
+
+  The between-arm difference E-001 measured is **0.01**. This is **0.39 to
+  0.51**. If it is causal it is the largest effect this project has measured on
+  its own corpus and it explains the null: the arms are indistinguishable
+  because they fail at the same thing.
+
+- **Why it cannot be published as it stands.** Conditioning on whether
+  retrieval succeeded is post-selection. The questions where the gold rule
+  arrives may simply be the easy ones — a card with a short ruling, a keyword
+  with a definition one hop away. That is the confound that invalidated E-012a,
+  where observed context-size buckets read as a size effect and assignment
+  inverted the conclusion. **Assignment is the only thing that separates them**
+  and this entry assigns.
+
+- **The decision this informs.** Whether Phase 9's target is "make retrieval
+  reach the governing rule" — a specific, expensive engineering programme — or
+  whether that target rests on a correlation the data cannot support. If the
+  effect survives assignment, the programme has a measured justification. If it
+  does not, the arms' equality means something else and Phase 9 needs a
+  different objective.
+
+### Design
+
+- **Population.** The 42 evaluation questions carrying `gold_cr_rules`. This is
+  the evaluation split's **second reading**, declared here and published
+  wherever any figure from it is quoted. It draws **no arm comparison**: E-001's
+  verdict is untouched and cannot be revised by this entry, which is a
+  within-arm intervention on one arm.
+- **Arm.** `B` (graph) only. The question is whether the generator's
+  correctness depends on the rule being present, which is not an arm property,
+  and one arm keeps the cost to a few dollars.
+- **Three conditions, paired within question.**
+
+  | condition | context |
+  |---|---|
+  | **control** | exactly what retrieval produced |
+  | **placebo** | control plus *k* CR rules drawn at random from outside the gold set, seeded |
+  | **treatment** | control plus the question's `gold_cr_rules` |
+
+  *k* is matched per question to the number of gold rules injected, so placebo
+  and treatment add the **same number of items and comparable tokens**. The
+  token budget is raised for all three conditions alike so that nothing is
+  evicted and the comparison is not silently measuring `enforce_budget`.
+
+- **Why the placebo is not optional.** Without it, a lift under treatment is
+  equally explained by "more context" or "rule-shaped text in the prompt". The
+  placebo is the registered falsifier: **if placebo lifts accuracy as much as
+  treatment, the effect is not the governing rule** and this entry reports that
+  instead.
+- **Questions where the gold rule was already retrieved are kept and analysed
+  separately.** For those, treatment is a near no-op and should show no lift. A
+  lift there is evidence the intervention is doing something other than what it
+  claims, and it is the second check that can return negative.
+- **Metric and contrast.** Judge-scored `correct` under the frozen rubric
+  `p6-c1`, the same two-way collapse E-001 used. Primary family: **treatment vs
+  control** and **placebo vs control**, exact McNemar paired within question,
+  Holm over the two, alpha = 0.05.
+- **Detectable effect, computed before the run.** Exact McNemar needs 6
+  discordant pairs one way for raw *p* < 0.05 and 7:0 for the stricter Holm
+  step at family size 2. On the 26 questions where the gold rule was absent, an
+  observational lift of 0.45 would produce roughly 12 discordant pairs. The
+  design is adequately powered **for the effect the observational cut suggests**
+  and underpowered for anything much smaller, which is stated rather than
+  discovered.
+
+### Decision rule, fixed before the run
+
+1. **Treatment beats control at its Holm step and placebo does not.** The
+   governing rule causes the answer. Consequence: **Phase 9's registered
+   objective is retrieval reaching the gold rule**, and E-013's abandoned
+   bridge problem — from card or question to chapters outside 700 — becomes its
+   first entry rather than a parked one.
+2. **Placebo beats control by a comparable margin.** The effect is context
+   volume or prompt shape, not the rule. Consequence: Phase 9 does not target
+   gold-rule recall, and the observational cut is retracted in the journal
+   where it was recorded.
+3. **Neither beats control.** The observational lift was selection, exactly as
+   E-012a's was. Consequence: the null in E-001 is not explained by retrieval
+   reaching the rule, and Phase 9 needs an objective this project has not yet
+   identified. **This branch is the one that costs the most and it is written
+   first for that reason.**
+
+### Predictions, recorded before the run
+
+1. **Treatment lifts correctness on the rule-absent subset by 0.25 to 0.45** —
+   less than the observational 0.45, because some of that gap is selection and
+   I expect the selection share to be real but minority.
+2. **Placebo lifts by less than 0.10.** If it lifts more, the entry lands in
+   branch 2 and the Magic-side reading from 2026-09-13 is retracted.
+3. **No lift on the already-present subset**, within noise.
+4. **Some treatment answers will be wrong *with* the gold rule in front of
+   them**, and that residual is the interesting number rather than a failure of
+   the design — it is this corpus's version of what E-016 measured, the price
+   of having the evidence and not using it.
+
+### Threats to validity, recorded before the run
+
+- **The judge is not blinded to the condition.** Treatment answers can cite a
+  rule number that control answers cannot, and the judge sees the answer.
+  E-010's blinding check failed at 0.778 on a weaker version of this problem
+  and the project concluded item-level blinding was unachievable there. The
+  same is likely true here. **The entry publishes unblinded and says so**,
+  under the `sufficiency` precedent; it does not assert a blind it has not
+  measured.
+- **Injecting the gold rule is an oracle intervention.** No figure here is a
+  system score — it measures the generator's use of evidence, not any
+  retriever's ability to find it. The project has three precedents for that
+  distinction being missed and one withdrawal that cost a headline.
+- **Second reading of the evaluation split**, declared. E-001's numbers stand;
+  this entry may not be substituted into them.
+- **`gold_cr_rules` is a human key.** A loose key injects rules the question
+  did not need and dilutes the treatment toward the placebo; a tight key does
+  the opposite. The keys were written before any retriever existed, which
+  protects against one direction of bias and not the other.
+- **n = 42, of which 26 carry the effect.** Adequately powered for a large
+  effect and nothing else.
+
+### Cost
+
+Three conditions × 42 questions = 126 generations plus 126 judge calls on arm
+B, at the pinned `gpt-4o-mini`. Expected under US$ 3, with `--limit` and a
+printed estimate before any spend.
+
+### Actual result
+
+_Not yet run._
