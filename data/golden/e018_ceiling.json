@@ -5,127 +5,127 @@
   "verdicts": [
     {
       "question_id": "hand-blood-moon-nonbasic",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "hand-regeneration-zero-toughness",
       "derivable": null,
-      "stale": false,
+      "stale": true,
       "note": ""
     },
     {
       "question_id": "hand-replacement-order-counters",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-102",
-      "derivable": null,
+      "derivable": false,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-1029",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-1591",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-198",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-20",
-      "derivable": null,
+      "derivable": false,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-2249",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-271",
-      "derivable": null,
+      "derivable": false,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-2711",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-3",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-3155",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-3228",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-396",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-4853",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-51",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-615",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-6370",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-650",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     },
     {
       "question_id": "rg-778",
-      "derivable": null,
+      "derivable": true,
       "stale": false,
       "note": ""
     }

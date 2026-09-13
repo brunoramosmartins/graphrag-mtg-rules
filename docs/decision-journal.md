@@ -90,6 +90,106 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — The ceiling is 17 of 20, and reading it found a key that does not answer its own question
+
+E-018's ceiling was read before any API call: with what retrieval already
+brought plus the gold CR rules, is the key's verdict derivable? **17 of 20,
+0.850 [0.640, 0.948].** The gate registered before the reading was 7. The
+design can run.
+
+**What the number buys is interpretability, not permission.** Before the
+reading, *"the model did not improve"* and *"the rules were not enough"* were
+the same outcome. They are not any more: with 17 derivable, a null in E-018 is
+a finding about the generator having the rule and not using it. That is the
+Magic-side counterpart of E-016, and it now has a denominator.
+
+**Three questions are not derivable and they fail for three different
+reasons.** `rg-102` is missing a *card* — the context holds Temur Battle Rage
+and not Death's Shadow, whose power and toughness are the crux, and no amount
+of rule injection supplies it. `rg-271` needs a rule the gold annotation never
+listed. And `rg-20`'s key opens **"Probably 49,278"** and says outright that
+with 15.5 septillion trigger orderings *"it's difficult to be certain"*. The
+count 3 is worth less than that decomposition: only one of the three is
+"retrieval must reach more rules", which is a direct input to Phase 9's front
+ordering and was not available from any aggregate.
+
+**`rg-20` is a `void` candidate that three arms were scored against.** The
+rubric defines `void` as *the answer key does not answer the question asked*
+and excludes it from every denominator. All three arms were labelled
+`incorrect` on `rg-20`, each rationale of the form "contradicts the key's
+assertion of 49,278" — the judge reading a hedge as an assertion. And `void`
+fired **zero times across the entire evaluation split**. Naming that in words:
+*of the 57, how many were void* returns 0, and what else makes it return 0? A
+criterion narrower than the words suggest, or a label nobody has checked can
+fire. It does not change E-001's verdict — `rg-20` is a concordant `incorrect`
+in all three arms, so the paired contrasts are untouched — and **no figure is
+revised**, because one case found while reading is not a survey. Re-auditing
+the split for void candidates is a Phase 9 entry.
+
+**The stale annotation is corrected, and it had miscounted the population.**
+`hand-regeneration-zero-toughness` pointed at 701.15, which this CR uses for
+Goad. Retrieval had brought `701.19`, `701.19a`, `701.19b`, `701.19c` — **the
+graph found the governing rule and the annotation was looking for the wrong
+number.** Corrected to 701.19: gold rule retrieved goes **16 → 17 of 42** and
+the primary population **21 → 20**. `snapshot_sha256` hashes question and
+answer, not annotations, so every frozen fingerprint survives — verified rather
+than assumed. The key's own prose still says "(701.15)" and is **not** edited,
+because it is what E-001 was scored against and rewriting it would make
+published labels describe text that no longer exists.
+
+The frozen id files refused the change until it was made deliberately, which is
+exactly what they are for, and the ceiling itself did not move: the stale
+question was already out of its denominator.
+
+**The honest bound on how much more staleness there is.** 18 of the 20 primary
+questions received rule evidence that simply did not match their annotation.
+In 17 of those 18 the mismatch is E-013's bridge — retrieval brings the keyword
+definition (702.7 First Strike, 702.10 Haste, 702.12 Indestructible) and the
+key needs a structural rule (613 layers, 614 replacement, 400 zones, 603
+triggers). Only the regeneration case has gold and retrieved numbers in the
+same neighbourhood, which is the signature of a renumbering. That signature
+fires once in eighteen. It says nothing about the 22 questions outside this
+population, and staleness landing far from what retrieval brought would not
+show the signature at all.
+
+## 2026-09-13 — "Inject the gold rule" did not say what a rule is, and one gold number points at the wrong rule
+
+Building the instrument that computes E-018's ceiling changed the entry twice,
+both times before any API call, and both times because 21 questions were
+rendered rather than reasoned about.
+
+**A rule number can name a heading.** The entry said *control plus the
+question's `gold_cr_rules`* and never said what that contains. Ten of the
+thirty gold rules in the frozen primary have subrules — `613.7` has thirteen,
+`400.7` twelve, `707.10` seven — and the text goes from 11,197 to 24,082
+characters with them. Injecting `613.7` alone injects a paragraph of preamble
+and omits the thirteen subrules where the cases live. A treatment doing that
+and returning a null would have been published as *the governing rule does not
+cause the answer*. Standing rule 9 asks what **else** makes a null come back,
+and this is it. Treatment now injects each rule with its subtree, and the
+placebo's token match binds against the subtree — a placebo matched against
+bare parents stops controlling volume, which is the only thing it controls.
+
+**The ceiling's question was stricter than the treatment.** The worksheet first
+asked whether the key followed from the gold rules *alone*. But these 21
+questions already receive cards and rulings; what they lack is a rule. Judging
+the rules in isolation marks `false` exactly where the card text was present
+all along and the rule was the only missing piece — the cases the entry exists
+to find. Corrected to *what retrieval already brought, plus these rules*, with
+the evidence each question carries listed by kind and handle, before any
+verdict was recorded.
+
+**One gold annotation points at the wrong rule.**
+`hand-regeneration-zero-toughness` carries `gold_cr_rules: [701.15, 704.5f]`
+and its key reads *"Regeneration replaces a destruction event (701.15)"*. In
+this CR **701.15 is Goad**; regeneration is 701.19. The number resolves, so
+nothing raises: the injection would have carried four subrules about goading
+into a question about regeneration. It was found by reading, not by a check,
+and it cannot be found mechanically — which is why nothing is claimed about the
+other 21 gold annotations this project has not read. The question leaves the
+ceiling's denominator rather than counting as a `false`, because there is no
+"these rules" to judge it against, and the run does not proceed over one.
+
 ## 2026-09-13 — Five of the questions carrying the effect never called the model, and 0.308 is partly a linking number
 
 E-018 was red-teamed before its first API call, and the pass was checked

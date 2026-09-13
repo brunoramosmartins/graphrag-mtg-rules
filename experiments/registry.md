@@ -6514,6 +6514,127 @@ the rendering deliverable all stand as amended earlier today. This changes what
 a condition contains and what the ceiling's question means — both before any
 verdict was recorded and before any spend.
 
+### The ceiling, read 2026-09-13 and before any API call
+
+**17 of 20 — 0.850 [0.640, 0.948] Wilson.** The gate registered before the
+reading was 7. The design can run.
+
+The question each of the 21 frozen questions was read against: *with what
+retrieval already brought, plus the gold CR rules, is this key's verdict
+derivable?* One question left the denominator as `stale` (below). Every verdict
+carries a written justification and they are summarised here rather than
+stored as a count, because a ceiling nobody can inspect is the thing this entry
+exists to avoid.
+
+#### What the ceiling changes about reading E-018's result
+
+Before the reading, *"the model did not improve"* and *"the rules were not
+enough"* were indistinguishable outcomes. They no longer are. With 17 of 20
+derivable and a bar of 7, **a null in E-018 is a finding about the generator,
+not about the corpus** — it would mean the model had the governing rule in
+front of it and did not use it, which is this corpus's version of what E-016
+measured. Prediction 4 is sharpened accordingly: the residual is the
+interesting number and it now has a denominator.
+
+It also sharpens the oracle threat already recorded. A treatment this
+sufficient is a strong intervention; no figure from it is a system score, and
+the distance between 0.850 and whatever E-018 returns is the generator's, not
+any retriever's.
+
+#### The three that are not derivable, and they have three different causes
+
+The count is 3. The causes are not one thing, and the decomposition is worth
+more than the count:
+
+| id | why the verdict does not follow | what would fix it |
+|---|---|---|
+| `rg-102` | **card text is missing.** The context holds `Temur Battle Rage` and not `Death's Shadow`, whose power and toughness are the crux. The gold rules explain damage assignment and cannot supply a card that is not there. | retrieval reaching the second card, not more rules |
+| `rg-271` | **a rule the annotation did not list.** `500.8` covers Aurelia adding a phase; nothing in the gold set establishes Time Stop skipping the remaining steps and phases. | a better gold key, or retrieval reaching beyond it |
+| `rg-20` | **the key does not establish its own answer** — see below | nothing retrieval can do |
+
+Only one of the three is *"retrieval must reach more CR rules"*. That is a
+direct input to Phase 9's front ordering and it was not available from any
+aggregate.
+
+#### `rg-20` is a `void` candidate that three arms were scored against
+
+Its key opens **"Probably 49,278."** and continues: *"There are
+15,511,210,043,330,985,984,000,000 different ways to order the triggers on the
+stack, so it's difficult to be certain of the maximum total power."* The key
+does not assert the verdict it is used to score.
+
+The rubric already has the label for this. `Correctness.VOID` is *"the answer
+key does not answer the question asked"*, and it is excluded from every
+denominator. Checked against E-001's evaluation run: all three arms were
+scored **`incorrect`** on `rg-20`, each rationale of the form *"contradicts the
+key's assertion of 49,278"* — the judge treating a hedged key as an assertion.
+And `void` fired **zero times across the whole evaluation split**.
+
+Naming that quantity in words, per standing rule 9: *of the 57 evaluation
+questions, how many did the judge call `void`* returns 0 — and what **else**
+makes it return 0? A rubric whose void criterion is narrower than *"the key
+does not establish its answer"*, or a judge that never reaches for a label it
+is not pushed toward. This is not evidence the label is broken; it is evidence
+nobody has checked whether it can fire.
+
+**What this does and does not change.** It does **not** change E-001's verdict.
+`rg-20` is a concordant `incorrect` in all three arms, so removing it from
+every denominator moves each arm by the same one question and the paired
+contrasts are untouched. It does affect the absolute correctness figures, which
+are computed over 57 rather than 56. **No figure is revised here**: the finding
+is recorded, and re-auditing the split for further `void` candidates is a
+Phase 9 task with its own entry, because one case found while reading is not a
+survey.
+
+#### The stale annotation, corrected, and what it moved
+
+`hand-regeneration-zero-toughness` carried `gold_cr_rules: ["701.15",
+"704.5f"]` while this CR numbers regeneration **701.19** — 701.15 is Goad.
+Retrieval had brought `701.19`, `701.19a`, `701.19b` and `701.19c`: **the graph
+found the governing rule and the annotation was looking for the wrong number.**
+
+Corrected to `["701.19", "704.5f"]`, with `gold_path` corrected alongside.
+Consequences, all checked:
+
+- **`snapshot_sha256` is intact.** It hashes `question + "|" + answer`, not the
+  annotations, so `pool_fingerprint` and every frozen hash in the project are
+  unaffected. Verified rather than assumed.
+- **The key's prose is NOT edited**, though it also says "(701.15)". The key is
+  what E-001 was scored against; editing it retroactively would make published
+  labels describe text that no longer exists. The inline citation stays stale
+  and is recorded as such here.
+- **The populations moved**, and the frozen files refused the change until it
+  was made deliberately, which is what they are for. Gold rule retrieved:
+  **16 → 17 of 42**. Primary population: **21 → 20**. The five `no_seed` ids
+  are unchanged.
+- **The ceiling is unchanged at 17 of 20**, because the stale question was
+  already outside the denominator. The gate was registered at 7 of 21 and is
+  not restated downward; the reading cleared it either way.
+
+The motivating table at the head of this entry reads **16/42** for arm B. That
+figure is superseded by **17/42** as of this amendment and is left in place,
+per the project's practice of amending rather than rewriting.
+
+#### How much staleness is there, and the honest bound
+
+Of the 20 primary questions, **18 received rule evidence anyway** — the graph
+brought rules, none of which matched the annotation. That is the population
+where a stale number could hide, and it was read as part of this ceiling.
+
+The pattern in 17 of the 18 is **not** staleness. It is E-013's bridge, now
+visible question by question: retrieval brings the keyword definition
+(`702.7` First Strike, `702.10` Haste, `702.12` Indestructible, `701.26` Tap)
+and the key needs a structural rule (`613.x` layers, `614.x` replacement,
+`400.x` zones, `603.x` triggers, `103.6` mulligans). `hand-regeneration-zero-
+toughness` is the exception precisely because its gold and retrieved numbers
+sit in the same neighbourhood, which is the signature of a renumbering.
+
+**The bound, stated rather than implied:** that signature fires on 1 of 18 in
+this population. It says nothing about the 22 evaluation questions outside it,
+and staleness that lands far from what retrieval brought would not show this
+signature at all. A number that resolves to the wrong rule cannot be detected
+mechanically, only read.
+
 ### Actual result
 
 _Not yet run._
