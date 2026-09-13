@@ -72,25 +72,74 @@ Three measurements say why:
 - **Vocabulary, not topology.** On the failure-selected population, the graph
   retrieves 7 of the 64 rules the keys require; a lexical index over all 3,308
   rules does *worse* at a realistic context size.
-- **Grounding, not retrieval.** Six of the graph arm's seven refusals land on
-  that stratum. Dropping them halves the deficit.
-- **The MetaQA calibration predicted it** months earlier — see §4.
+- **Declining, not reasoning wrong.** Six of the graph arm's seven refusals
+  land on that stratum. Dropping them halves the deficit.
+- **The MetaQA calibration predicted it** months earlier — see §4, and see
+  what §4 had to withdraw in the process.
 
 <!-- write: the synthesis. A question names cards and player verbs; a rule is
      written in defined terms. Nothing in the design bridges the register. -->
 
 ---
 
-## 4. The borrowed benchmark predicted the domain finding
+## 4. The borrowed benchmark predicted the domain finding — and then withdrew half of it
 
 **Mechanism.** <!-- write: calibrating on a benchmark with an answer key
      before claiming anything on your own corpus — and what it buys beyond
-     bug-finding. -->
+     bug-finding. The sharpest version of the argument is that the answer key
+     is what lets you audit your own harness, which is the part that paid off
+     here and is not the part anyone advertises. -->
 
-**Our instance.** MetaQA, 2026-09-02: conditional on the answer being present
-in the evidence the model received, correctness falls to **0.339** at three
-hops. The registration said that if this prediction failed, the finding would
-be about generation and would transfer to the MTG side. It failed, and it did.
+**Our instance, as published on 2026-09-11.** MetaQA: conditional on the answer
+being present in the evidence the model received, correctness falls to **0.339**
+at three hops. The registration said that if this prediction failed, the finding
+would be about generation and would transfer to the MTG side. It failed, and it
+appeared to.
+
+**What happened on 2026-09-13.** Before paying for the follow-up built on that
+sentence, we rendered one scored case. A three-hop question — *"the movies
+written by the screenwriter of The Best Intentions were directed by who"* —
+whose sixteen-item context held hop one and **eleven films released in 1992**.
+Nothing about what Bergman wrote. Nothing about who directed those films. The
+model refused. The grounding prompt instructs a refusal when the evidence is
+insufficient, so it was obeying, and the harness had scored it as a generation
+failure.
+
+The chain search accepted any path to an accepted answer **string**. Bergman is
+in the answer set because he directed some of his own screenplays, so a one-step
+`written_by` edge satisfied a question asking `directed_by`. **126 of the 137
+questions in that cell — 92% — were one-step chains.** E-002's condition is
+weaker still and splits 213 / 11 the same way.
+
+So the three-hop figure is withdrawn, and with it the sentence this project
+repeated most. What survives is the clean half: at one and two hops the chains
+match their declared depth on every question, correctness is **0.890 → 0.672**,
+and of the 82 two-hop failures **39 are refusals and 19 are unparseable output
+against 24 wrong entities** — fewer than one in three is a reasoning error.
+
+<!-- write: the honest reframe. "The model cannot chain three facts" was never
+     measured. What is measured is narrower and more interesting: handed a
+     complete two-step chain in a sixteen-item context, the model mostly does
+     not get the answer wrong — it declines, or it writes something the parser
+     cannot read. Beyond two hops nobody knows, and this retriever reaches a
+     genuine three-step chain on 3% of three-hop questions. -->
+
+**Detection, generally.** <!-- write: the conditioning clause is the claim.
+     "Conditional on the answer being present in the evidence" was operating
+     as "an accepted string was reachable". Write the condition out in words,
+     then render one case that satisfies it and check that it is the case you
+     meant. -->
+
+<!-- write: and the part that belongs to this piece's argument — pre-registration
+     did every job it was pointed at here, including recording three predictions
+     and scoring all three wrong. It cannot protect a quantity nobody rendered.
+     That is not an argument against registering; it is the boundary of what
+     registering buys, and the boundary is worth naming as precisely as the
+     benefit. -->
+
+> This section is the reason the piece exists in its current form. The first
+> draft had it as a clean prediction-comes-true story. Rendering one case cost
+> an afternoon and removed the cleanest paragraph in the TIL.
 
 ---
 

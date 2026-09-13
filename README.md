@@ -63,11 +63,14 @@ Three measurements say why, and each is registered:
   written in defined terms, and nothing here bridges the register. *(That
   population was selected for being hard, so this says what nothing reaches
   **there** — it is not an estimate of retrieval quality overall.)*
-- **The weak link is grounding, not retrieval.** Calibrating on MetaQA first
-  predicted this: conditional on the answer being *present in the evidence the
-  model received*, correctness falls to **0.339** at three hops. The same
-  pattern reappeared here — six of the graph arm's seven refusals land on
-  `interaction_multihop`, and removing them halves its deficit.
+- **The weak link is the model declining, not the model reasoning wrong.**
+  Calibrating on MetaQA first: at a matched 16-item context with the complete
+  two-step chain *verified* present, correctness is **0.672** against 0.890 at
+  one hop — and of those 82 failures, **39 are refusals and 19 are unparseable
+  output, against 24 wrong entities.** Fewer than one failure in three is a
+  reasoning error. The same shape reappeared here: six of the graph arm's seven
+  refusals land on `interaction_multihop`, and removing them halves its
+  deficit.
 - **The retrieval comparison is budget-confounded**, by a 3× rule set before
   the split opened. At matched token budget the vector arm keeps a median of
   40.5 items against the graph's 12.0 — 3.38×. So the headline retrieval
@@ -84,6 +87,20 @@ Every number above was predicted, bounded, or gated in
 [`experiments/registry.md`](experiments/registry.md) **before** the run that
 produced it. [`docs/evaluation.md`](docs/evaluation.md) is the source of truth
 and carries the limitations that bound each one.
+
+**One of them was withdrawn, and the withdrawal is on the record.** The second
+bullet used to quote a three-hop figure and conclude that generation, not
+retrieval, was the bottleneck — the project's most-repeated sentence. Before
+paying for the follow-up experiment built on it, we rendered a single scored
+case: a three-hop question whose context held hop one and eleven unrelated
+films. The model refused, correctly, and the harness had scored that as a
+generation failure. The cause was a chain search that accepted any path to an
+accepted answer *string* rather than one that answers the question, and **126
+of the 137 questions in that cell (92%) were one-step chains**. The three-hop
+column is withdrawn, the follow-up was suspended unspent, and the one- and
+two-hop columns — whose chains match their declared depth on every question —
+are what the bullet now quotes. The repair, the measurement and what survives
+are in the 2026-09-13 amendments to E-002 and E-012.
 
 ## Why Magic
 

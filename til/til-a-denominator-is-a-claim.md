@@ -2,9 +2,10 @@
 
 **Cross-phase · drafted 2026-09-12**
 
-> **SKELETON.** Four real instances from one experiment, all verified; prose
-> not written. The point is that the same defect arrived four times wearing
-> four different costumes, and each time it decided the answer.
+> **SKELETON.** Five real instances, all verified; prose not written. The
+> point is that the same defect kept arriving in different costumes, and each
+> time it decided the answer. The fifth arrived on 2026-09-13 and withdrew the
+> project's most-quoted number.
 
 <!-- write: opening. Precision is hits over something. The something is a
      decision about what a retrieval *unit* is, and whoever picks it picks
@@ -12,7 +13,7 @@
 
 ---
 
-## Four costumes, one defect, one experiment
+## Five costumes, one defect
 
 ### 1. Passage versus rule item
 
@@ -60,6 +61,35 @@ Printed as N-of-M it says: **arm A retrieves no CR rule number at all on 17 of
 <!-- write: the fix was one line of formatting, and it surfaced a fact about
      the system that three months of measurement had not. -->
 
+### 5. An accepted answer versus an answerable question
+
+The fifth arrived three months after this file was started, and it decided the
+project's headline rather than a table in it.
+
+Two experiments reported *"conditional on the answer being present in the
+evidence the model received"*. That clause was operating as **"an accepted
+answer string was reachable through the evidence"** — which is a different
+claim, and returns a non-empty chain either way.
+
+A three-hop question, *"the movies written by the screenwriter of The Best
+Intentions were directed by who"*, was accepted on the one-step chain
+`The Best Intentions | written_by | Ingmar Bergman`. Bergman is in the answer
+set because he directed some of his own screenplays. The chain proves
+`written_by`; the question asks `directed_by`. The model, shown hop one and
+eleven films released in 1992, refused — as its grounding prompt instructs —
+and was scored as a generation failure.
+
+**126 of the 137 questions in that cell: 92%.** The weaker of the two
+conditions required no chain at all and split 213 / 11.
+
+<!-- write: this one is the argument for the whole file. The denominator here
+     is not a number in a table, it is the *population the result is about* —
+     and choosing it wrong did not shift a figure by a few points, it made the
+     figure answer a question nobody asked. Note also that the first four
+     costumes were caught by review and this one needed a rendered case: the
+     defect had become invisible to reading because the code was correct for
+     the sentence it was written against. -->
+
 ---
 
 ## The related trap: a metric that cannot see the failure
@@ -85,7 +115,11 @@ present and 1.000 with them fixed.
        the same budget differently;
      - a denominator that varies per arm is a denominator the arm selected;
      - check whether your headline metric can move in the bad direction at
-       all. -->
+       all;
+     - a conditioning clause is a denominator: render one case that satisfies
+       it and check that it is the case the clause describes. Four of the five
+       above were caught by reading; the fifth needed a case printed, because
+       the code was correct for the sentence it had been written against. -->
 
 ---
 
