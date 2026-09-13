@@ -90,6 +90,38 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — A significant result was refused because the effect size was registered first
+
+E-016 asked whether an eviction policy that knows nothing about the answer can
+keep the answer. Four oracle-free policies trimmed the identical pool, paired
+by construction. Two of them beat the shipped trim and beat random decisively —
+chain reach 0.030 → 0.120, adjusted *p* = 0.023, and the connectivity arm beats
+random +11/−0 at *p* = 0.001.
+
+**The registered rule asked for a gain of 0.20 and the best arm returned
+0.090, so nothing is added to `enforce_budget`.** Without that number fixed
+beforehand, "significantly better than what ships, and better than chance" is
+an extremely easy thing to adopt; it would have changed shipped behaviour to
+close a seventh of the gap it was pointed at. The p-value said yes and the
+effect size said no, and the effect size was right.
+
+**Why no ordering could have worked.** A 6,000-token budget holds ~200 triples;
+an equal share gives distance 3 about 66 slots against 1,000 candidates.
+Ordering decides which 66 and cannot make 66 cover 1,000. The chain costs 90
+tokens — the price was never the problem, finding those 90 among 200,000 is.
+What an order *can* fix is the systematic part, not discarding the needle's
+half of the haystack first, and that is worth nine points exactly.
+
+**So the three-hop problem is the walk.** Breadth-first expansion builds a
+shell and a chain is a path; at depth three the shell is four orders of
+magnitude larger. Neither sixteen times the budget (E-015: 0.650) nor a better
+eviction order (0.120) closes it.
+
+Four predictions were registered: one half right, two wrong, one unsupported —
+including the entry's own hypothesis, that connectivity-first beats
+proportional, which returned a difference of two questions and is recorded as
+nothing rather than as a direction.
+
 ## 2026-09-13 — The three-hop evidence was there, and the budget was throwing it away
 
 E-015 ran, free, on the 100 three-hop dev questions. At the shipped

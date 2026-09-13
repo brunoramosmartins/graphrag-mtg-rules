@@ -5508,7 +5508,7 @@ bought it.
 
 ---
 
-## E-016 — can a trim that knows nothing about the answer keep the answer? (registered 2026-09-13, not yet run)
+## E-016 — can a trim that knows nothing about the answer keep the answer? (registered 2026-09-13, run 2026-09-13)
 
 - **Registered:** 2026-09-13, after E-015's grid and its amendment, and
   **before any trim policy is written**. E-015 ended by naming the target this
@@ -5655,4 +5655,84 @@ and are reused across all four arms rather than repeated per arm.
 
 ### Actual result
 
-_Not yet run._
+**Actual result (2026-09-13, dev split, 100 3-hop questions, four policies over
+the identical pool, zero model calls): branch 2 at both caps — the trim is not
+the lever.**
+
+| arm | `kind_cap` 1,000 *(ceiling 0.650)* | `kind_cap` 4,000 *(ceiling 0.920)* |
+|---|---|---|
+| **A** shipped | 0.030 [0.010, 0.085] 3/100 | 0.030 [0.010, 0.085] 3/100 |
+| **B** proportional | 0.100 [0.055, 0.174] 10/100 | 0.100 [0.055, 0.174] 10/100 |
+| **D** connectivity | **0.120** [0.070, 0.198] 12/100 | 0.100 [0.055, 0.174] 10/100 |
+| **R** random | 0.010 [0.002, 0.054] 1/100 | 0.020 [0.006, 0.070] 2/100 |
+
+Paired within question against A, exact McNemar, Holm over the two primary
+arms. At `kind_cap` 1,000: **B +8/−1, adjusted *p* = 0.0391; D +10/−1, adjusted
+*p* = 0.0234 — both significant.** At 4,000 the same +8/−1 no longer clears its
+Holm step (adjusted *p* = 0.0781). Falsifier: **D beats R +11/−0,
+*p* = 0.00098**, so random is not what did it.
+
+### The registered bar refused a significant result, and it was right to
+
+**The designed policies work and are nowhere near enough.** They beat the
+shipped policy reliably and they beat chance decisively; they move chain reach
+from 0.030 to 0.120 against a ceiling of 0.650. The rule fixed before the run
+asked for **0.20** and the best arm returned **0.090**.
+
+Without that number written down first, "significant improvement over the
+shipped trim, *p* = 0.023, and it beats random at *p* = 0.001" is an extremely
+easy thing to adopt. It would have changed shipped behaviour to close a seventh
+of the gap it was pointed at. **The p-value said yes and the registered effect
+size said no, and the effect size was right.**
+
+So, as registered: **nothing is added to `enforce_budget`**, and three-hop
+retrieval is recorded as needing a different **walk** rather than a different
+eviction order.
+
+### Why no ordering could have saved it, in one line of arithmetic
+
+A 6,000-token budget holds roughly 200 triples. An equal share gives distance 3
+about **66 slots against 1,000 candidates** at `kind_cap` 1,000, and against
+4,000 at the larger cap. Ordering decides which 66; it cannot make 66 cover
+1,000. The chain costs 90 tokens and the problem was never the price — it is
+finding those 90 tokens among 200,000.
+
+What an eviction order *can* fix is the systematic part: not throwing away the
+half of the haystack the needle lives in, first. That is worth **9 points**,
+and it is worth exactly 9 points. The other 53 are the walk's.
+
+This is also why the larger pool does not help. At `kind_cap` 4,000 the ceiling
+rises to 0.920 and every arm stays flat or falls: four times the candidates for
+the same 66 slots is a worse lottery, not a better one.
+
+### Predictions, scored
+
+1. **"A at `kind_cap` 4,000 is no better than at 1,000, probably worse."**
+   *Half right.* No better — identical at 0.030 — and not worse either.
+2. **"B lands between 0.15 and 0.35."** *Wrong.* 0.100 at both caps, below the
+   range, and the arithmetic above is why the range was optimistic.
+3. **"D beats B."** *Not supported.* 12 questions against 10 at one cap and a
+   tie at the other. This entry's actual hypothesis returned a difference of
+   two questions, which is nothing, and it is recorded as nothing rather than
+   as a direction.
+4. **"R beats A."** *Wrong*, and wrong in the comfortable direction: random is
+   worse than shipped, 0.010 against 0.030. The uncomfortable sentence was
+   registered so it could not be avoided if true; it was not true.
+
+Four predictions: one half right, two wrong, one unsupported.
+
+### What this leaves
+
+**The three-hop problem is the walk.** Breadth-first expansion from a seed
+builds a shell, and a chain is a path; at depth three the shell is four orders
+of magnitude larger than the path, and neither a bigger budget (E-015: 0.650 at
+sixteen times the tokens) nor a smarter eviction order (0.120 here) closes
+that. Whatever fixes it has to search differently, not keep differently.
+
+**And that is the strongest registered support the P3 decomposition thesis has
+had.** One-hop chain reach is 1.000. If a three-hop question is answered as
+three one-hop retrievals, none of this arithmetic applies — not because the
+generator improves, but because the haystack is never built. That claim now
+rests on two measured entries rather than on the withdrawn sentence it was
+originally motivated by, and it still has to be registered and run on its own
+terms before it is worth anything.
