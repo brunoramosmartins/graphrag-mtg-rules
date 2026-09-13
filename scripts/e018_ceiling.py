@@ -18,7 +18,7 @@ question the reader decides one thing:
 `worksheet` renders what is needed to decide; `score` reads the decisions back.
 Nothing here fills a verdict in, and `score` refuses a sheet with a blank.
 
-**Three commands, in order:**
+**Four commands, in order:**
 
     freeze      the two id files the 2026-09-13 amendment requires, computed
                 from E-001's recorded arm-B retrieval and never recomputed at
@@ -27,6 +27,10 @@ Nothing here fills a verdict in, and `score` refuses a sheet with a blank.
                 rule text and answer keys, which the Fan Content Policy forbids
                 committing. The verdict file it seeds carries ids and booleans
                 only, and that one is versioned.
+    mark        record what the reading decided, so the verdict file is not
+                hand-edited 21 times. It **records; it does not decide** — there
+                is no heuristic and no model call here, because the ceiling is
+                the one quantity in E-018 that no code can produce.
     score       the ceiling with a Wilson interval, against the registered gate.
 
 The registered gate: **if the ceiling is below 0.333 x 21 (7 questions), E-018
@@ -36,6 +40,9 @@ construction.
 Usage:
     python scripts/e018_ceiling.py freeze
     python scripts/e018_ceiling.py worksheet
+    python scripts/e018_ceiling.py mark 1 true 2 stale 3 false
+    python scripts/e018_ceiling.py mark 4 false --note "turns on a ruling"
+    python scripts/e018_ceiling.py mark
     python scripts/e018_ceiling.py score
 """
 
@@ -300,8 +307,115 @@ def worksheet(args: argparse.Namespace) -> int:
         }
         VERDICTS.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         print(f"Seeded {VERDICTS} with {len(ids)} blank verdict(s).")
-    print(f"\nNext: read {WORKSHEET}, set every `derivable`, then:")
+    print(f"\nNext: read {WORKSHEET} and record each verdict:")
+    print("  python scripts/e018_ceiling.py mark 1 true 2 stale 3 false")
+    print("  python scripts/e018_ceiling.py mark            # what is left")
     print("  python scripts/e018_ceiling.py score")
+    return 0
+
+
+def resolve(target: str, verdicts: list[dict]) -> int:
+    """A worksheet number or a question id, to a row index.
+
+    Both are accepted because both are in front of the reader: the worksheet
+    numbers its sections 1..n and each one prints its id. Guessing which the
+    author meant is not needed — a bare integer is a section number, anything
+    else is an id.
+
+    Raises:
+        SystemExit: when the target names no row, rather than silently
+            recording a verdict against whatever row happened to be first.
+    """
+    if target.isdigit():
+        index = int(target) - 1
+        if not 0 <= index < len(verdicts):
+            raise SystemExit(
+                f"{target} is not a worksheet number — the sheet has "
+                f"{len(verdicts)} question(s), numbered 1 to {len(verdicts)}."
+            )
+        return index
+    for index, row in enumerate(verdicts):
+        if row["question_id"] == target:
+            return index
+    raise SystemExit(f"No question with id {target!r} in {VERDICTS}.")
+
+
+def apply_mark(row: dict, value: str, note: str | None) -> str:
+    """Record one verdict on one row. Returns what to print about it.
+
+    `stale` leaves `derivable` at None deliberately: a question whose gold
+    annotation points at a number this CR uses for something else has no
+    "these rules" to be judged against, and recording a `false` there would
+    put a corpus finding where a key defect belongs.
+    """
+    was = "stale" if row.get("stale") else {True: "true", False: "false"}.get(row.get("derivable"))
+    if value == "stale":
+        row["stale"] = True
+        row["derivable"] = None
+    else:
+        row["derivable"] = value == "true"
+        row["stale"] = False
+    if note is not None:
+        row["note"] = note
+    if was is None:
+        return f"  {row['question_id']}: {value}"
+    if was == value:
+        return f"  {row['question_id']}: {value} (unchanged)"
+    # Never silent. A mistyped section number would otherwise overwrite a
+    # verdict already read and nothing would say so.
+    return f"  {row['question_id']}: {was} -> {value}  ** CHANGED"
+
+
+def mark(args: argparse.Namespace) -> int:
+    """Record verdicts from the command line. It records; it does not decide.
+
+    There is no heuristic here and no model call, and there will not be one.
+    The ceiling is a judgement about whether a key follows from evidence a
+    person has read — the one quantity in E-018 that no code can produce. A
+    number that looks like the ceiling and was not read is worth less than no
+    number, because it would be trusted.
+    """
+    if not VERDICTS.exists():
+        raise SystemExit(f"No verdicts at {VERDICTS}. Run `worksheet` first.")
+    payload = json.loads(VERDICTS.read_text(encoding="utf-8"))
+    verdicts = payload["verdicts"]
+
+    if not args.pairs:
+        _, stale, blank = partition(verdicts)
+        done = len(verdicts) - len(blank)
+        print(f"{done} of {len(verdicts)} recorded ({len(stale)} stale).\n")
+        for index, row in enumerate(verdicts, start=1):
+            if row["question_id"] in blank:
+                print(f"  {index:>3}. {row['question_id']}")
+        if not blank:
+            print("  nothing left — run `score`.")
+        return 0
+
+    if len(args.pairs) % 2:
+        raise SystemExit(
+            "Arguments come in pairs: a worksheet number or question id, then "
+            "one of true / false / stale.\n"
+            "  python scripts/e018_ceiling.py mark 1 true 2 stale"
+        )
+    steps = list(zip(args.pairs[::2], args.pairs[1::2], strict=True))
+    if args.note is not None and len(steps) != 1:
+        raise SystemExit("--note applies to one verdict; pass a single pair with it.")
+
+    # Resolved and validated in full before anything is written: a batch that
+    # fails on its third pair would otherwise leave the first two recorded and
+    # nothing saying which.
+    for target, value in steps:
+        if value not in {"true", "false", "stale"}:
+            raise SystemExit(f"{value!r} is not true, false or stale (for {target}).")
+    planned = [(resolve(target, verdicts), value) for target, value in steps]
+    for index, value in planned:
+        print(apply_mark(verdicts[index], value, args.note))
+
+    VERDICTS.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    _, stale, blank = partition(verdicts)
+    print(f"\n{len(verdicts) - len(blank)} of {len(verdicts)} recorded, {len(blank)} to go.")
+    if not blank:
+        print("Run `python scripts/e018_ceiling.py score`.")
     return 0
 
 
@@ -390,6 +504,14 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("freeze", help="write the two id files, once")
     sub.add_parser("worksheet", help="render the sheet and seed the verdict file")
+    marker = sub.add_parser("mark", help="record verdicts; with no arguments, what is left")
+    marker.add_argument(
+        "pairs",
+        nargs="*",
+        metavar="TARGET VALUE",
+        help="worksheet number or question id, then true / false / stale",
+    )
+    marker.add_argument("--note", default=None, help="a note, with a single pair")
     sub.add_parser("score", help="the ceiling against the registered gate")
     args = parser.parse_args()
 
@@ -399,7 +521,8 @@ def main() -> int:
 
         args.caches = [CACHE_DIR, E007_CACHE_DIR]
 
-    return {"freeze": freeze, "worksheet": worksheet, "score": score}[args.command](args)
+    commands = {"freeze": freeze, "worksheet": worksheet, "mark": mark, "score": score}
+    return commands[args.command](args)
 
 
 if __name__ == "__main__":

@@ -195,6 +195,76 @@ class TestTheReaderIsJudgingTheContextTheTreatmentProduces:
         assert "alone" not in ceiling.QUESTION
 
 
+class TestMarkingRecordsAndDoesNotDecide:
+    """The verdict file is written from the reading, never inferred."""
+
+    def sheet(self) -> list[dict]:
+        return [
+            {"question_id": "a", "derivable": None, "stale": False, "note": ""},
+            {"question_id": "b", "derivable": None, "stale": False, "note": ""},
+        ]
+
+    def test_a_worksheet_number_resolves_to_its_row(self) -> None:
+        assert ceiling.resolve("2", self.sheet()) == 1
+
+    def test_a_question_id_resolves_to_its_row(self) -> None:
+        assert ceiling.resolve("a", self.sheet()) == 0
+
+    def test_a_number_outside_the_sheet_refuses_rather_than_clamping(self) -> None:
+        # Clamping would record a verdict against whichever row is nearest,
+        # and nothing in the output would distinguish that from a hit.
+        with pytest.raises(SystemExit, match="numbered 1 to 2"):
+            ceiling.resolve("9", self.sheet())
+
+    def test_an_unknown_id_refuses(self) -> None:
+        with pytest.raises(SystemExit, match="No question with id"):
+            ceiling.resolve("nope", self.sheet())
+
+    def test_true_and_false_are_recorded_as_the_boolean(self) -> None:
+        rows = self.sheet()
+        ceiling.apply_mark(rows[0], "true", None)
+        ceiling.apply_mark(rows[1], "false", None)
+        assert rows[0]["derivable"] is True
+        assert rows[1]["derivable"] is False
+
+    def test_stale_leaves_derivable_unanswered(self) -> None:
+        # A question whose gold annotation points at a number this CR uses
+        # for something else has no "these rules" to be judged against.
+        # Recording a `false` there puts a corpus finding where a key defect
+        # belongs, and it would count in the ceiling's denominator.
+        row = self.sheet()[0]
+        ceiling.apply_mark(row, "stale", None)
+        assert row["stale"] is True
+        assert row["derivable"] is None
+
+    def test_marking_a_verdict_false_after_stale_clears_the_stale_flag(self) -> None:
+        row = self.sheet()[0]
+        ceiling.apply_mark(row, "stale", None)
+        ceiling.apply_mark(row, "false", None)
+        assert row["stale"] is False
+        assert row["derivable"] is False
+
+    def test_overwriting_an_existing_verdict_is_announced(self) -> None:
+        # A mistyped worksheet number would otherwise overwrite a verdict
+        # already read, silently.
+        row = self.sheet()[0]
+        ceiling.apply_mark(row, "true", None)
+        message = ceiling.apply_mark(row, "false", None)
+        assert "CHANGED" in message
+        assert "true -> false" in message
+
+    def test_recording_the_same_verdict_twice_is_not_a_change(self) -> None:
+        row = self.sheet()[0]
+        ceiling.apply_mark(row, "true", None)
+        assert "unchanged" in ceiling.apply_mark(row, "true", None)
+
+    def test_a_note_is_kept_and_an_absent_note_does_not_erase_one(self) -> None:
+        row = self.sheet()[0]
+        ceiling.apply_mark(row, "false", "turns on a ruling nobody retrieved")
+        ceiling.apply_mark(row, "false", None)
+        assert row["note"] == "turns on a ruling nobody retrieved"
+
+
 class TestTheGateWasRegisteredBeforeTheReading:
     """The arithmetic behind it, kept where a later edit would trip a test."""
 
