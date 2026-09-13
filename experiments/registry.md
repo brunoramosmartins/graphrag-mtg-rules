@@ -5736,3 +5736,139 @@ generator improves, but because the haystack is never built. That claim now
 rests on two measured entries rather than on the withdrawn sentence it was
 originally motivated by, and it still has to be registered and run on its own
 terms before it is worth anything.
+
+---
+
+## E-017 — is the three-hop haystack the depth, or the untyped walk? (registered 2026-09-13, not yet run)
+
+- **Registered:** 2026-09-13, after E-016 returned branch 2 and recorded that
+  three-hop retrieval needs a different *walk* rather than a different eviction
+  order. This entry tests that sentence before anything is built on it.
+
+- **The decision this informs, and it is a build decision.** P3 is scoped as an
+  agentic router whose thesis is decomposition: answer a multi-hop question as a
+  sequence of single-hop retrievals. That thesis was originally motivated by a
+  sentence this project has since withdrawn, and E-016 gave it new support
+  indirectly. **Before P3 builds an agent, this entry asks whether the saving
+  decomposition claims is real, and whether an agent is even the cheapest way
+  to get it.**
+
+  The cheapest version of the same idea needs no agent at all: **expand along
+  the relation the question is about, instead of expanding along everything.**
+  If typed expansion alone closes the gap, the agentic machinery is solving a
+  problem that a `WHERE type(r) = $relation` already solved, and P3 should know
+  that before writing a planner rather than after.
+
+### What is already measured, and the bar it sets
+
+| | |
+|---|---|
+| untyped three-hop pool, median | **199,146 tokens** (`kind_cap` 4,000) |
+| the answer chain inside it | **90 tokens**, 3 triples |
+| shipped budget | **6,000 tokens** |
+| chain reach at that budget, best of four eviction policies | **0.120** (E-016) |
+| chain reach at sixteen times the budget, shipped policy | 0.650 (E-015) |
+
+So a typed expansion has to be at least **33× smaller** than the untyped shell
+to fit the shipped budget at all. That factor is stated here, before the run,
+as the thing the measurement has to clear.
+
+### Design — retrieval only, zero model calls
+
+- **The quantity.** For each three-hop dev question, read the relation sequence
+  off the answer chain — three relation names — then expand from the seed
+  following **only those relations, one per hop**, and measure the size of what
+  comes back in triples and tokens.
+
+- **What this is, said plainly.** The relation sequence comes from the gold
+  chain, so this is a **ceiling**: it measures what a typed walk would cost *if
+  something chose the relations correctly*. Nothing here chooses them.
+  **No number in this entry is a system score**, and the entry may not be
+  quoted as evidence that a system reaches anything. It is the same shape as
+  `reduce_to_k` keeping the chain because it was handed the answer, and it is
+  labelled that way on purpose — the mistake that cost this project its
+  headline was letting an oracle-conditioned figure read as a system figure.
+
+- **The comparison that carries the result** is therefore not reach — a typed
+  walk along the gold relations reaches the answer by construction — but
+  **size**: how many tokens the typed context costs against the 199,146 of the
+  untyped one, and what fraction of questions fit inside 6,000.
+
+- **Metrics.**
+  1. *Fit rate*: the fraction of questions whose typed three-hop expansion fits
+     the shipped 6,000-token budget, with a Wilson interval.
+  2. *Reduction factor*: untyped tokens ÷ typed tokens, per question, reported
+     as a median with quartiles.
+  3. *Fan-out per hop*: entities reached at each hop, median. A three-hop
+     MetaQA answer is a set, so the typed walk is a bounded tree rather than a
+     path, and its size is the product of three branching factors. That
+     product is what decides whether typing is enough.
+
+- **Population.** The same 100 three-hop dev questions E-015 and E-016 used, so
+  every figure here sits beside theirs without a population caveat. The
+  confirmatory split is not touched: this entry decides a build direction, not
+  a published result.
+
+### Decision rule, fixed before the run
+
+1. **Fit rate ≥ 0.80.** Typed expansion alone puts the three-hop chain inside
+   the shipped budget. Consequence: **P3's first registered experiment is
+   typed expansion, not an agent.** An agent is justified only by whatever
+   typed expansion leaves on the table, and the next entry measures the price
+   of choosing the relations without the gold chain — the analogue of E-016's
+   "the price of not knowing which 90 tokens".
+2. **Fit rate ≤ 0.30.** Typing is not the saving. The fan-out is inherent to
+   this KB at depth three, and **E-016's reading that "the walk is the problem"
+   is wrong or incomplete** — it would mean no walk of this family fits, typed
+   or not. Consequence: the decomposition thesis does not inherit E-016 as
+   support, and P3 has to justify itself on something else. This branch is the
+   one that costs the most to accept and it is written down first for that
+   reason.
+3. **Between.** Reported, no build direction is decided here, and the reduction
+   factor is carried into P3's own registration as a prior rather than as a
+   verdict.
+
+### Predictions, recorded before the run
+
+1. **Fit rate above 0.80 — branch 1.** Nine relations, and only one is followed
+   per hop, so the shell collapses by roughly the branching factor cubed.
+2. **Median reduction factor between 100× and 1,000×.** If it comes back under
+   33× the entry lands in branch 2 and my reading of E-016 was wrong.
+3. **The fan-out is uneven and the middle hop dominates.** The first hop leaves
+   a named entity and is small; the second lands on a person or a genre and
+   fans wide; the third is bounded by that width. If any hop is the problem it
+   is the second, and that is where a later selector would have to be good.
+4. **A minority of questions will not fit at any typing.** Hub seeds — a
+   prolific director, a common genre — fan out enough that even one relation
+   per hop is thousands of triples. I expect 10–20% of questions in that
+   condition, and if the figure is near zero I should suspect the measurement
+   rather than celebrate.
+
+### Threats to validity, recorded before the run
+
+- **The relation sequence is an oracle.** Stated above and repeated here
+  because it is the entry's whole limitation: this bounds what typing could
+  buy, and says nothing about whether anything can pick the relations.
+- **Reach is not measured and must not be inferred.** Following the gold
+  relations reaches the answer by construction, so a reach figure from this
+  design would be a tautology dressed as a result. Only size is reported.
+- **A ceiling that looks generous makes the remaining problem look small.**
+  E-016 is the precedent: its ceiling was 0.920 and the best oracle-free arm
+  returned 0.120. Any reduction factor found here should be read as the
+  numerator of a fraction whose denominator has not been measured yet.
+- **MetaQA has nine relations and a uniform degree distribution.** The CR has
+  neither. Concepts transfer, constants do not, and no branching factor from
+  this entry is carried to the Magic side.
+- **Multi-answer questions inflate the typed tree.** MetaQA three-hop answer
+  sets run to a dozen entities; the typed walk must reach one of them, not all,
+  but the walk does not know which and so pays for the whole level. The
+  measurement reflects that and is not corrected for it.
+
+### Cost
+
+**Zero model calls.** Three targeted Cypher expansions per question over 100
+questions, against the already-loaded MetaQA instance.
+
+### Actual result
+
+_Not yet run._
