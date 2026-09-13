@@ -5200,3 +5200,142 @@ of 3-hop questions, which points at retrieval rather than the generator.
 ### Actual result
 
 _Not run. Suspended as above._
+
+---
+
+## E-015 — does the three-hop chain survive retrieval, and what destroys it? (registered 2026-09-13, not yet run)
+
+- **Registered:** 2026-09-13, before any cell is collected and before
+  `scripts/run_e015.py` exists. It follows E-012's amendment of the same day
+  and exists because that amendment left the three-hop question open rather
+  than answered.
+
+- **The decision this informs.** E-012's registered job was to decide whether
+  `enforce_budget`'s distance-first trim is a hazard for multi-hop questions.
+  It chose branch 2 — *context reduction is not adopted, the trim stays* — on
+  a size null measured at fixed depth. **That null cannot see this hazard.**
+  Every E-012 cell had the answer chain guaranteed present by construction,
+  because `reduce_to_k` reinstated it before the model was called. A design
+  that repairs the damage before measuring is structurally blind to the damage,
+  which is this project's recurring shape arriving in the experiment built to
+  catch it.
+
+  So the consequence E-012 published about `enforce_budget` was not supported
+  by evidence about `enforce_budget`. This entry supplies that evidence, or
+  fails to and says which.
+
+- **What is already measured, from fields E-002 recorded at the time.**
+
+  | | questions with evidence dropped by the budget | with the frontier truncated | median evidence |
+  |---|---:|---:|---:|
+  | 1-hop | 0 / 500 | 0 / 500 | 7 |
+  | 2-hop | 121 / 500 | 106 / 500 | 22 |
+  | **3-hop** | **498 / 500** | **497 / 500** | 206 |
+
+  And with the repaired `answer_path` — which requires a chain of the declared
+  depth — the shipped configuration reaches a genuine three-step chain on
+  **10 of 300** questions of E-012's confirmatory split (3.3%).
+
+  `enforce_budget` sorts by `(-distance, -index)` and evicts from the front, so
+  **distance-3 evidence is always the first thing thrown away** — on a 3-hop
+  question, the hop the answer lives on. `frontier_cap` truncates upstream of
+  that, removing entities before the third expansion runs at all.
+
+- **Objective.** Measure, with **zero model calls**, the fraction of 3-hop
+  questions on which retrieval delivers a chain of the declared depth, as a
+  function of the two limits that are cutting it, and price each setting in
+  evidence items and tokens.
+
+### Design
+
+- **Population.** The 3-hop questions of E-012's frozen draws: the **dev** draw
+  (100, seed `20260903`) carries the sweep, and the **confirmatory** draw (300,
+  seed `20260904`) is read once, at the single setting the sweep names. Both
+  were drawn for a generation experiment; this entry runs retrieval only and
+  draws no conclusion about any model, so it spends neither split's meaning.
+
+- **Grid.** `frontier_cap` ∈ {400 *(shipped)*, 1600} × `token_budget` ∈
+  {6000 *(shipped)*, 24000, 96000}. Six cells. `kind_cap` stays at
+  E-002's 1000 and the expansion depth stays at the question's hop count —
+  this entry varies the two limits that discard evidence, not the walk.
+  **Extension rule, fixed here:** if reach is still rising at
+  `frontier_cap` 1600, one further cell at 6400 is added and reported as an
+  extension of this grid rather than as a new experiment.
+
+- **Primary metric.** *Chain reach* — the fraction of questions on which
+  `answer_path(..., hops=3)` returns a chain — with a Wilson interval. It is a
+  retrieval metric and no model is involved.
+
+- **Secondary metrics, registered because the repair can pay for itself
+  badly.** Median evidence items and median tokens per question at each cell.
+  E-012 measured the generator's tolerance for context up to 256 items; a cell
+  that buys reach at 2,000 items is buying it outside anything this project
+  has tested.
+
+### Decision rule, fixed before the run
+
+1. **Chain reach rises above 0.50 at some cell.** The three-hop failure is
+   substantially an artefact of the two limits. Consequences: E-012's branch-2
+   consequence about `enforce_budget` is **amended** — recorded as inferred
+   from a null that could not see this — the cheapest cell clearing 0.50 is
+   named as the setting any future 3-hop work uses, and E-014 becomes
+   answerable again at that setting with its own amendment.
+2. **Chain reach stays below 0.20 at every cell.** Breadth-first expansion
+   from a seed does not reach three-hop answers at any setting worth paying
+   for, and the finding is about the retrieval **strategy**, not its limits.
+   Consequences: E-014 stays suspended in its current form permanently; P3's
+   decomposition hypothesis inherits this as its registered prior, with the
+   mechanism being that decomposition replaces one three-hop retrieval with
+   three one-hop retrievals, and one-hop reach is 100%.
+3. **Between 0.20 and 0.50.** Reported, and the cheapest cell above 0.20 is
+   named. No consequence is drawn for `enforce_budget`, because a change to
+   shipped trimming should not need a close reading to justify — the same bar
+   E-013 was held to.
+
+### Predictions, recorded before the run
+
+1. **Reach at the shipped cell is below 0.10 on dev**, consistent with the
+   3.3% already measured on conf.
+2. **Reach is monotone non-decreasing in both limits.** Raising a cap or a
+   budget can only add evidence. **A cell where reach falls as a limit rises
+   is a harness bug and not a finding**, and no number is read until it is
+   explained. Registered as the check in this entry that can return negative.
+3. **`frontier_cap` dominates `token_budget`.** Truncation happens upstream:
+   no budget can retain evidence that was never collected, because the entity
+   it hangs off never entered the frontier. So the 400 → 1600 step moves reach
+   more than the 6000 → 96000 step.
+4. **Reach above 0.50 costs a context far outside what E-012 tested.** Median
+   evidence at the shipped 3-hop cell is already 206; I expect the cheapest
+   cell clearing 0.50, if one exists, to sit above 1,000 items.
+
+### Threats to validity, recorded before the run
+
+- **A chain present is necessary, not sufficient.** Reach says the evidence
+  could support an answer, never that an answer would be right. **No figure in
+  this entry may be quoted as a correctness or a system score**, and the
+  distance between the two is exactly the mistake E-012's amendment corrects.
+- **The repaired `answer_path` errs toward exclusion.** Its walk marks nodes
+  seen at the depth it first reaches them, so an entity reachable both above
+  and at the declared depth is consumed by the shallower path. Every reach
+  figure here is therefore a **lower bound**.
+- **Context the generator has never been tested on.** E-012's size null runs
+  to 256 items. A cell that buys reach at thousands is outside it, and quoting
+  the null there would be extrapolation.
+- **MetaQA's KB is dense and uniform.** Its relation set is small and its
+  degree distribution nothing like the CR's. Concepts transfer, constants do
+  not: no cap or budget found here is carried to the Magic side.
+- **Both splits were drawn for a generation experiment.** This entry reads
+  them for retrieval only. If any later entry wants a *generation* claim at
+  three hops, it needs a fresh draw, because the repaired filter leaves ten
+  usable questions on the confirmatory split.
+
+### Cost
+
+**Zero model calls.** Six cells × 100 dev questions of graph traversal, plus
+one confirmatory reading of 300. The expense is wall-clock on the MetaQA
+instance at the larger frontier, not money, and the script prints the cell it
+is on so a long cell is visible rather than silent.
+
+### Actual result
+
+_Not yet run._
