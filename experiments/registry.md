@@ -5739,7 +5739,7 @@ terms before it is worth anything.
 
 ---
 
-## E-017 — is the three-hop haystack the depth, or the untyped walk? (registered 2026-09-13, not yet run)
+## E-017 — is the three-hop haystack the depth, or the untyped walk? (registered 2026-09-13, run 2026-09-13)
 
 - **Registered:** 2026-09-13, after E-016 returned branch 2 and recorded that
   three-hop retrieval needs a different *walk* rather than a different eviction
@@ -5871,4 +5871,107 @@ questions, against the already-loaded MetaQA instance.
 
 ### Actual result
 
-_Not yet run._
+**Actual result (2026-09-13, dev split, 92 of 100 three-hop questions, zero
+model calls): branch 3 — typing buys a great deal and is not enough, and the
+residual has a name.**
+
+Harness check first, because nothing below is readable without it: **the typed
+walk reproduced the chain it followed on 92 of 92**. Following the gold chain's
+own relations must return the gold chain; if it did not, the query, the
+direction handling or the visited rule would be wrong and every size figure
+would be fiction.
+
+| | |
+|---|---|
+| questions measured | 92 (8 excluded — no chain in the pool, the same 8% as E-016's 0.920 ceiling) |
+| **fit rate at the shipped 6,000 tokens** | **0.522** [0.421, 0.621] — 48/92 |
+| typed tokens | median **5,676** (q1 1,412, q3 35,962) |
+| untyped tokens | median 193,797 |
+| **reduction factor** | median **30.6×** (q1 5.5×, q3 76.1×) — the bar was 33× |
+
+Fan-out, entities newly reached per hop: **2 / 89 / 42** at the median, with a
+hop-2 maximum of **7,363**.
+
+**The median typed expansion costs 5,676 tokens against a 6,000-token budget.**
+It fits by three hundred tokens. That is the whole result in one line: typing
+takes a 193,797-token shell down to something that *just* fits, for half the
+questions.
+
+### The residual has a name, and it is not depth
+
+An exploratory cut of the same run — descriptive of a distribution already
+measured, no selection involved, and labelled exploratory wherever quoted:
+
+| | questions that fit 6,000 | questions that do not |
+|---|---:|---:|
+| median hop-2 fan-out | **22** | **493** |
+
+And the middle relation on the 44 that do not fit:
+
+| relation | count |
+|---|---:|
+| `has_genre` | 20 |
+| `release_year` | 19 |
+| `starred_actors` | 3 |
+| `in_language` | 1 |
+| `has_tags` | 1 |
+
+**Thirty-nine of forty-four are `has_genre` or `release_year`.** Those are hub
+relations by nature: "movies in the same genre as X" or "released the same year
+as X" passes through a node with thousands of neighbours. `written_by`,
+`directed_by` and `starred_actors` pass through a person and fan out by tens.
+
+So the three-hop problem, as far as this project has measured it, is **not
+depth and not untyped walking**. It is **traversing a hub**. A chain of three
+person-shaped relations is cheap at any depth; one genre or one year in the
+middle is what builds the haystack.
+
+Raising the budget does not fix it either: fit rate goes 0.522 at 6,000 →
+0.609 at 12,000 → 0.685 at 24,000 → **0.793 at 48,000, and 0.793 at 96,000**.
+Nineteen questions fit at no budget tested. They are the hub cases.
+
+### Predictions, scored
+
+1. **"Fit rate above 0.80 — branch 1."** *Wrong.* 0.522.
+2. **"Median reduction between 100× and 1,000×."** *Wrong*, and by an order of
+   magnitude: 30.6×. **The reasoning attached to it was also wrong**, separately
+   and worth recording: it said that a reduction under 33× would put the entry
+   in branch 2. It did not — the branch reads the *fit rate*, and a median
+   reduction just under the bar sits happily beside a fit rate of 0.522 because
+   the distribution is enormously skewed (q1 5.5×, q3 76.1×). Two quantities
+   were conflated in a prediction written by the person who had defined both.
+3. **"The fan-out is uneven and the middle hop dominates."** *Right*, and it is
+   the only one. 2 / 89 / 42, with the hop-2 maximum at 7,363.
+4. **"10–20% will not fit at any typing."** *Wrong, and optimistic.* 47.8% do
+   not fit the shipped budget and 20.7% fit at no budget tested.
+
+One of four right. The one that was right is the one that turned out to matter.
+
+### What this decides, and what it refuses to decide
+
+**Branch 3 applies as registered: no build direction is decided here.** The
+reduction factor goes into P3's registration as a prior, not as a verdict. That
+is the rule refusing to hand P3 a mandate on a 0.522, and it is the right
+refusal — the same bar that stopped E-016 adopting a significant result.
+
+What P3 inherits is sharper than a mandate anyway:
+
+- **Typed expansion is necessary.** A 30× reduction is not a detail, and no
+  agent should be built that expands untyped.
+- **Typed expansion is not sufficient**, and the gap is concentrated: 39 of the
+  44 failures pass through two relations out of nine.
+- **The target is hub traversal, not multi-hop.** Any P3 design should be
+  registered against that, and a design that helps with depth in general but
+  not with hubs in particular would be solving the wrong half.
+- **An agent is still not obviously the answer.** Seeing that an intermediate
+  set has 493 members and deciding to filter is something a rule can do. That
+  the cheapest mechanism has not been ruled out is, again, the finding.
+
+### The limitation that bounds every figure above
+
+The relation sequence was read off the gold chain. This measures what typing
+would cost **if something chose the relations correctly**, and nothing here
+chose. The price of choosing is unmeasured, and E-016 is the precedent for how
+large that price can be: its ceiling was 0.920 and the best oracle-free arm
+returned 0.120. Every number in this entry is a numerator whose denominator has
+not been measured.

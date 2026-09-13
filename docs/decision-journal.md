@@ -90,6 +90,41 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — The three-hop problem is hub traversal, not depth
+
+E-017 asked whether the three-hop haystack is the depth or the untyped walk,
+before P3 builds an agent on E-016's closing sentence. Free, retrieval only,
+and it measures size rather than reach — the relation sequence is read off the
+gold chain, so a reach figure would be a tautology and the entry says so twice.
+
+Typing the walk takes the median three-hop context from **193,797 tokens to
+5,676**, a 30.6x reduction, against a 6,000-token budget. It fits by three
+hundred tokens, for **half** the questions.
+
+**The residual has a name.** Of the 44 questions that do not fit, **39 pass
+through `has_genre` or `release_year` at the middle hop** — hub relations, where
+one node has thousands of neighbours. Median hop-2 fan-out is 22 on the
+questions that fit and 493 on the ones that do not. Nineteen fit at no budget
+tested, including 96,000.
+
+So the thing this project has been calling a depth problem since E-002 is
+**hub traversal**. A chain of three person-shaped relations is cheap at any
+depth; one genre or one year in the middle builds the haystack.
+
+**Branch 3 applies: no build direction is decided.** The rule refuses to hand
+P3 a mandate on a fit rate of 0.522, which is the same bar that stopped E-016
+adopting a statistically significant result the day before. What P3 inherits is
+sharper than a mandate — typed expansion is necessary, is not sufficient, and
+the target is hubs rather than depth; a design that helps with depth in general
+and not with hubs in particular would be solving the wrong half. An agent is
+still not obviously the answer: noticing that an intermediate set has 493
+members and filtering is something a rule can do.
+
+One of four predictions was right, and the reasoning attached to a second was
+wrong independently of the prediction — it tied a median reduction factor to a
+branch that reads a fit rate, two quantities defined in the same entry by the
+same person.
+
 ## 2026-09-13 — A significant result was refused because the effect size was registered first
 
 E-016 asked whether an eviction policy that knows nothing about the answer can
