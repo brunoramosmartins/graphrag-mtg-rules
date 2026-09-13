@@ -22,6 +22,11 @@ from typing import Protocol
 STEP = re.compile(r"(<-\[:[^\]]+\]-|-\[:[^\]]+\]->)")
 NODE = re.compile(r"\(:(?P<label>\w+)(?:\s*\{(?P<name>[^}]*)\})?\)")
 
+#: The relation name inside a step. Read with a pattern rather than stripped
+#: of its punctuation: `strip` takes a *set* of characters, so a relation
+#: legitimately starting or ending with one of them would lose it silently.
+RELATION = re.compile(r"\[:(?P<name>[^\]]+)\]")
+
 #: Path strings that are prose rather than traversals.
 NOT_A_PATH = ("hybrid retrieval", "lexical retrieval", "vector", "(no path recorded)")
 
@@ -66,7 +71,10 @@ def parse_path(
             name = (match["name"] or "").strip() or fallback_key
             nodes.append((match["label"], name))
         else:
-            relation = part.strip("<->-[]:")
+            step = RELATION.search(part)
+            if not step:
+                return [], []
+            relation = step["name"]
             left, right = len(nodes) - 1, len(nodes)
             edges.append((right, left, relation) if part.startswith("<-")
                          else (left, right, relation))

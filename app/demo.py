@@ -36,19 +36,27 @@ from pathlib import Path
 
 import streamlit as st
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "scripts"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from examples import resolve  # noqa: E402  (app-local)
-from paths import FRIENDLY, build_graph, has_path, widest_level  # noqa: E402  (app-local)
-
 from graphrag_mtg.etl.cr_parser import CR_TXT_PATH
 from graphrag_mtg.extraction.llm import LlmClient
 from graphrag_mtg.generation.answerer import answer as generate_answer
 from graphrag_mtg.graph.connection import driver_session
 from graphrag_mtg.retrieval.pipeline import neo4j_runner, retrieve
 from graphrag_mtg.retrieval.subgraph import DEFAULT_KIND_CAP, DEFAULT_TOKEN_BUDGET, Outcome
+
+# `graphrag_mtg` is installed (`pip install -e .`) and needs no path help. The
+# two modules below sit beside this file and are imported by bare name because
+# Streamlit runs the script, so `app` is not a package here.
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from examples import resolve  # noqa: E402  (app-local, needs the path above)
+from paths import (  # noqa: E402  (app-local, needs the path above)
+    FRIENDLY,
+    build_graph,
+    has_path,
+    widest_level,
+)
 
 MAX_ANSWER_TOKENS = 700
 
