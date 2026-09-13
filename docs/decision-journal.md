@@ -90,6 +90,57 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — Five of the questions carrying the effect never called the model, and 0.308 is partly a linking number
+
+E-018 was red-teamed before its first API call, and the pass was checked
+against the artifacts rather than accepted. The entry's motivating table
+reproduces exactly from E-001's arm-B evaluation record: 42 questions carry
+`gold_cr_rules`, 16 have one retrieved and score 0.812, 26 do not and score
+0.308. Two things it did not know came out of the same check.
+
+**Five of those 26 never reached the generator.** All five retrieved with
+`outcome = no_seed`, and `answerer.py` refuses before any model call on
+anything that is not `RESOLVED`. That is deliberate and documented — `NO_SEED`
+means *entities exist, none reaches the rule graph* — so it is not a defect.
+But those five carried 12, 9, 7, 5 and **28** evidence items, and the refusal
+text they received says *"retrieval returned no usable evidence"*, which is
+false on all five. The policy is right; the sentence is not, and it is the
+shape of sentence that makes an aggregate read wrong six weeks later.
+
+Standing rule 9, applied to a figure recorded in this journal earlier today:
+*of the questions whose gold rule retrieval did not bring, how many did the arm
+answer correctly* — what **else** makes that return 0.308? Retrieval resolving
+no seed, so the arm never answered. **Among the 21 the generator actually saw
+the rate is 0.381, and the gap is 0.431, not 0.504.** Still the largest effect
+this project has measured on its own corpus, and smaller than it was written
+down as. The five leave E-018's primary and are run as a named exploratory
+stratum; a design that moves entity linking and rule presence at once answers
+neither.
+
+**The branch that cancels a phase fired on failure to reject.** Recomputed at
+n = 21, the smallest net lift that clears the strict Holm step is **0.333** —
+and the entry's own prediction 1 registers 0.25 to 0.45. It predicted an effect
+it would frequently fail to detect, and gave the undetected case the most
+expensive consequence in the entry. E-001 had already solved this shape with a
+three-valued verdict; E-018 had two of the three. Branch 3 is now *3a
+inconclusive*, which cancels nothing and is the default, and *3b evidence of
+absence*, which requires the interval to exclude +0.20 and is the only branch
+that stops Phase 9.
+
+Seven more changes are in the amendment. The one worth repeating here is that
+**the effect-size bar was placed where it can bind rather than where it reads
+well**: on treatment vs control at n = 21 the discordance threshold already
+forces a lift of 0.333, so any bar at 0.25 is decorative — that is recorded as
+already-enforced, and the real bar sits on *treatment minus placebo*, which is
+the contrast that names the construct and the one a null can hide behind.
+
+A footnote on the instrument, because it is the same lesson: the red-team pass
+argued from **2.5 gold rules per question**. That constant is E-013's, measured
+on the 26-question failure population. On these 42 the median is **one**, and
+13 of the 16 present questions already have their full gold set. Checking it
+before using it is the only reason it is a sentence in the amendment instead of
+a mistake in the design.
+
 ## 2026-09-13 — Phase 9 opens on a gate, and Phase 8 closes with three items moved rather than finished
 
 Phase 9 opened the same day the Magic-side audit landed, with the objective

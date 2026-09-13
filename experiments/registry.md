@@ -6116,6 +6116,303 @@ Three conditions × 42 questions = 126 generations plus 126 judge calls on arm
 B, at the pinned `gpt-4o-mini`. Expected under US$ 3, with `--limit` and a
 printed estimate before any spend.
 
+### Amendment 2026-09-13 — five of the questions carrying the effect never called the model, and the branch that cancels a phase fires on failure to reject
+
+Written after a red-team pass over the entry and **before the first API call**.
+Nothing below was learned from a run. Every figure in it is recomputed from
+E-001's recorded arm-B evaluation artifacts, which have not changed.
+
+#### What was verified first
+
+The entry's motivating table reproduces exactly from
+`runs/e001_B_{retrieval,verdicts}_eval.jsonl`: 42 questions carry
+`gold_cr_rules`, 16 have a gold rule among their retrieved `rule` evidence and
+13 of those score `correct` (0.812), 26 do not and 8 score `correct` (0.308).
+Two facts the entry did not have came out of the same pass.
+
+**Five of the 26 never reached the generator.** All five —
+`hand-humility-opalescence`, `hand-clone-copies-printed-pt`, `rg-1182`,
+`rg-3915`, `rg-1469` — retrieved with `outcome = no_seed`, and
+`answerer.py` refuses on `outcome is not RESOLVED or is_empty` before any
+model call. This is deliberate and documented: `NO_SEED` means *entities
+exist, none reaches the rule graph*, and `Outcome`'s docstring says no value
+other than `RESOLVED` may be answered from. It is not a defect. But it means
+the manipulated variable on those five is not the presence of the governing
+rule, and it is worth recording that the refusal these five received is **not**
+retrieval returning nothing: they carried 12, 9, 7, 5 and **28** evidence items
+respectively. The refusal text — *"retrieval returned no usable evidence"* — is
+false as written on all five, and is the shape of sentence that makes an
+aggregate read wrong later.
+
+Applying standing rule 9 to the entry's own table: *of the questions whose gold
+rule retrieval did not bring, how many did the arm answer correctly* — what
+**else** makes that return 0.308? **Retrieval resolving no seed, so the arm
+never answered at all.** Among the 21 questions the generator actually saw, the
+absent-condition rate is **8/21 = 0.381**, and the observational gap the entry
+is built on is **0.812 − 0.381 = 0.431**, not 0.504. It remains the largest
+effect this project has measured on its own corpus, and it is smaller than the
+entry claimed.
+
+**The gold key is thinner than assumed, and this confirms rather than weakens
+the entry.** The median question carries **one** gold rule, and **13 of the 16
+present questions have their full gold set retrieved**. The entry's claim that
+treatment is a near no-op on the present subset holds for 13 of 16; three
+questions receive a genuine remainder. (An earlier draft of this amendment
+carried 2.5 gold rules per question — that constant is E-013's, measured on the
+26-question failure population, and it does not transfer. It was checked
+against this population before being used, which is the only reason it is a
+sentence here and not an error in the design.)
+
+#### Change 1 — the five `no_seed` ids leave the primary, and are run anyway
+
+Frozen to `data/golden/e018_no_seed_ids.json` **before any injected context is
+built**, from E-001's recorded retrieval rather than recomputed at run time.
+They are **excluded from the primary contrast**: on them the intervention would
+manipulate entity linking as well as rule presence, and a design that moves two
+things answers neither.
+
+They are still run in all three conditions and reported as a **named
+exploratory stratum** — *what the governing rule buys on questions where
+linking resolved nothing* is a real question, it is the question Phase 9's
+Front C is partly about, and five cases at ≤ US$ 0.30 is not a saving worth
+making. The stratum fires no branch and enters no test family. The alternative
+considered and rejected was a fourth condition that lifts the `outcome` guard;
+it measures something valuable and it makes the primary uninterpretable on its
+own.
+
+#### Change 2 — the primary denominator is frozen, and it is 21
+
+The entry stated its population as 42, computed its power on 26, and attached
+neither to its decision rule. Two defensible denominators with opposite
+verdicts on a marginal result, chosen after the labels exist, is the 2026-09-13
+defect class reappearing inside the entry written to avoid it.
+
+**The primary contrast is computed on the rule-absent subset**: the arm-B
+evaluation questions carrying `gold_cr_rules` whose retrieved evidence contains
+no gold rule, minus the five above. Ids frozen to
+`data/golden/e018_absent_ids.json` before the run, from E-001's record.
+**n = 21**, printed here before the first call. The 16-question present subset
+and the 42-question pooled figure are secondaries and fire no branch.
+
+#### Change 3 — branch 3 splits, because failure to reject is not evidence of absence
+
+This is the amendment the entry most needed. Branch 3 cancelled a phase on a
+null, and the entry's own prediction 1 registers a lift of **0.25 to 0.45**
+while its power arithmetic detects far less than that.
+
+Recomputed at n = 21, exact McNemar, Holm over a family of two (strict step
+α/2 = 0.025):
+
+| discordant split | *p* | net lift | clears strict step |
+|---|---:|---:|---|
+| 6:0 | 0.031 | 0.286 | no |
+| 7:0 | 0.016 | 0.333 | yes |
+| 8:1 | 0.039 | 0.333 | no |
+| 9:1 | 0.021 | 0.381 | yes |
+| 10:2 | 0.039 | 0.381 | no |
+| 11:2 | 0.022 | 0.429 | yes |
+
+**The smallest net lift that can clear the strict step is 0.333.** The bottom
+half of the entry's own predicted interval is undetectable by its own design.
+So:
+
+- **3a — inconclusive, and it is the default.** Neither contrast clears its
+  Holm step and the treatment−control paired difference's 95% interval
+  **includes +0.20**. Consequence: **nothing is cancelled.** The observational
+  cut stays unpublished, Phase 9's objective is recorded as *unresolved*, and
+  the entry states that 21 paired questions cannot separate a 0.25 effect from
+  zero.
+- **3b — evidence of absence.** Neither contrast clears its Holm step **and**
+  the interval **excludes +0.20** — at n = 21 that is roughly net discordance
+  of at most one in the treatment's favour. Only 3b carries the registered
+  consequence of cancelling Phase 9's objective.
+
+Registered now, before the run: **this entry is far better able to confirm the
+effect than to rule it out**, and that asymmetry is published wherever any
+figure from it is quoted.
+
+#### Change 4 — the construct gets a bar, and the bar is placed where it can bind
+
+Branch 1 fired on significance alone. On 2026-09-13 a registered effect-size
+bar refused two significant results in this project and was right both times,
+so the omission is not defensible.
+
+But an honest bar has to be able to bind. On the treatment−control contrast at
+n = 21 it cannot: the smallest clearing split already carries a net lift of
+0.333, so any bar at or below 0.25 is decorative. **Recorded as such rather
+than written as a rule**: the discordance threshold already enforces a lift of
+at least 0.333 on that contrast, and no separate bar is added to it.
+
+The bar that can bind is on the construct. **Branch 1 additionally requires
+treatment − placebo ≥ 0.15** on the frozen subset. That contrast is what names
+the thing the entry claims — goldness net of volume and rule-shaped text — and
+it is where a null can hide behind a significant treatment-vs-control result.
+It is registered as a **bar, not a third test**: at n = 21 a Holm family of
+three would need 7:0 on every contrast and would make branch 1 nearly
+unreachable at the entry's own predicted effect. Below 0.15, the result is
+reported as *"the rule helps, and this design cannot separate that help from
+putting more rule-shaped text in the prompt"*, and Phase 9's objective is
+**reported, not adopted**.
+
+#### Change 5 — the branches are made exhaustive, and branch 2 stops using an adjective
+
+> *"2. Placebo beats control by a comparable margin."*
+
+That is the sentence E-001's amendment 2026-08-15c was written to outlaw: it
+has at least two defensible readings with opposite verdicts. Four real outcomes
+fall outside the three branches as registered — most importantly the likeliest
+one, *both clear their steps and treatment clears by more*. Restated
+mechanically, and now covering every outcome:
+
+1. **The rule causes the answer.** Treatment clears its Holm step **and**
+   treatment − placebo ≥ 0.15. Consequence unchanged.
+2. **The effect is volume or prompt shape.** Placebo clears its step **and**
+   treatment − placebo < 0.15. Consequence unchanged: Phase 9 does not target
+   gold-rule recall and the observational cut is retracted in the journal where
+   it was recorded.
+3. **3a inconclusive / 3b evidence of absence**, as above.
+4. **The injection hurts.** Either contrast clears its step in the **negative**
+   direction. Consequence: the entry reports a distraction effect, Phase 9's
+   objective is not adopted on this evidence, and the finding is registered as
+   the Magic-side counterpart of what E-015 measured, where more retrieval
+   bought worse coverage.
+
+#### Change 6 — a manipulation check, and branch 3 does not fire without it
+
+Nothing in the entry verified that the injected rule reached the prompt as
+sent. A null under an injection that silently failed is indistinguishable from
+a null under an injection that worked, and this project has already shipped one
+cell that had been handing the model the wrong evidence for months without a
+trace showing it.
+
+Per treatment generation the run records the injected rule numbers, whether
+each appears in the text `prompt_sha256` was computed over, and whether the
+answer's handles include any of them.
+
+- **Registered floor: the injected rule appears in the prompt as sent on
+  21/21**, checked mechanically, hard-failing the run if not.
+- ***Gold-rule citation uptake*** — the share of treatment answers citing at
+  least one injected rule — is reported as a named secondary. **If uptake is
+  below 0.50, branch 3 does not fire**: the entry reports that the intervention
+  did not reach the answer, and a null under a treatment the generator never
+  used is a null about the harness.
+
+#### Change 7 — the ceiling, computed before the run and from the keys the run will score
+
+E-013 paid for this lesson and E-016 answered it: *a ceiling is a claim about
+the experiment, and it has to be computed over the experiment's own inputs.*
+E-018 computed a detectable effect and no ceiling, and the ceiling matters more
+here than in either of them, because the 2026-09-13 audit recorded that
+**roughly 60% of this arm's correct answers cite no CR rule at all — they are
+grounded in rulings and card text.**
+
+Before any call, the author reads each of the 21 keys and records whether the
+key's verdict is derivable **from that question's `gold_cr_rules` alone**. That
+count is the maximum number of flips this design can produce; it is printed in
+this entry before the run, and any result above it is a defect in the
+measurement rather than a finding. **If the ceiling is below 0.333 × 21 ≈ 7
+questions, the entry is redesigned rather than run**, because branch 1 would be
+unreachable by construction.
+
+This is also the only honest test of the entry's own fourth threat —
+*`gold_cr_rules` is a human key* — which was stated and never measured.
+
+#### Change 8 — the rendering deliverable, which standing rule 8 already required
+
+The entry registered no rendering step, on the same day the rule requiring one
+was adopted, for a comparison whose gate consequence is a whole phase.
+
+`scripts/e018_inspect.py` renders per case: the question, the key, the
+control / placebo / treatment **prompts as sent** with `prompt_sha256` verified
+against the rebuilt prompt, the three raw answers, the three judge labels and
+rationales, and the injected rule numbers. Categories read **in full** because
+each holds five cases or fewer: treatment flips to correct, treatment flips to
+incorrect, placebo flips, the `no_seed` stratum, `void`, and unparseable judge
+output. Written to `docs/error-samples/e018.md`, versioned, and read **before
+any figure leaves this entry**.
+
+#### Change 9 — no pair is dropped for a condition-dependent reason
+
+The rubric carries `void` and the judge short-circuits refusals to a label
+without a model call, and the entry said nothing about either. A refusal scores
+*not correct* in every condition, inheriting E-001's scoring rule. A `void`
+label voids the **question in all three conditions**, is counted, and its ids
+are listed. No other exclusion is permitted after the run; any exclusion
+proposed post hoc is reported both ways.
+
+#### Threats added to the list, recorded before the run
+
+- **The outcome instrument is not validated, and the treatment stresses its
+  weakest boundary.** E-011's gate did not fire at 55 audited answers; the
+  judge agreed with a human on `correct` 13/18 and on `partial` **4/14**, and
+  all 15 disagreements ran one way with the judge stricter. The two-way
+  collapse puts this entire result on the `correct`/`partial` boundary, which
+  tie-break 3 decides on *reasoning matching the key* — a property the
+  treatment moves directly, since the key cites CR rules and treatment puts
+  those rules in front of the model. Consequences registered now: the
+  **three-label distribution is reported per condition** beside the collapsed
+  figure; an ordinal shift with no change in the collapse is named as its own
+  outcome — *"the rule improves the answer below the resolution of the
+  registered measure"* — and **blocks branch 3**; and no figure here is
+  described as validated correctness.
+- **The placebo controls volume and rule-shaped text; it does not control
+  topicality.** A random draw from the CR is off-topic by construction, so
+  branch 1 cannot distinguish *this governing rule* from *any rule about this
+  subject area*. Those imply different Phase 9 programmes — exact gold-rule
+  recall, which E-013 measured at a ceiling near zero, versus topical rule
+  coverage, which the `REFERENCES` work already scoped. Branch 1's consequence
+  is therefore narrowed to **"retrieval reaching rules of the right subject
+  area"**, of which exact gold-rule recall is the strictest reading. A
+  near-miss condition — *k* rules from the gold rules' own chapter, excluding
+  the gold rules — would separate them for about US$ 1 and is **registered as
+  optional, to be decided before the run, not after seeing the result.**
+- **No noise floor, which E-011's amendment item 9 made binding** for paired
+  comparisons over these rows: a model at temperature 0 is not deterministic.
+  A second control replicate (21 generations, 21 judge calls, ≈ US$ 0.50) runs
+  **first**; control-vs-control discordance is published beside the treatment
+  contrast, and if it reaches 4 one way the thresholds above are recomputed
+  against that floor before any branch fires.
+- **The motivating comparison is between two non-equivalent question sets.**
+  0.431 is a difference between the questions whose gold rule arrived and those
+  whose did not; E-001's 0.01 is paired within question between two arms. They
+  are not commensurable and the entry will not call one larger than the other.
+  The stratum composition of the 16 and the 21 is printed before the run, and
+  no per-stratum claim is made from either side.
+- **What the treatment changes besides goldness, now pinned.** Injected rules
+  enter the `Subgraph` through the same path as retrieved ones, so
+  serialization, handle contract and `expand()`'s fabricated-citation detector
+  treat them identically. The merged evidence is shuffled at a recorded seed in
+  all three conditions, so injected items are never a contiguous block at one
+  end. The placebo draw is redrawn until its token count is within ±20% of the
+  treatment's for that question, and the realized per-question deltas are
+  published. `notice=False` is set explicitly and `dropped`/`capped` are
+  recorded per condition. The 63 generations are interleaved by question rather
+  than batched by condition. And a check that can fail is registered: **0 of 21
+  control contexts differ from E-001's under the raised budget**, verified
+  mechanically — E-013 measured `dropped` empty at this budget, so this should
+  hold, and if it does not then the control is not "exactly what retrieval
+  produced".
+- **The second reading of the evaluation split is spent here.** After this
+  entry no third reading is available for Phase 9's confirmation. Whether the
+  development split must grow before Front C opens is **open**, recorded in the
+  journal for 2026-09-13, and not answered by this entry.
+
+#### Cost, restated
+
+Three conditions × 21 primary questions = 63 generations and 63 judge calls,
+plus 15 questions × 3 in the present subset, 5 × 3 in the `no_seed` stratum,
+and 21 in the noise-floor replicate. Still under US$ 3 at the pinned
+`gpt-4o-mini`, with `--limit` and a printed estimate before any spend.
+
+#### What this amendment does not change
+
+The design's core is untouched: assignment rather than observation, a placebo
+as the registered falsifier, arm B only, pairing within question, and the
+expensive branch written first. The red-team pass did not find a reason to
+abandon the entry. It found that the entry could return a number that reads as
+a verdict and is not one, in six specific ways, and every one of them is closed
+above **before the first call rather than after the result.**
+
 ### Actual result
 
 _Not yet run._
