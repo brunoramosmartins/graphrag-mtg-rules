@@ -7,6 +7,104 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project versions by roadmap phase rather than by semantic API surface —
 it is a study, not a library, and nothing here is imported by anyone else.
 
+## [1.1.0] — 2026-09-13
+
+**A claim this project had repeated for months was withdrawn, and what replaced
+it was measured the same day.** Nothing in 1.0.0 is deleted; 1.0.0's headline
+result stands untouched. What changed is a sentence about *why* it came out
+that way, and the sentence was wrong.
+
+### Withdrawn
+
+- **"Generation is the bottleneck, not retrieval" is withdrawn at three hops**,
+  along with the figures that carried it (E-002's 0.339, E-012's 0.511). The
+  conditioning clause — *"conditional on the answer being present in the
+  evidence the model received"* — was operating as *"an accepted answer string
+  was reachable"*, which is a weaker and different thing.
+- Found by rendering **one** scored case before paying for the follow-up
+  experiment built on it: a three-hop question whose context held hop one and
+  eleven films released in 1992. The model refused, correctly, and the harness
+  scored that as a generation failure. **126 of the 137 questions in that cell
+  (92%) were accepted on a one-step chain.**
+- **E-014 was suspended before its first call**, unspent, because it was
+  registered to interrogate the measurement that had just been withdrawn.
+- **E-001 is untouched** — different corpus, different scorer, and
+  `answer_path` has no part in it. So are the one-hop and two-hop columns,
+  whose chains match their declared depth on every question.
+
+### The replacement, measured
+
+Three entries registered and run on 2026-09-13, none of them spending a token.
+
+- **E-015**: at the shipped budget, retrieval delivers a three-hop chain on
+  **3 of 100** questions; at sixteen times the budget, **65 of 100**.
+  `enforce_budget` evicts by descending distance, so the first thing it
+  discards is the hop the answer lives on. Amends E-012's holding that the
+  distance-first trim is not a hazard — that holding was inferred from a size
+  null measured on cells where the chain had already been reinstated.
+- **E-016**: four oracle-free eviction policies over an identical pool. Two
+  beat the shipped trim significantly and beat random decisively, moving reach
+  0.030 → 0.120. **The registered bar asked for 0.20 and nothing was adopted.**
+- **E-017**: typing the walk cuts the median three-hop context from
+  **193,797 tokens to 5,676** — 30.6× — and the median then fits the budget by
+  three hundred tokens, for half the questions. Of the 44 that do not fit,
+  **39 pass through `has_genre` or `release_year` at the middle hop.**
+
+**The position this leaves:** what three hops costs is neither depth nor
+generation. It is **traversing a hub**.
+
+### Added
+
+- `scripts/e014_inspect.py` — rebuilds the exact prompt for a scored cell from
+  the frozen split, the graph and the deterministic reduction rule, and prints
+  it beside the answer key and the outcome. Verifies the rebuild against a
+  recorded hash where one exists, and says the case is a reconstruction where
+  one does not. This is what found the defect above.
+- `scripts/run_e015.py`, `scripts/run_e016.py`, `scripts/e016_policies.py`,
+  `scripts/run_e017.py` — the three entries, all retrieval-only.
+- The `generation` span now carries `input.value`, `output.value` and a
+  SHA-256 of exactly what was sent. It has been registered as an `LLM` span —
+  the kind Phoenix renders with a prompt and a completion — since Phase 7, and
+  both fields were empty, so the trace said what an answer *cited* and never
+  what the model was looking at.
+- Runs record `raw` and `prompt_sha256`, so an unparseable completion and a
+  wrong answer stop being the same row on disk.
+
+### Changed
+
+- `metaqa.answer_path` requires a chain of the **declared depth**, and `hops`
+  is keyword-only and required: a caller that does not say how deep the chain
+  must be is the defect, so there is no default to fall into. Against the
+  confirmatory split the repair leaves the one-hop and two-hop exclusion counts
+  byte-identical and cuts three-hop from 137 usable questions to 10.
+- `docs/evaluation.md` marks each withdrawn cell in place rather than deleting
+  a number, and carries the three entries that replaced them.
+- The README states the withdrawal — what the old claim was, the case that
+  exposed it, and what survives — instead of quietly swapping the figure.
+
+### Fixed
+
+- `run_e012.py` refuses a run in which **every** question was excluded. An
+  unloaded MetaQA instance accepts Bolt, resolves no seed, and printed
+  `900 question(s), 900 excluded` before exiting 0 — word for word what a
+  legitimate run prints.
+- `app/paths.py` read a relation with `strip()` over a character *set*, so a
+  relation beginning or ending with one of `<>-[]:` would have lost it
+  silently. No relation in the schema does today, which is what made the
+  defect patient.
+
+### Known limitations, added
+
+- **No figure from E-015, E-016 or E-017 is a correctness score.** Chain reach
+  says the evidence could support an answer, never that one would be right.
+- **E-017's relation sequence comes from the gold chain**, so it bounds what
+  typing would buy *if something chose correctly*. Nothing there chose, and
+  E-016 is the precedent for that price: its ceiling was 0.920 and the best
+  oracle-free arm returned 0.120.
+- **Three hops is no longer measurable on the existing splits.** Requiring a
+  real three-step chain leaves 10 usable questions of 300, so any future
+  three-hop generation claim needs a fresh frozen draw.
+
 ## [1.0.0] — 2026-09-12
 
 The evaluation split was opened once and the study answered its own question.
