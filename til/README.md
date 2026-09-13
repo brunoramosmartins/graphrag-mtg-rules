@@ -21,5 +21,5 @@ extracting.
 
 | TIL | Insight |
 |---|---|
-| [a check that cannot run](./til-a-check-that-cannot-run.md) *(skeleton)* | A broken probe and a broken subject produce the same output, so the operator debugs the wrong half. Five instances, from a distroless healthcheck to an auto-fit that lived inside the pass we had disabled. |
+| [a check that cannot run](./til-a-check-that-cannot-run.md) *(skeleton)* | A broken probe and a broken subject produce the same output, so the operator debugs the wrong half. Six instances — and the costliest runs the shape backwards: a guard that returned a pass for two different reasons, one of them the failure it existed to catch. |
 | [a denominator is a claim](./til-a-denominator-is-a-claim.md) *(skeleton)* | Precision is hits over *something*, and whoever picks the something picks the winner. Five instances — the fifth was a conditioning clause that meant something weaker than its words, and it withdrew the project's most-quoted number. |
