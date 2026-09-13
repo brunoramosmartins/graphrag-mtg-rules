@@ -78,7 +78,18 @@ WORKSHEET = Path("data/interim/e018_ceiling_worksheet.md")
 #: questions makes branch 1 unreachable whatever the intervention does.
 GATE = 7
 
-QUESTION = "Is this key's verdict derivable from this question's gold CR rules alone?"
+#: The question the reader answers, and it is the treatment's own definition.
+#: An earlier draft asked whether the key followed from the gold rules *alone*,
+#: which is a different and stricter thing: these 21 questions already receive
+#: cards and rulings, and what they lack is a rule. Judging the rules in
+#: isolation would mark `false` exactly where the card text was present all
+#: along and the rule was the only missing piece — the cases E-018 exists to
+#: find. The ceiling has to be computed over the context the treatment
+#: actually produces, which is control plus the gold rules.
+QUESTION = (
+    "With what retrieval already brought, plus the gold CR rules below, "
+    "is this key's verdict derivable?"
+)
 
 
 def populations(golden: Path) -> tuple[list[str], list[str], list[str]]:
@@ -191,6 +202,27 @@ def rule_block(number: str, cr: object) -> list[str]:
     return lines
 
 
+def evidence_summary(record: dict) -> str:
+    """What retrieval already brought, by kind and handle.
+
+    The handles rather than a count, because the judgement is whether the key
+    follows from *this* evidence plus the rules — and "12 rulings" does not
+    tell a reader whether the ruling the key turns on is among them. The text
+    is deliberately not rendered: the worksheet would triple and the reader
+    can open any case in full with `e001_inspect.py --qid`.
+    """
+    kinds: dict[str, list[str]] = {}
+    for item in record.get("evidence", ()):
+        kinds.setdefault(item["kind"], []).append(item["key"])
+    if not kinds:
+        return "**nothing**. Retrieval returned an empty subgraph."
+    parts = [
+        f"{len(keys)} {kind}: " + ", ".join(f"`{key}`" for key in keys)
+        for kind, keys in sorted(kinds.items())
+    ]
+    return "; ".join(parts)
+
+
 def worksheet(args: argparse.Namespace) -> int:
     """Render the sheet to read, and seed the verdict file if it is absent."""
     if not ABSENT_IDS.exists():
@@ -202,22 +234,33 @@ def worksheet(args: argparse.Namespace) -> int:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from audit_correctness import question_and_key
 
+    retrieval_path, _, _ = artefacts(ARM, SPLIT)
+    records = {row["question_id"]: row for row in load_jsonl(retrieval_path, what="retrieval")}
+
     lines = [
         "# E-018 ceiling worksheet",
         "",
         f"**{QUESTION}**",
         "",
-        "Not *would the model get it right* — whether the rules below **contain the",
-        "verdict**. A key answered from a ruling, from card text, or from a rule the",
-        "annotation did not list is `false`, and that is a finding about the corpus,",
-        "not a failure of the question.",
+        "Not *would the model get it right*, and not *do the rules alone say it*.",
+        "The treatment E-018 applies is **the retrieved context plus these rules**,",
+        "so that is what the ceiling has to be computed over. Card text and rulings",
+        "are already there — what these 21 questions lack is a rule.",
+        "",
+        "`true` — with the evidence listed and these rules in front of it, a careful",
+        "reader could write the key's verdict and cite it.",
+        "",
+        "`false` — the verdict still does not follow. It turns on a ruling nobody",
+        "retrieved, on a rule the annotation did not list, or on card text that is",
+        "not there. **That is a finding about the corpus, not a failure of the",
+        "question**, and it is the number this sheet exists to produce.",
         "",
         f"This count is the maximum number of flips E-018 can produce. Below **{GATE}**",
-        "of 21, branch 1 is unreachable by construction and the entry is redesigned",
-        "rather than run.",
+        f"of {len(ids)}, branch 1 is unreachable by construction and the entry is",
+        "redesigned rather than run.",
         "",
-        f"Record each verdict in `{VERDICTS}`. Nothing in this file is filled in for",
-        "you, and `score` refuses a sheet with a blank.",
+        f"Record each verdict in `{VERDICTS}`. Nothing is filled in for you, and",
+        "`score` refuses a sheet with a blank.",
         "",
         f"CR effective {cr.effective_date}.",
         "",
@@ -228,7 +271,8 @@ def worksheet(args: argparse.Namespace) -> int:
         question, key = question_and_key(qid, args.caches, args.golden)
         lines += [f"## {index}. `{qid}`", "", "**Question.** " + question, "", "**Key.**", ""]
         lines += [f"> {para}" for para in key.strip().splitlines() if para.strip()]
-        lines += ["", "**Gold CR rules**, each with its subrules.", ""]
+        lines += ["", "**Already in the context** — " + evidence_summary(records[qid]), ""]
+        lines += ["**Added by the treatment: the gold CR rules, with their subrules.**", ""]
         for number in wanted[qid]:
             lines += rule_block(number, cr)
         lines += ["", f"**{QUESTION}**  `true` / `false`", "", "---", ""]
@@ -267,10 +311,20 @@ def partition(verdicts: list[dict]) -> tuple[list[str], list[str], list[str]]:
     A blank is not a `false`. Treating it as one would let a half-read sheet
     produce a ceiling, and a ceiling over whichever questions happened to be
     read first is not a ceiling.
+
+    A `stale` question is not blank either, and it is not answerable: its gold
+    annotation points at a number this CR uses for something else, so there is
+    no "these rules" to judge against. It leaves the denominator and is
+    reported, per amendment 2026-09-13b — which is also why it may not simply
+    be marked `false` and forgotten.
     """
     derivable = [row["question_id"] for row in verdicts if row.get("derivable") is True]
     stale = [row["question_id"] for row in verdicts if row.get("stale")]
-    blank = [row["question_id"] for row in verdicts if row.get("derivable") is None]
+    blank = [
+        row["question_id"]
+        for row in verdicts
+        if row.get("derivable") is None and not row.get("stale")
+    ]
     return derivable, stale, blank
 
 
@@ -288,21 +342,28 @@ def score(args: argparse.Namespace) -> int:
             f"A ceiling computed over a partial sheet is a ceiling over whichever "
             f"questions happened to be read first."
         )
-    n = len(verdicts)
+    # A stale question has no "these rules" to judge against, so it leaves the
+    # denominator rather than counting as a `false`. The registered population
+    # is 21; if this prints anything smaller, that difference is the finding.
+    n = len(verdicts) - len(stale)
+    if n == 0:
+        raise SystemExit("Every question is stale. There is no ceiling to compute.")
     interval = wilson_interval(len(derivable), n)
 
     print(f"{QUESTION}\n")
     print(f"  derivable:  {len(derivable)} of {n}")
     print(f"  proportion: {len(derivable) / n:.3f}  [{interval.low:.3f}, {interval.high:.3f}]")
-    print(f"  gate:       {GATE} of {n} ({GATE / n:.3f}), registered before the reading\n")
+    print(f"  gate:       {GATE} of {len(verdicts)} registered before the reading")
     if stale:
         print(THIN)
         print(f"** {len(stale)} question(s) carry a gold rule number this CR uses for")
         print(f"   something else: {', '.join(stale)}")
-        print("   E-018 would inject the wrong rule text on these and score the result")
-        print("   as a null. Fix the key file before the run, or exclude them and say")
-        print("   so — they cannot be left as they are.\n")
-    print(THIN)
+        print("   They are out of the denominator above, so the ceiling is now measured")
+        print(f"   over {n} of the {len(verdicts)} the entry registered — and the gate was")
+        print(f"   set at {GATE} of {len(verdicts)}. E-018 would inject the wrong rule text on")
+        print("   these and read the result as a null. Fix the key file before the run,")
+        print("   or exclude them in the registry and say so. They may not be left.")
+    print(f"\n{THIN}")
     if len(derivable) < GATE:
         print("BELOW THE GATE. Branch 1 is unreachable by construction: the injection")
         print("cannot produce enough flips to clear the strict Holm step even if it")

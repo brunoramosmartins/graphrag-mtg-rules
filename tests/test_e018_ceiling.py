@@ -100,10 +100,19 @@ class TestABlankIsNotAFalse:
         assert "c" not in derivable
         assert blank == ["c"]
 
-    def test_stale_is_recorded_beside_the_answer_not_instead_of_it(self) -> None:
-        # `stale` says the key points at a number this CR uses for something
-        # else — a defect in the key file, not a fact about the corpus. It has
-        # to survive alongside whatever the reader answered.
+    def test_a_stale_question_is_not_blank_and_does_not_hold_up_the_score(self) -> None:
+        # There is no "these rules" to judge against when the annotation
+        # points at a number this CR uses for something else, so a stale
+        # question is answerable by nobody. It must not read as unread work.
+        _, stale, blank = ceiling.partition(
+            [{"question_id": "x", "derivable": None, "stale": True}]
+        )
+        assert stale == ["x"]
+        assert blank == []
+
+    def test_stale_is_recorded_beside_an_answer_when_the_reader_gave_one(self) -> None:
+        # `stale` is a defect in the key file, not a fact about the corpus,
+        # so it survives alongside whatever the reader answered.
         derivable, stale, _ = ceiling.partition(
             [{"question_id": "x", "derivable": True, "stale": True}]
         )
@@ -154,6 +163,36 @@ class TestTheReaderSeesWhatTheRuleActuallySays:
         block = ceiling.rule_block("999.9", FakeCR([]))
         assert len(block) == 1
         assert "NOT IN THIS CR" in block[0]
+
+
+class TestTheReaderIsJudgingTheContextTheTreatmentProduces:
+    """Control plus the rules, not the rules alone — see amendment 2026-09-13b."""
+
+    def test_the_evidence_already_present_is_listed_by_kind_and_handle(self) -> None:
+        # A count would not do. "12 rulings" does not tell a reader whether
+        # the ruling the key turns on is among them, and that is the judgement.
+        record = {
+            "evidence": [
+                {"kind": "card", "key": "Blood Moon"},
+                {"kind": "card", "key": "Gaea's Cradle"},
+                {"kind": "rule", "key": "701.26"},
+            ]
+        }
+        summary = ceiling.evidence_summary(record)
+        assert "2 card: `Blood Moon`, `Gaea's Cradle`" in summary
+        assert "1 rule: `701.26`" in summary
+
+    def test_an_empty_subgraph_says_so_rather_than_rendering_nothing(self) -> None:
+        # A blank line here would read as "no evidence listed" and be judged
+        # as though the context were merely unremarkable.
+        assert "nothing" in ceiling.evidence_summary({"evidence": []}).lower()
+
+    def test_the_question_is_about_the_retrieved_context_plus_the_rules(self) -> None:
+        # The earlier phrasing asked whether the key followed from the rules
+        # alone, which would mark false exactly where the card text was
+        # present and the rule was the only missing piece.
+        assert "retrieval already brought" in ceiling.QUESTION
+        assert "alone" not in ceiling.QUESTION
 
 
 class TestTheGateWasRegisteredBeforeTheReading:

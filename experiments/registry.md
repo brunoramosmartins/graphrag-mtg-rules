@@ -6413,6 +6413,107 @@ abandon the entry. It found that the entry could return a number that reads as
 a verdict and is not one, in six specific ways, and every one of them is closed
 above **before the first call rather than after the result.**
 
+### Amendment 2026-09-13b — what "inject the gold rule" injects, and what the ceiling is computed over
+
+Written while building the ceiling instrument the previous amendment
+registered, and **before the first API call**. Both changes come from rendering
+the 21 questions rather than from reasoning about them.
+
+#### The treatment injects the subtree, not the bare rule
+
+The entry said *"control plus the question's `gold_cr_rules`"* and never said
+what a rule is. The CR answers that differently than the entry assumed: a rule
+number can name a heading whose substance lives entirely beneath it.
+
+Measured over the frozen primary population, from the CR the run will use
+(effective August 7, 2026):
+
+| | |
+|---|---:|
+| gold rules across the 21 questions | 30 |
+| of those, rules that have subrules | **10** |
+| largest: `613.7` | 13 subrules |
+| `400.7` | 12 subrules |
+| `707.10` | 7 subrules |
+| own text only, all 30 rules | 11,197 chars |
+| with subtrees | **24,082 chars** |
+
+Injecting `613.7` alone injects a paragraph of preamble and leaves out the
+thirteen subrules where the cases live. On `701.15` it injects the single word
+*Goad*. A treatment that does this and returns a null would be reported as *the
+governing rule does not cause the answer*, when what was injected was a
+heading — and standing rule 9 asks what **else** makes a null come back, which
+is exactly this.
+
+**Registered:** treatment injects each gold rule **with its subtree**, in
+document order, through the same `Subgraph` path as retrieved evidence so
+handles and the fabricated-citation detector treat them identically. The
+subtree is taken from `cr_parser.subtree`, which walks parent links rather than
+number prefixes — `613.4b` does not start with `613.4.`, and a prefix match
+would pull `613.41` into `613.4`.
+
+**The placebo follows the treatment, not the rule count.** The previous
+amendment matched the placebo to within ±20% of the treatment's token count.
+That stands and now binds against the subtree: the placebo draws whole rule
+subtrees at random from outside the gold set and redraws until it matches. A
+placebo matched against bare parents while the treatment carries subtrees would
+stop controlling volume, which is the only thing it exists to control, and the
+entry would land in branch 1 on a context-size effect.
+
+**The token budget is raised for all three conditions alike**, as already
+registered. At roughly 24,000 characters of rule text spread over 21 questions
+this is about 280 added tokens per question on average, well inside the budget
+E-013 measured as never firing on this corpus. `dropped` and `capped` are
+recorded per condition anyway, and a non-empty one invalidates the comparison
+rather than being noted afterwards.
+
+#### The ceiling is computed over control plus the rules, not over the rules alone
+
+The instrument first asked the reader whether the key's verdict was derivable
+*from the gold rules alone*. That is a stricter and different question, and it
+would have produced a lower ceiling for the wrong reason: these 21 questions
+already receive cards and rulings — what they lack is a rule — so judging the
+rules in isolation marks `false` exactly where the card text was present all
+along and the rule was the only missing piece. Those are the cases the entry
+exists to find.
+
+**Registered question, and it is the treatment's own definition:** *with what
+retrieval already brought, plus the gold CR rules, is this key's verdict
+derivable?* The worksheet lists the evidence each question already carries, by
+kind and handle, so the reader is judging the context the treatment actually
+produces. The wording was corrected before any verdict was recorded; no reading
+was taken under the earlier phrasing.
+
+#### A stale gold annotation, and what it would have done
+
+`hand-regeneration-zero-toughness` carries `gold_cr_rules: [701.15, 704.5f]`
+and its key reads *"Regeneration replaces a destruction event (701.15)"*. In
+this CR, **701.15 is Goad**; regeneration is 701.19. The number resolves, so
+nothing raises — the injection would have carried four subrules about goading
+into a question about regeneration, and the null would have been invisible.
+
+This is one case in 21 and it was found by rendering, not by a check. The
+verdict sheet therefore carries `stale` as a field of its own, separate from
+the derivability answer, because the two have different consequences: `false`
+is a fact about the corpus and belongs in the ceiling, while `stale` is a
+defect in the key file and belongs in Phase 9's backlog. **`score` reports any
+stale question and the run does not proceed over one**: either the key is
+corrected before the run, or the question is excluded and the exclusion is
+declared here. It may not be left as it is.
+
+Whether the other 41 gold annotations are stale in the same way is **not known
+and is not claimed**. A number that resolves to the wrong rule cannot be
+detected mechanically, only read. The 21 in the primary are read as part of the
+ceiling; the remaining 21 are not, and any figure drawn from them carries this
+sentence.
+
+#### What this amendment does not change
+
+The population, the branches, the effect-size bar, the manipulation check and
+the rendering deliverable all stand as amended earlier today. This changes what
+a condition contains and what the ceiling's question means — both before any
+verdict was recorded and before any spend.
+
 ### Actual result
 
 _Not yet run._
