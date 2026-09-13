@@ -718,9 +718,9 @@ answer-bearing chain guaranteed present, on a frozen confirmatory draw of
 > check that the columns below survive.
 >
 > With that column gone, **no figure in this document supports "generation is
-> the bottleneck, not retrieval" at three hops.** What replaces it is a
-> question, not a result: retrieval reaches the genuine three-step chain on
-> 3.0% of 3-hop questions, and nothing has registered a rule to test that yet.
+> the bottleneck, not retrieval" at three hops.** What replaced it is three
+> registered entries run the same day — E-015, E-016 and E-017, below — and
+> their answer is neither generation nor depth.
 
 **Depth at matched size, on the columns that survive: 0.890 to 0.672 at
 *k*=16, separated.** Holding the context at 8 items, 0.883 to 0.660.
@@ -735,6 +735,121 @@ context reduction is **not** adopted, `enforce_budget`'s distance-first trim
 **stays**, and E-001's multi-hop stratum carries the compositional limit as
 a named bound.
 
+## What three hops actually costs (E-015, E-016, E-017 — all run 2026-09-13, all free)
+
+When E-012's three-hop column was withdrawn, the question it had appeared to
+answer reopened. Three entries were registered and run the same day, none of
+them spending a token, and between them they move the answer off generation
+and off depth.
+
+### E-015 — the evidence was there and the budget was discarding it
+
+Chain reach is the fraction of questions on which retrieval delivers a chain of
+the **declared depth** — the repaired `answer_path`, which refuses a shortcut
+to an accepted answer string.
+
+| frontier | token budget | chain reach | median items |
+|---:|---:|---|---:|
+| 400 | 6,000 *(shipped)* | 0.030 [0.010, 0.085] | 207 |
+| 400 | 24,000 | 0.180 [0.117, 0.267] | 837 |
+| 400 | 96,000 | **0.650** [0.553, 0.736] | 2,007 |
+
+Sixteen times the budget, nothing else changed, and three-hop coverage goes
+from 3 questions in 100 to 65. `enforce_budget` evicts by descending distance,
+so on a three-hop question the first thing it throws away is the hop the answer
+lives on — and E-002's own recorded fields had said so all along: **498 of 500
+three-hop questions had evidence dropped, against 0 of 500 at one hop.**
+
+**This amends E-012.** Its holding that the distance-first trim is not a hazard
+was inferred from a size null measured on cells where `reduce_to_k` had already
+reinstated the chain. A design that repairs the damage before measuring cannot
+see the damage.
+
+Two things went wrong in E-015's own design and are recorded rather than
+smoothed. `frontier_cap` turned out **inert** — every cell at 1,600 identical
+to its twin at 400 to the last digit, because `add_evidence` caps per
+`(template, kind)` and the template carries the distance, so a thousand triples
+per level swallowed 2.5× more candidates without changing what survived. And
+the amendment that added `kind_cap` **fired the monotonicity check**: raising
+the cap admits ~45,000 more distance-2 triples, which pushes 34 of 40 questions
+over a budget none had hit, and the farthest-first trim then evicts the answer's
+hop. Reach falls 0.650 → 0.460. **More retrieval buys worse multi-hop
+coverage**, and the registered claim that reach could only rise was wrong: it
+holds only while added evidence cannot displace what was already kept.
+
+### E-016 — the trim is not the lever, and a significant result was refused
+
+Four eviction policies, all oracle-free, trimming the **identical** pool at the
+shipped 6,000-token budget. Paired by construction.
+
+| arm | reach at `kind_cap` 1,000 | ceiling 0.650 |
+|---|---|---|
+| **A** shipped | 0.030 [0.010, 0.085] | |
+| **B** proportional | 0.100 [0.055, 0.174] | adjusted *p* = 0.0391 |
+| **D** connectivity first | **0.120** [0.070, 0.198] | adjusted *p* = 0.0234 |
+| **R** random, fixed seed | 0.010 [0.002, 0.054] | the control |
+
+The designed policies beat the shipped trim and beat chance decisively
+(D vs R: +11/−0, *p* = 0.00098). **The rule fixed before the run asked for a
+gain of 0.20 and the best arm returned 0.090, so nothing was added to
+`enforce_budget`.**
+
+Why no ordering could have worked: a 6,000-token budget holds about 200
+triples, and an equal share gives distance 3 roughly 66 slots against 1,000
+candidates. Ordering decides which 66; it cannot make 66 cover 1,000. **The
+chain costs 90 tokens** — the price was never the problem. What an eviction
+order can fix is the systematic part, not discarding the needle's half of the
+haystack first, and that is worth nine points exactly.
+
+### E-017 — the residual has a name, and it is hub traversal
+
+The cheapest version of the decomposition idea needs no agent: expand along the
+relation the question is about instead of along everything. Measured as
+**size**, never reach — the relation sequence is read off the gold chain, so a
+reach figure would be a tautology.
+
+| | |
+|---|---|
+| untyped three-hop context | median **193,797** tokens |
+| typed along the chain's own relations | median **5,676** tokens |
+| reduction | **30.6×** (q1 5.5×, q3 76.1×) |
+| fits the shipped 6,000-token budget | **0.522** [0.421, 0.621] — 48 of 92 |
+
+Typing takes the haystack down by thirty times and the median expansion then
+fits **by three hundred tokens**, for half the questions. Fan-out per hop is
+2 / 89 / 42, and the middle hop is where it goes wrong.
+
+Of the 44 questions that do not fit, **39 pass through `has_genre` or
+`release_year` at the middle hop.** Those are hub relations: one node with
+thousands of neighbours. Median hop-2 fan-out is **22** on the questions that
+fit and **493** on the ones that do not, and nineteen fit at no budget tested,
+including 96,000.
+
+### The position this leaves, stated as the source of truth
+
+**What three hops costs is not depth and not generation. It is traversing a
+hub.** A chain of three person-shaped relations is cheap at any depth; one
+genre or one year in the middle builds the haystack that the budget then trims
+from the wrong end.
+
+Three things follow, and two of them are refusals:
+
+- **Typed expansion is necessary.** A 30× reduction is not a detail, and
+  nothing should expand untyped at depth.
+- **It is not sufficient**, and the gap is concentrated in two relations of
+  nine, so a repair aimed at depth in general would miss it.
+- **Nothing was adopted.** E-016 declined to change shipped trimming on a
+  significant result because the registered effect size was not met, and E-017
+  declined to hand P3 a build direction on a fit rate of 0.522. Both bars were
+  written before the runs.
+
+**Every figure in this section is a retrieval figure.** Chain reach says the
+evidence could support an answer; it says nothing about whether one would be
+right. And E-017's relation sequence came from the gold chain, so it bounds
+what typing would buy *if something chose correctly* — nothing there chose, and
+E-016 is the precedent for how large that price can be: its ceiling was 0.920
+and the best oracle-free arm returned 0.120.
+
 ## What Act 1 transfers, and what it does not
 
 - **Transfers, narrowed 2026-09-13.** Between one and two hops, depth costs
@@ -744,8 +859,12 @@ a named bound.
   in judge-level Magic questions, not an estimate of it.
 - **No longer claimed.** That the bottleneck at *three* hops is compositional
   reasoning. The cell that said so was 92% one-step chains; see the withdrawal
-  above. Whether three hops fails on reasoning, on retrieval, or on the
-  grounding prompt's refusal rule is now unmeasured.
+  above.
+- **Transfers, and this is the replacement.** At three hops the cost is
+  **hub traversal**, not depth: typed expansion cuts the context 30x, and what
+  remains too large passes through a relation whose middle node has thousands
+  of neighbours (E-017). The shape transfers — a regulatory corpus has its own
+  hubs, and "see rule 704" is one. The numbers do not.
 - **Does not transfer.** No number in Act 1 is a Magic number. The budget
   does not currently fire on the Magic corpus at all — `dropped` is 0 across
   all 42 E-007 questions, all 18 E-008 probes, and all 20 Phase 6
