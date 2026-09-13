@@ -1711,6 +1711,27 @@ about the pipeline, about linking, or about Magic rests on any figure here.
 Comparability to the band is bounded twice over: every system in it is
 trained on MetaQA, and this spine is zero-shot with a generic template.
 
+### Amendment 2026-09-13 — `answer_shown` does not mean the question was answerable
+
+**Nothing above is rewritten.** The condition this entry reports under is
+`answer_shown = any(hits_at_1(name, question) for name in stats["shown"])` —
+the answer *string* appearing among the evidence's entity names, with no chain
+required. Re-measuring the real chain behind each `answer_shown` case
+reproduces the published 0.884 / 0.677 / 0.339 exactly and splits the 3-hop
+figure into **213 questions whose real chain is one step (Hits@1 0.347)** and
+**11 whose chain is three (0.182)**. 95% of the cell.
+
+So **"conditional on the answer being present in the evidence the model
+received, correctness falls to 0.339 at three hops" is withdrawn** — the
+conditioning does not say what its words say. The 1-hop and 2-hop figures are
+unaffected: their chains match their declared depth on every question.
+
+The full measurement, the case that exposed it, what survives and the
+consequences are in **E-012's amendment of 2026-09-13**, which is the entry
+that owns the repair.
+
+---
+
 ## E-003 — Linking and extraction quality against manual annotations
 
 - **Registered:** 2026-07-20 (a priori — the sample froze first at seed
@@ -4734,6 +4755,131 @@ no figure in this entry is an end-to-end system score.
 
 ---
 
+### Amendment 2026-09-13 — the 3-hop column measures neither depth nor the generator, and the same defect is in E-002
+
+**Nothing above is rewritten.** This is appended, the published figures stand
+as the record of what was computed, and what changes is the scope of what they
+may be read to mean.
+
+**What prompted it.** `scripts/e014_inspect.py` was written to render one
+scored cell — the prompt as sent, the answer key, the chain `answer_path`
+found, the recorded outcome — because the claim holding up this entire entry,
+*the model was handed a clean chain and still failed*, had never been looked at
+for a single question. The first case it printed was `mq-3-10308`, a 3-hop
+question reading **"the movies written by the screenwriter of The Best
+Intentions were directed by who"**, whose 16-item context held hop one
+(`The Best Intentions | written_by | Ingmar Bergman`), four other facts about
+that film, and **eleven unrelated films released in 1992**. Nothing in it said
+what Bergman wrote. Nothing in it said who directed those films. The model
+refused, and by the system prompt's own rule it was right to.
+
+It scored as a failure because `answer_path` looks for **any accepted answer
+string reachable through the evidence**, found *Ingmar Bergman* — who is in the
+answer set because he directed some of his own screenplays — and returned a
+one-step chain. That chain proves `written_by`. The question asks `directed_by`.
+
+**Measured, over the whole confirmatory split.** Chain length returned by
+`answer_path`, against the declared hop count:
+
+| declared | real chain | n | correct | refused | format | wrong |
+|---|---|---:|---:|---:|---:|---:|
+| 1-hop | 1 | 300 | 267 | 8 | 4 | 21 |
+| 2-hop | 2 | 250 | 168 | 39 | 19 | 24 |
+| **3-hop** | **1** | **126** | 67 | 43 | 6 | 10 |
+| 3-hop | 2 | 2 | 0 | 0 | 0 | 2 |
+| 3-hop | 3 | **9** | 3 | 3 | 2 | 1 |
+
+**126 of the 137 questions in the 3-hop cell (92%) carry a one-step chain.**
+Nine carry three. `reduce_to_k` preserves whatever chain `answer_path` found,
+so at *k*=16 those 126 questions handed the model a one-hop context with a
+three-hop question stapled to it.
+
+**E-002 carries the same defect, and its condition is weaker still.** E-002
+conditions on `answer_shown = any(hits_at_1(name, question) for name in
+stats["shown"])` — the answer *string* appearing among the evidence's entity
+names, with no chain required at all. Re-collecting the same subset and
+measuring the real chain behind each `answer_shown` case reproduces E-002's
+published figures exactly (0.884 at 1-hop, 0.677 at 2-hop, 76 of 224 = 0.339
+pooled at 3-hop), which is what makes the decomposition trustworthy:
+
+| E-002, 3-hop, `answer_shown` | n | Hits@1 |
+|---|---:|---:|
+| real chain of **1 step** | **213** | 0.347 |
+| real chain of 3 steps | 11 | 0.182 |
+
+**213 of 224 = 95%.**
+
+**What this withdraws.**
+
+- **The 3-hop column of 12b's table does not measure depth**, and the sentence
+  this project has quoted most often — *conditional on the answer being present
+  in the evidence the model received, correctness falls to 0.339 / 0.511 at
+  three hops* — is withdrawn. The conditioning is not what its words say. It
+  reads "an accepted answer string was reachable", not "the question was
+  answerable from what the model was shown".
+- **The 43 refusals in the 126 are re-read.** The grounding prompt instructs a
+  refusal when the evidence is insufficient. On those questions it was
+  insufficient. A refusal there is the model obeying, and scoring it as a
+  generation failure attributes to the generator a decision the harness made.
+- **"Generation is the bottleneck, not retrieval" is not supported at three
+  hops by any figure in this registry**, and it is the claim that motivated
+  E-014 and that has been repeated in `docs/evaluation.md`, the README, two
+  TILs and the P3 handoff.
+
+**What survives, and it is not nothing.**
+
+- **The 1-hop and 2-hop rows are clean**: chain length equals declared hops on
+  300 of 300 and 250 of 250. The fall from **0.890 to 0.672** is a real,
+  correctly-conditioned depth effect and stands.
+- **The size null stands where it was measured cleanly.** It is computed within
+  a fixed depth, and 1-hop and 2-hop are unaffected.
+- **Branch 2's consequences stand on the clean half.** `enforce_budget`'s
+  distance-first trim keeps its verdict and context reduction stays unadopted,
+  because the size null that decided both is intact at 1 and 2 hops. What is
+  withdrawn is the 3-hop evidence that was cited alongside it.
+- **E-001 is untouched.** Different corpus, different scorer; `answer_path` has
+  no part in it. Its numbers stand exactly as published.
+
+**The finding that replaces it, stated as a question and not as a result.**
+Of 300 3-hop questions on the confirmatory split, 163 were already excluded as
+unreachable and 126 more reach an answer only by shortcut. Retrieval reaches
+the genuine three-step chain on **9 of 300 (3.0%)**, and on **11 of 500 (2.2%)**
+in E-002. Within this project's own evidence that points at retrieval, not
+generation, as the three-hop bottleneck — but it is a post-hoc re-cut of
+finished runs, it is labelled exploratory wherever it is quoted, and it decides
+nothing until an entry registers it with a rule written before the run.
+
+**The defect, named.** *A denominator is a claim about what counts.* "The
+answer is present in the evidence" was operationalised as "an accepted string
+is reachable" and read as "the question is answerable". The two return an
+identical non-empty chain and are distinguishable only by looking — which is
+the other recurring shape here, a check whose negative case is invisible. Both
+were registered as lessons in this project months before they decided this
+entry's headline.
+
+**Consequences, applied.**
+
+1. **E-014 is suspended before its first call.** It is registered to ask
+   whether the depth effect is a property of the generator, at a depth whose
+   measurement has just been withdrawn. The entry stands; nothing about it is
+   deleted; it does not run until the instrument is repaired and a depth cell
+   exists that measures depth.
+2. **`answer_path` needs a chain of the declared length**, and the repair ships
+   with a test that fails against the current function. Registered here so the
+   fix is on the record before it is written.
+3. **A re-draw is required for any future 3-hop arm.** Requiring a real
+   three-step chain leaves 9 usable questions on this split, so the split is
+   exhausted for that purpose and a new frozen draw is the only honest route.
+
+**Recorded against the process, not the result.** Pre-registration did its job
+on everything it was pointed at — the decision rule, the buckets, the three
+wrong predictions, all on the record. It could not protect a quantity nobody
+had rendered. The cheap check that would have caught this on day one is the one
+the repair now makes routine: **print one case and read it** before a number
+built on it is quoted anywhere.
+
+---
+
 ## E-013 — the rules the graph cannot reach, and whether an edge it already has gets to them (registered 2026-09-11, not yet run)
 
 - **Registered:** 2026-09-11, after the Phase 8 error analysis and **before any
@@ -4861,3 +5007,196 @@ no figure in this entry is an end-to-end system score.
   but it did not protect against the quantity being mis-specified in the first
   place. The check that would have caught it is cheap: compute the ceiling
   from the same inputs the run will see.
+
+---
+
+## E-014 — is the depth effect a property of the task, or of the generator? (registered 2026-09-13, not yet run)
+
+- **Registered:** 2026-09-13, before any call is made and before
+  `run_e012.py` grows the flag this entry needs. **Registered *after* E-001
+  and E-012 have returned results**, which is stated plainly rather than
+  buried: this is a follow-up motivated by two known outcomes, not a blind
+  prediction. The mitigation is structural and is the reason the entry is
+  shaped the way it is — **E-014 cannot revise E-001 or E-012.** Their
+  published numbers stand whatever this returns. The most it can do is earn
+  a *new* registered experiment.
+
+- **The decision this informs, stated before the design.** E-001 returned
+  `inconclusive` on all four strata and the direction ran against the thesis
+  on `interaction_multihop` (0.27 graph against 0.41 vector, n = 22). One
+  explanation for that is live and unmeasured: **the comparison was run at a
+  generator ceiling low enough to mask any retrieval difference.** E-012
+  measured that ceiling on `gpt-4o-mini` — at a matched 16-item context with
+  a clean chain guaranteed present, Hits@1 falls 0.890 -> 0.672 -> 0.511
+  across one, two and three hops — but it varied size and depth, never the
+  model. So the project does not currently know whether "the generator cannot
+  chain three facts" is a statement about the task or a statement about
+  `gpt-4o-mini`.
+
+  Two decisions wait on the answer. (1) Whether the MTG evaluation split is
+  opened a **second** time with a stronger generator, or whether that
+  explanation is closed. (2) Whether P3's decomposition hypothesis — break a
+  multi-hop question into single-hop retrievals, each in the regime where the
+  generator was measured competent — is the right thesis to carry forward, or
+  is solving a problem a model upgrade dissolves.
+
+- **Why this runs on MetaQA and not on the MTG split.** The question is about
+  the generator, and MetaQA has an answer key, a frozen split, a reduction
+  rule that guarantees the answer is present, and a completed measurement to
+  pair against. Answering it on the 57 MTG questions would spend the
+  evaluation split's second look to learn something the calibration benchmark
+  can say for under twenty dollars. **This experiment does not touch the MTG
+  evaluation split.** Earning the right to open it is the outcome, not the
+  method.
+
+### Design
+
+- **One variable changes.** Generator `gpt-4o-mini` -> **`gpt-4o`**,
+  temperature 0, prompt `e002-a3` **unchanged**, same frozen confirmatory
+  split (300 per hop, seed `20260904`), same reduction rule, same
+  `frontier_cap` 400, `kind_cap` 1000, same answer normalisation and
+  `hits_at_1`. Any prompt edit voids the comparison, exactly as in E-012.
+
+- **Within the same model family, deliberately.** A cross-vendor swap changes
+  prompt idiom, refusal behaviour and answer formatting at the same time as
+  reasoning, and the entry could not attribute a movement to any of them. One
+  step up inside the family is the only swap that leaves a single variable.
+  A cross-vendor arm is a different question and would need its own entry.
+
+- **The size sweep is dropped, and E-012 is why.** E-012 measured that
+  context size does nothing at fixed depth — 1-hop moves between 0.883 and
+  0.897 across a 32x change in context, and paired tests reach nothing near
+  their thresholds. Re-running four sizes here would spend money to replicate
+  a null. **Primary design: *k* = 16 at all three hops.** A single
+  size-null replication at *k* = 256 runs at 3-hop only, as a check that the
+  null survives the model change rather than as a contrast.
+
+- **Primary contrast: paired across models, within question.** The same 3-hop
+  questions scored by both models at *k* = 16, exact McNemar, n = 137.
+  Pairing across hops is impossible — different questions — so the comparison
+  that decides is the one that holds the question fixed and moves the model.
+
+- **Secondary family.** The same paired contrast at 1-hop and 2-hop. Three
+  tests, **Holm correction declared here rather than chosen after the
+  p-values**, alpha = 0.05.
+
+- **Detectable effect, computed before the run.** With reversals rare, exact
+  McNemar needs **6 discordant pairs one way** for raw *p* < 0.05 and **8:0**
+  for the strictest Holm step at family size 3. At n = 137 that is a shift of
+  6 questions, or 0.044. This design is far better powered than E-001's was,
+  and the reason is not sample size — it is that the pairing holds the
+  question fixed and moves one variable, where E-001 had to compare different
+  retrievers over a stratum of 22.
+
+### Decision rule, fixed before the run
+
+Let **D** = Hits@1(1-hop, *k*=16) minus Hits@1(3-hop, *k*=16) under `gpt-4o`.
+Under `gpt-4o-mini`, D = 0.890 - 0.511 = **0.379**.
+
+1. **D <= 0.15 *and* the 3-hop paired contrast reaches its Holm-adjusted
+   threshold.** The depth effect is largely a property of that generator.
+   Consequences: E-012's verdict is annotated as **model-conditional** — its
+   numbers stand, its scope narrows; E-001's inconclusive result acquires a
+   live, registered explanation, and this earns **one** second opening of the
+   MTG evaluation split, as its own entry with its own decision rule, with
+   both openings and their dates published; and P3's decomposition hypothesis
+   is **weakened**, because a generator that chains three facts does not need
+   the chain broken up for it.
+2. **D >= 0.25.** The depth effect survives a generator change within the
+   family. Consequences: **no second opening on a model swap alone**; E-001's
+   multi-hop reading stands as published; P3 inherits this as its registered
+   prior and the decomposition hypothesis is strengthened.
+3. **0.15 < D < 0.25, or D <= 0.15 without a significant paired contrast.**
+   Reported and not acted on. No second opening; the decision passes to P3.
+   This branch exists so a middling result is not read as whichever half is
+   more convenient, and so a spread that narrows on noise is not read as
+   branch 1.
+
+### Predictions, recorded before the run
+
+1. **D lands between 0.05 and 0.15 — branch 1.** MetaQA's 3-hop chains are
+   templated and short, and at *k* = 16 with a clean chain guaranteed present
+   the task is template-following over a tiny KB. If this is right it is the
+   most consequential thing the project has measured, because it narrows
+   E-012's central finding to a statement about one small model.
+2. **1-hop moves less than 5 points**, from 0.890, because it is near the
+   task ceiling.
+3. **The size-null replicates**: 3-hop at *k* = 256 falls inside 3-hop at
+   *k* = 16's interval.
+4. **The exclusion count is identical** — 163 at 3-hop, 213 overall.
+   Exclusion is decided by retrieval, before any model call. **If it differs,
+   the harness changed and not the model**, and no cell is readable until
+   that is explained.
+
+### Threats to validity, recorded before the run
+
+- **The frozen split is read a second time.** Declared here, not discovered
+  later. E-012's published numbers stand unchanged, E-014's may not be
+  substituted into E-012's tables, and the number of reads and their dates
+  are published wherever either is quoted. Two declared reads is not a garden
+  of forking paths; undeclared reads are.
+- **MetaQA is templated, and the asymmetry is the whole point.** A gap that
+  **survives** here is a *floor* on the gap on judge-level Magic questions,
+  whose chains are not templated. A gap that **closes** here proves nothing
+  about Magic. This asymmetry is why branch 1 earns a new registered
+  experiment and never a conclusion about E-001.
+- **The reduction rule is an oracle filter.** It uses the gold answer, so
+  E-014 measures the generator's ceiling given good retrieval, not
+  end-to-end performance. **No figure in this entry may be quoted as a system
+  score.** Inherited from E-012 verbatim.
+- **A model swap changes more than reasoning** — answer formatting, refusal
+  behaviour, prompt sensitivity, tokenisation. Guards: identical prompt and
+  identical normalisation; the 1-hop instrument check below; the
+  exclusion-count check in prediction 4; and `refused` reported per cell
+  rather than folded into `correct`.
+- **Registered with the motivating results already known.** Stated in the
+  header. The structural mitigation is that no branch of the decision rule
+  permits editing E-001 or E-012.
+- **Cost asymmetry could tempt a mid-run stop.** Every cell is paid and
+  written before any is read. A run read before it completes is exploratory
+  and is labelled exploratory wherever it is quoted.
+
+### Instrument check, and it can fail
+
+**If 1-hop improves by more than 5 points** — from 0.890 to above 0.94 — the
+comparison is contaminated before the 3-hop cells are read. At *k* = 16 with
+a clean chain present there is no chaining at all at one hop, so a large
+movement there is answer-matching, formatting or prompt sensitivity, not
+reasoning. The 3-hop cells are not interpreted until that is explained. This
+is registered as a check that **can** return negative, against the project's
+recurring failure shape: a probe that cannot fail is not a probe.
+
+### Cost
+
+Up to 900 questions minus the 213 whose answer is unreachable, about **687
+calls at *k* = 16**, plus **137 at *k* = 256** for the size-null replication,
+about 824 calls. Contexts at *k* = 16 are small; most of the token cost sits
+in the *k* = 256 arm. `--limit` and a printed estimate before any spend, per
+the project rule. Expected under US$ 25; the printed estimate governs, and if
+it exceeds US$ 40 the *k* = 256 arm is dropped and its absence recorded here.
+
+### Suspended 2026-09-13, before the first call
+
+The dry run was clean — 687 calls at *k*=16 for ~US$2.83, 137 at *k*=256 for
+~US$2.97, and every registered count matched exactly (824 calls, 213 exclusions
+overall, 163 at 3-hop), so registered prediction 4 held before a token was
+spent. Nothing was spent anyway.
+
+**E-012's amendment of 2026-09-13 withdrew the measurement E-014 exists to
+interrogate.** The 3-hop cell this entry pairs across models is 92% shortcut:
+`answer_path` accepted a one-step chain to an answer *string* on 126 of its 137
+questions, so the cell measures neither depth nor the generator. Running a
+stronger model against it would produce a number carrying the same defect, at
+the same confidence, and would look exactly like an answer.
+
+This entry stands unedited. It does not run until `answer_path` requires a
+chain of the declared length, a depth cell exists that measures depth, and a
+new frozen draw replaces the 3-hop arm — requiring a real three-step chain
+leaves 9 usable questions on the current split. Whether the question E-014 asks
+is still the right question after that repair is itself open: the same
+amendment reports that retrieval reaches the genuine three-step chain on 3.0%
+of 3-hop questions, which points at retrieval rather than the generator.
+
+### Actual result
+
+_Not run. Suspended as above._

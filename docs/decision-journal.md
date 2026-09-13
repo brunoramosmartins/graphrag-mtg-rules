@@ -90,6 +90,83 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — Rendering one case withdrew the project's most-quoted number
+
+E-014's dry run was clean and every registered count matched. Before paying it,
+the author asked to see the evidence behind the claim it was built on — a
+rendered prompt with the model failing in front of it — rather than the
+aggregate. `scripts/e014_inspect.py` was written to print one scored cell: the
+prompt as sent, the answer key, the chain `answer_path` found, the outcome.
+
+The first case it printed was a 3-hop question, *"the movies written by the
+screenwriter of The Best Intentions were directed by who"*, whose context held
+hop one and eleven films released in 1992 — nothing about what Bergman wrote,
+nothing about who directed those films. The model refused. Under the grounding
+prompt's own rule it was right to, and the harness scored it as a generation
+failure.
+
+Measured across the split: **126 of the 137 questions in E-012's 3-hop cell
+(92%) carry a one-step chain**, because `answer_path` searches for any accepted
+answer *string* rather than a chain that answers the question. E-002 is worse
+still — its condition requires no chain at all — and splits 213 / 11 the same
+way. Both reproduce their published figures exactly, which is what makes the
+decomposition trustworthy rather than a competing measurement.
+
+**What this cost.** The sentence "generation is the bottleneck, not retrieval"
+is withdrawn at three hops, and it had already been repeated in
+`docs/evaluation.md`, the README, two TILs, the P3 handoff issue and E-014's
+entire motivation. E-014 is suspended before its first call. What survives is
+the clean half: 1-hop and 2-hop chains match their declared depth on every
+question, so 0.890 → 0.672 is a real depth effect, the size null holds where it
+was measured, and E-001's numbers are untouched.
+
+**The lesson is not that pre-registration failed.** It did every job it was
+pointed at — the decision rule, the buckets, three predictions recorded and
+scored wrong. It cannot protect a quantity nobody has rendered. Two of this
+project's own recorded lessons decided this entry's headline months after being
+written down: a denominator is a claim about what counts, and a check whose
+negative case is invisible reads as a pass. The cheap repair is now routine:
+**print one case and read it before quoting a number built on it.**
+
+## 2026-09-13 — E-014 registered: the generator ceiling is tested on MetaQA, not on the evaluation split
+
+E-001 came back `inconclusive` on all four strata with the direction running
+against the thesis on `interaction_multihop`. One explanation for that is live
+and unmeasured: the comparison may have run at a generator ceiling low enough
+to mask any retrieval difference. E-012 measured that ceiling on `gpt-4o-mini`
+— Hits@1 falling 0.890 → 0.672 → 0.511 across hops at a matched 16-item
+context — but it varied size and depth, never the model. So the project cannot
+currently say whether "the generator cannot chain three facts" is a fact about
+the task or a fact about one small model.
+
+**The decision is where to ask.** The tempting version re-runs the 57 MTG
+questions on a stronger generator. That spends the evaluation split's second
+look — the split was opened once, on 2026-09-12, and that single opening is
+the most defensible thing in the repository — to learn something the
+calibration benchmark answers for under twenty-five dollars. So E-014 runs on
+MetaQA's frozen confirmatory split instead, changing exactly one pinned value
+(`gpt-4o-mini` → `gpt-4o`, same family so the swap does not also move prompt
+idiom, refusal behaviour and answer formatting), and **earning** a registered
+second opening is the outcome rather than the method.
+
+**Two things are recorded against the author rather than the result.** First,
+E-014 is registered with its motivating results already known, which is stated
+in the entry's header instead of being left for a reader to notice; the
+mitigation is structural — no branch of its decision rule permits editing
+E-001 or E-012. Second, the branch boundaries were checked against E-012's own
+D of 0.379 before being written down, so the rule could not have been drawn to
+pass the prior it is testing; `tests/test_e014_analysis.py` pins that property.
+
+**What this closes, and it is a scope error rather than a rigor one.** Phase 8
+had otherwise ended at a diagnosis — the bottleneck is generation, retrieval
+quality is worth roughly 19 of the 66 points missing at three hops — with no
+registered attempt at the thing it identified. Stopping there was a choice
+about how far to go, not a consequence of the pre-registration; pre-registration
+forbids undisclosed iteration, not iteration. The asymmetry that keeps the
+follow-up honest is registered with it: a depth gap that *survives* on MetaQA
+is a floor on the gap over judge-level questions, while a gap that *closes*
+there proves nothing about Magic, whose chains are not templated.
+
 ## 2026-09-12 — The 3x gate fired, so the retrieval comparison is confounded
 
 E-010 part (b) ran on the split it was always registered for. Two things came
