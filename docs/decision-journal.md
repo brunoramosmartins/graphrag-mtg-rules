@@ -90,6 +90,54 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — An audit for the same defect elsewhere, and it found three more
+
+After the three-hop withdrawal, the question was whether the same defect class
+sits under other load-bearing claims. The class, stated so it can be searched
+for: **a quantity supporting a claim, whose definition admits a reading weaker
+than the claim, and which nobody has inspected at the level of one case.**
+
+**1. "The 1-hop and 2-hop columns are clean" was my own overclaim, written
+yesterday, in the entry about this defect.** Chain length matching the declared
+depth does not establish that the chain's *relations* answer the question. An
+unambiguous check — the question asks about a person relation, the chain uses
+only attribute relations — finds **3.0% of 1-hop and 3.2% of 2-hop** chains are
+shortcuts, with examples like `[release_year, release_year]` answering *"which
+films have the same director of If a Man Answers"*. At 3% the depth effect is
+unaffected and the columns stand; the word "clean" does not, and it had reached
+`docs/evaluation.md`, the README, the changelog and two TILs.
+
+**2. The README's claim about the graph arm's refusals was wrong in
+mechanism.** It read the seven as the model declining. Reading all seven:
+**six carry `generated=False` — retrieval resolved no entity and the model was
+never called** (five `no_seed`, one `no_match`). That is entity linking
+failing. The seventh is a genuine refusal and a correct one — the model walked
+the rules and said the context never supplied the creature's toughness. The
+`Answer` dataclass already separates `generated` from `refused` and documents
+why; the claim pooled them anyway. Seven instances is ten minutes of reading
+and nobody had read them.
+
+**3. The audit's own instrument had the defect.** A hand-written keyword map
+flagged *"what **kind** of movie is The King"* as inconsistent because its
+`has_genre` synonyms were "genre" and "type of". Its looser reading (10% and
+27%) is therefore an unreliable ceiling and only the tight check is quoted.
+
+**And one consequence that lands on an entry run the same day.** E-017 reads
+its relation sequence off the chain `answer_path` returns — and this audit
+established that chain is *arbitrary among several* when more than one relation
+joins the same pair. So E-017's typed expansion may have followed the wrong
+relations on some questions. Its direction is not in doubt (a 30x reduction
+does not come from noise) and neither is the hub finding, but the figures carry
+that threat and it is recorded rather than discovered later.
+
+**What the audit found sound** — reported so the finding has a denominator,
+which is itself the defect being hunted. E-001's headline; the judge published
+ungated at 0.727; blinding withdrawn at 0.778; the 3.38x budget confound;
+E-010's four denominator defects; E-013's mis-specified ceiling. Every one is a
+**declared** limitation already written down where it is quoted. The defect
+class is not "this project has limitations" — it is a limitation nobody could
+see because the supporting quantity was never rendered.
+
 ## 2026-09-13 — The three-hop problem is hub traversal, not depth
 
 E-017 asked whether the three-hop haystack is the depth or the untyped walk,

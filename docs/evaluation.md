@@ -674,9 +674,15 @@ whole apparatus exists to prevent. The floor is measured as registered:
 > E-012's amendments of 2026-09-13 in
 > [experiments/registry.md](../experiments/registry.md).
 >
-> **1-hop and 2-hop are unaffected** — their chains match their declared depth
-> on every question — so the fall from 0.884 to 0.677 stands as a real,
-> correctly-conditioned depth effect.
+> **1-hop and 2-hop largely survive** — their chains match their declared depth
+> on every question — so the fall from 0.884 to 0.677 stands as a real depth
+> effect. *"Largely", corrected 2026-09-13: matching the declared **depth** is
+> not the same as matching the relations the question asks for, and an audit
+> found an unambiguous shortcut on **3.0% of 1-hop and 3.2% of 2-hop** chains
+> — a chain of attribute relations answering a question about a person. The
+> word "clean" was an overclaim from a proxy; at 3% the depth effect is
+> unaffected, and the audit's own looser check over-fired, so 3% is a floor
+> and 10%/27% an unreliable ceiling.*
 
 The registered prediction "grounded generation is not the bottleneck at any
 hop" is **falsified**, and that is the transferable result. Conditional on

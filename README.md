@@ -68,9 +68,15 @@ Three measurements say why, and each is registered:
   two-step chain *verified* present, correctness is **0.672** against 0.890 at
   one hop — and of those 82 failures, **39 are refusals and 19 are unparseable
   output, against 24 wrong entities.** Fewer than one failure in three is a
-  reasoning error. The same shape reappeared here: six of the graph arm's seven
-  refusals land on `interaction_multihop`, and removing them halves its
-  deficit.
+  reasoning error.
+- **On the Magic side the graph arm's seven "refusals" are mostly not refusals
+  at all** *(corrected 2026-09-13, by reading all seven — an earlier version of
+  this bullet pooled them and inherited the wrong mechanism)*. **Six carry
+  `generated=False`: retrieval resolved no entity and the model was never
+  called** — five `no_seed`, one `no_match`. That is entity linking failing,
+  not a model declining. The seventh is a real refusal and a correct one: the
+  model walked the rules and said the context never gave it the creature's
+  toughness.
 - **The retrieval comparison is budget-confounded**, by a 3× rule set before
   the split opened. At matched token budget the vector arm keeps a median of
   40.5 items against the graph's 12.0 — 3.38×. So the headline retrieval
