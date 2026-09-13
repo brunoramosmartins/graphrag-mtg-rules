@@ -5010,7 +5010,7 @@ built on it is quoted anywhere.
 
 ---
 
-## E-014 — is the depth effect a property of the task, or of the generator? (registered 2026-09-13, not yet run)
+## E-014 — is the depth effect a property of the task, or of the generator? (registered 2026-09-13, **suspended 2026-09-13**, never run)
 
 - **Registered:** 2026-09-13, before any call is made and before
   `run_e012.py` grows the flag this entry needs. **Registered *after* E-001
@@ -5505,3 +5505,154 @@ The three-hop reach figures now have a second bound on them: **0.650 is what
 this retriever achieves when the budget does not bind at all**, and every
 attempt so far to buy more by retrieving more has cost reach rather than
 bought it.
+
+---
+
+## E-016 — can a trim that knows nothing about the answer keep the answer? (registered 2026-09-13, not yet run)
+
+- **Registered:** 2026-09-13, after E-015's grid and its amendment, and
+  **before any trim policy is written**. E-015 ended by naming the target this
+  entry has to hit and explicitly refused to change shipped trimming off the
+  back of a guard firing; this is the entry that was promised there.
+
+- **The decision this informs.** Whether `enforce_budget` gains an alternative
+  eviction policy. E-012 held that its distance-first trim is not a hazard,
+  inferred from a size null measured on cells where `reduce_to_k` had already
+  reinstated the chain. E-015 measured the trim directly and amended that: at
+  three hops it discards the hop the answer lives on, and giving retrieval a
+  larger pool makes it discard more. A replacement policy is now the obvious
+  move, which is exactly when it needs a rule written before the code.
+
+### The ceiling, computed before the run and from the collections the run will trim
+
+Measured 2026-09-13 on the same 100 three-hop dev questions, `frontier_cap`
+1,600, budget effectively unbounded, so nothing is evicted:
+
+| `kind_cap` | chain present in the untrimmed pool | median pool | **the chain's own cost** |
+|---:|---|---:|---:|
+| 1,000 | 0.650 [0.553, 0.736] | 59,512 tokens | median **90** tokens, max 111 |
+| 4,000 | **0.920** [0.850, 0.959] | 199,146 tokens | median 94 tokens, max 135 |
+
+**That is the whole entry in two numbers.** The evidence that answers a
+three-hop question costs about **90 tokens**; the budget is **6,000**; the
+chain is in the retrieved pool on **92 of 100** questions; and the shipped
+configuration delivers it on **3**. The trim discards one and a half percent of
+its own budget to make room for distance-2 material the question did not ask
+about.
+
+This is the E-013 lesson applied: the ceiling is computed from the same inputs
+the run will see, not from the graph. **0.920 is the number every arm below is
+measured against, and no arm can exceed it** — anything above it is a bug in
+the measurement, not a result.
+
+### Design
+
+- **All four arms trim the same pool.** For each question, retrieval runs
+  **once** per `kind_cap` and the four policies are applied to that identical
+  pre-trim evidence. The comparison is therefore **paired by construction**:
+  no arm can win by having been handed a different retrieval.
+
+- **The arms, and every one is oracle-free.** This is the constraint the entry
+  exists under and the reason it is not trivial. `reduce_to_k` keeps the chain
+  because it is *given* the answer; nothing here may be.
+
+  | arm | policy |
+  |---|---|
+  | **A** | shipped: evict by descending distance, ties by later arrival |
+  | **B** | proportional: each distance level is guaranteed an equal share of the budget; eviction takes from whichever level is over its share |
+  | **D** | connectivity-first: prefer evidence whose head or tail already appears in kept evidence, so the kept set grows as connected paths rather than as a breadth-first shell |
+  | **R** | random eviction at a recorded seed — **the control, and the falsifier** |
+
+- **Why R is the falsifier and not a filler arm.** If random eviction matches B
+  and D within their intervals, then nothing the designed policies do matters
+  and the only thing that helped was *ceasing to evict by descending distance*.
+  That is a different and much smaller claim, and it is the one that gets
+  reported. Registered now so it cannot be quietly dropped if it is awkward.
+
+- **Grid.** Four arms × `kind_cap` ∈ {1,000, 4,000} at the **shipped 6,000-token
+  budget**, `frontier_cap` 1,600. The budget stays at 6,000 on purpose: E-015
+  already showed that 96,000 tokens buys 0.650 with the naive trim, and the
+  question here is how much of the 0.920 ceiling a better policy can deliver
+  **without** paying sixteen times the budget.
+
+- **Primary metric and contrast.** Chain reach at the declared depth. Primary
+  family: **B vs A** and **D vs A**, exact McNemar paired within question, Holm
+  over the two, alpha = 0.05. R vs the best designed arm is the falsifier check
+  and is reported whatever it says.
+
+- **Detectable effect, computed before the run.** Exact McNemar needs 6
+  discordant pairs one way for raw *p* < 0.05 and 7:0 for the stricter Holm
+  step at family size 2. With A at 0.030 and any working arm well above it,
+  discordance will be in the tens. **This design is not underpowered and that
+  is not a virtue of the sample size** — it is that the arms are paired on the
+  same pool and the control is near the floor.
+
+### Decision rule, fixed before the run
+
+1. **The better of B and D beats A by at least 0.20 in chain reach, clears its
+   Holm-adjusted threshold, and beats R.** The policy is added to
+   `enforce_budget` as an option, **off by default**, with this measurement
+   recorded in its docstring — the pattern E-013 set for `reference_hop`. It
+   ships off because the Magic corpus does not currently hit the budget at all
+   (E-013: `dropped` empty on all 26 questions), so adopting it as the default
+   on MetaQA evidence would be changing shipped behaviour on calibration data.
+2. **No arm beats A by 0.20.** The trim is not the lever. Reported, nothing is
+   added to `enforce_budget`, and the three-hop retrieval problem is recorded
+   as needing a different walk rather than a different eviction order.
+3. **B or D beats A, but R matches the winner within its interval.** Reported
+   as *abandoning descending-distance eviction is what mattered*; the specific
+   policy is **not credited**, and if anything is added it is documented as
+   "not distance-descending" rather than by the name of the arm that happened
+   to win.
+
+### Predictions, recorded before the run
+
+1. **A at `kind_cap` 4,000 is no better than its 0.030 at 1,000**, and probably
+   worse: a larger pool is more distance-2 material to displace the chain with,
+   which is the mechanism E-015's amendment measured.
+2. **B lands between 0.15 and 0.35.** Reserving a share for distance 3 is
+   necessary and nowhere near sufficient — there are on the order of a thousand
+   distance-3 candidates and the policy has no idea which one matters.
+3. **D beats B.** A chain is a connected path, so preferring evidence that
+   extends what is already kept is chain-shaped without an oracle. This is the
+   entry's actual hypothesis and the reason it exists.
+4. **R beats A.** This is the uncomfortable one and it is registered because it
+   is uncomfortable: if it holds, the shipped policy is worse than chance at the
+   job it exists to do, and that sentence is the finding rather than a footnote
+   to it.
+
+### Threats to validity, recorded before the run
+
+- **Chain reach is not correctness.** It says the evidence could support an
+  answer, never that one would be right. Carried forward verbatim from E-015,
+  because the distance between those two sentences is what E-012's amendment
+  had to correct.
+- **A cheap ceiling makes a hard problem look easy.** The chain costs 90 tokens
+  of a 6,000-token budget, so an oracle keeps it every time. **No arm here has
+  an oracle**, and the gap between 0.920 and whatever the best arm returns is
+  the price of not knowing which 90 tokens matter. Quoting the ceiling without
+  that sentence would misread the entry.
+- **Pairing removes collection variance and shares collection defects.** All
+  four arms see the same pool, so any defect in `collect` is invisible to this
+  comparison. It is the right trade for a policy contrast and it is not free.
+- **MetaQA's KB is uniform and shallow in relation types.** Concepts transfer,
+  constants do not: no share, seed or threshold found here is carried to the
+  Magic side without being re-measured there.
+- **The Magic corpus does not hit the budget.** Every consequence above is
+  therefore about a *policy that is available*, not about a change to what
+  Magic answers do today. Branch 1 ships the flag off for exactly this reason,
+  and an entry that wants it on has to measure it there first.
+- **`kind_cap` 4,000 was shown by E-015 to hurt under a binding budget.** It is
+  included here anyway and deliberately: the point is whether a better policy
+  turns a bigger pool from a liability back into an asset, which is the claim
+  a depth-preserving trim implicitly makes.
+
+### Cost
+
+**Zero model calls.** Two collections per question over 100 questions, each
+trimmed four ways in memory. The `kind_cap` 4,000 collections are the slow part
+and are reused across all four arms rather than repeated per arm.
+
+### Actual result
+
+_Not yet run._
