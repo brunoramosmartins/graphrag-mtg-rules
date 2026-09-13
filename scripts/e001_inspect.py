@@ -66,11 +66,11 @@ from graphrag_mtg.generation.answerer import (
 from graphrag_mtg.retrieval.subgraph import serialize
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from audit_correctness import CACHE_DIR as E007_CACHE_DIR  # noqa: E402
-from audit_correctness import question_and_key  # noqa: E402
-from run_e007 import rebuild  # noqa: E402  sibling script; sys.path above enables it
-from run_eval import CACHE_DIR, GOLDEN_DIR, NOTICE  # noqa: E402
-from split_golden import QUESTION_FILES, load_questions  # noqa: E402
+from audit_correctness import CACHE_DIR as E007_CACHE_DIR
+from audit_correctness import question_and_key
+from run_e007 import rebuild
+from run_eval import CACHE_DIR, GOLDEN_DIR, NOTICE
+from split_golden import QUESTION_FILES, load_questions
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
