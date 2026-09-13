@@ -111,7 +111,7 @@ def counts(rows: list[dict]) -> int:
             cell = [row for row in rows if row["hops"] == hops and row["k"] == k]
             if not cell:
                 continue
-            tally = {name: 0 for name in OUTCOMES}
+            tally = dict.fromkeys(OUTCOMES, 0)
             for row in cell:
                 tally[outcome_of(row)] += 1
             label = "untrimmed" if k == 0 else str(k)

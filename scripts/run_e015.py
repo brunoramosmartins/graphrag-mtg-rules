@@ -147,7 +147,10 @@ def monotonicity(rows: list[dict]) -> list[str]:
         for bigger in sorted(by_key):
             if bigger == smaller:
                 continue
-            if any(b < s for b, s in zip(bigger, smaller)):
+            # strict=True: both keys are built by the same expression above, so
+            # a future fourth axis added to one and not the other raises here
+            # instead of silently comparing a prefix and calling it dominance.
+            if any(b < s for b, s in zip(bigger, smaller, strict=True)):
                 continue
             if by_key[bigger]["reached"] < row["reached"]:
                 complaints.append(
