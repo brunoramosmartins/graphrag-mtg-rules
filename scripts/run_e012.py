@@ -30,7 +30,7 @@ from graphrag_mtg.evaluation import metaqa
 from graphrag_mtg.evaluation.metaqa import HOPS
 from graphrag_mtg.evaluation.metrics import mcnemar, wilson_interval
 from graphrag_mtg.extraction.llm import LlmClient, estimate_cost
-from graphrag_mtg.generation.answerer import answer, build_prompt
+from graphrag_mtg.generation.answerer import answer, build_prompt, prompt_digest
 from graphrag_mtg.graph.connection import driver_session, metaqa_target
 from graphrag_mtg.retrieval.subgraph import DEFAULT_TOKEN_BUDGET, Subgraph
 
@@ -321,6 +321,20 @@ def run(args: argparse.Namespace) -> int:
                         "predicted": predicted,
                         "correct": metaqa.hits_at_1(predicted, question),
                         "refused": result.refused,
+                        # `parse_prediction` returns None on a reply that
+                        # skipped the ANSWER: marker, and `hits_at_1(None, ...)`
+                        # is False — so without the raw text a format failure
+                        # and a wrong entity are the same row on disk. They are
+                        # different findings: at two hops the run splits 39
+                        # refusals / 19 unparseable / 24 wrong.
+                        "raw": result.text,
+                        # Of exactly what was sent. `e014_inspect.py` rebuilds
+                        # the prompt from the frozen split and checks it against
+                        # this; without it a reconstruction that quietly differs
+                        # is indistinguishable from one that does not.
+                        "prompt_sha256": prompt_digest(
+                            system, build_prompt(question.text, cell)
+                        ),
                         "prompt_version": version,
                         "model": client.model,
                     },

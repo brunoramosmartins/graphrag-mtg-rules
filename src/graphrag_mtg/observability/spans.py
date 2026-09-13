@@ -116,13 +116,49 @@ register_span_kinds(SPAN_KINDS)
 #: says nothing rather than saying something false.
 LLM_MODEL_NAME = "llm.model_name"
 
+#: OpenInference's names for what an LLM span was sent and what it returned.
+#: Added 2026-09-13, and the reason is worth recording: `generation` has been
+#: registered as an `LLM` span since Phase 7, which is the kind Phoenix renders
+#: with a prompt and a completion — and both fields were empty. The trace said
+#: what the answer *cited* and never what the model was looking at, so the
+#: claim "it was handed the right evidence and still failed" was unfalsifiable
+#: from the trace. It took a separate script rendering one case to find that
+#: 92% of a cell had been handed the wrong evidence all along.
+#:
+#: Unlike `llm.token_count.*`, these two can be filled honestly: they are the
+#: exact strings sent and returned, not an estimate wearing a billing name.
+LLM_INPUT = "input.value"
+LLM_OUTPUT = "output.value"
+LLM_INPUT_MIME = "input.mime_type"
+LLM_OUTPUT_MIME = "output.mime_type"
+
+#: Prompts and completions are large and a span is not a store. Recorded
+#: truncated, with the hash of the *whole* string beside it so a reconstruction
+#: can be verified rather than assumed — the trap `e014_inspect.py` documents.
+LLM_VALUE_CHARS = 4000
+PROMPT_SHA256 = "graphrag.prompt.sha256"
+
 #: Keys that deliberately sit outside the `graphrag.` namespace, and the
 #: whole list of them. Everything this project records is prefixed so that
 #: "show me what this project wrote" is one Phoenix filter; a foreign key is
 #: a key the *viewer* defines, which is only useful spelled its way. Keeping
 #: the exceptions enumerated is what stops "the invariant has an exception"
 #: from becoming "the invariant is a suggestion".
-FOREIGN_ATTRIBUTES = frozenset({LLM_MODEL_NAME})
+FOREIGN_ATTRIBUTES = frozenset(
+    {LLM_MODEL_NAME, LLM_INPUT, LLM_OUTPUT, LLM_INPUT_MIME, LLM_OUTPUT_MIME}
+)
+
+
+def clip(value: str, limit: int = LLM_VALUE_CHARS) -> str:
+    """A span-sized slice, saying so when it cuts.
+
+    A silently truncated prompt is a prompt someone will read as complete,
+    which is the shape this module keeps finding. The marker names the
+    attribute that carries the hash of the whole thing.
+    """
+    if len(value) <= limit:
+        return value
+    return f"{value[:limit]}\n\n[truncated at {limit} chars; full text hashed in {PROMPT_SHA256}]"
 
 ARM = "graphrag.arm"
 QUESTION = "graphrag.question"

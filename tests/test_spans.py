@@ -166,16 +166,24 @@ class TestAttributeNames:
         # The namespace rule has exactly one class of exception: keys the
         # viewer defines, which are only useful spelled its way. Listing
         # them is what keeps "the invariant has an exception" from becoming
-        # "the invariant is a suggestion" — a new `llm.*` or `openinference.*`
-        # constant added without thought fails here.
+        # "the invariant is a suggestion" — a foreign constant added without
+        # thought fails here.
         outside = {
             value
             for value in attribute_constants().values()
             if not value.startswith("graphrag.")
         }
         assert outside == set(spans.FOREIGN_ATTRIBUTES)
+        # The allowed spellings are OpenInference's own. `input.value` and
+        # `output.value` carry no prefix at all in that convention, and using
+        # a prefixed variant would mean Phoenix reads nothing — the point of
+        # spelling a foreign key the viewer's way. Widened 2026-09-13 from
+        # `llm.`/`openinference.` when the generation span finally started
+        # carrying the prompt and the completion it had always claimed to.
         assert all(
-            value.startswith(("llm.", "openinference.")) for value in spans.FOREIGN_ATTRIBUTES
+            value.startswith(("llm.", "openinference."))
+            or value in {"input.value", "output.value", "input.mime_type", "output.mime_type"}
+            for value in spans.FOREIGN_ATTRIBUTES
         )
 
     def test_no_two_constants_name_the_same_attribute(self) -> None:
