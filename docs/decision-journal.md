@@ -90,6 +90,49 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — Phase 9 opens on a gate, and Phase 8 closes with three items moved rather than finished
+
+Phase 9 opened the same day the Magic-side audit landed, with the objective
+**retrieval that reaches the governing rule** — and with E-018 as a gate in
+front of it rather than a task inside it. The ordering is the decision: if
+assignment shows no effect, the phase's objective is wrong and the three
+engineering fronts behind it would have been built on a post-selected
+correlation, which is the confound that inverted E-012a. The fronts do not
+open before the gate returns.
+
+**The phase carries no hour budget and no date.** The roadmap's effort table
+stops at Phase 8 and stays there. This is a personal project with no deadline;
+a shirt size on Phase 9 would exist only to be missed, and elapsed time was
+never a metric this project could read honestly.
+
+**Gate carry-overs from Phase 8, and what was decided for each.**
+
+- **The tags `v1.0.0` and `v1.1.0` did not exist.** The CHANGELOG asserted two
+  releases that the repository could not show — the only published
+  inconsistency in it. Carried over and done at the close of the Phase 8
+  branch: `v1.0.0` on the last commit that stood at that version, `v1.1.0` on
+  the head. The phase tags before them keep their `vN.M-topic` names; the
+  release tags are plain semver, as the CHANGELOG header already said.
+- **The P3 closing issue was dropped, not deferred.** Its body is written and
+  versioned at [handoff/p3-agentic-rag.md](handoff/p3-agentic-rag.md), which is
+  the part that has to survive; `gh` is not installed on this machine, so every
+  `gh issue create` this project has produced was ceremony. The handover is a
+  document in `docs/`, and that is where it stays.
+- **Two Phase 8 DoD items move to Phase 10**: an outside reader following the
+  README on a clean machine, and pinning the repository. Both are checks on a
+  README that Phase 10 will rewrite to carry two verdicts side by side.
+  Checking it now means checking it twice.
+
+**One risk was raised and is not resolved.** Phase 9's roadmap marks
+"repairing retrieval while looking at the 42 evaluation questions" as
+`Critical`, and mitigates it with "iterate only on the development split". But
+E-018 *is* a second reading of the evaluation split, declared, and Front C will
+be iterated by a person who has that number in mind. The mitigation as written
+does not survive contact with the phase it is meant to protect. Whether the
+development split has to grow before any front opens — which pulls part of
+Phase 10's curation forward — is **open, and recorded here undecided** rather
+than silently answered by whatever happens first.
+
 ## 2026-09-13 — The same audit on the Magic side: no falsified claim, and the best explanation the null has had
 
 The MetaQA audit found three defects, so the same pass was run against the
