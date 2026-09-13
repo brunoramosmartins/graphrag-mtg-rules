@@ -90,6 +90,41 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — The three-hop evidence was there, and the budget was throwing it away
+
+E-015 ran, free, on the 100 three-hop dev questions. At the shipped
+configuration the chain the question needs survives retrieval on **3 of 100**.
+At sixteen times the token budget, with nothing else changed, **65 of 100**.
+The registered branch-1 consequence is applied: E-012's holding that the
+distance-first trim is not a hazard was inferred from a size null measured on
+cells where `reduce_to_k` had already reinstated the chain, and is amended.
+
+**Two things went wrong in the entry's own design, and both are recorded rather
+than smoothed.** It said it varied "the two limits that discard evidence" and
+`frontier_cap` turned out to be inert — every cell at 1,600 identical to its
+twin at 400 to the last digit, because `add_evidence` caps per
+`(template, kind)` and the template carries the distance, so a thousand triples
+per level is the real ceiling and it swallowed 2.5x more candidates without
+changing what survived. The limit that binds was never named.
+
+Then the amendment that added `kind_cap` **fired the monotonicity check**, and
+the explanation is not a bug: raising the cap admits ~45,000 more distance-2
+triples, that pushes 34 of 40 questions over the budget where none had been,
+and `enforce_budget` evicts farthest first — the hop the answer lives on. Reach
+falls from 0.650 to 0.460. **More retrieval buys worse multi-hop coverage**,
+and the registered prediction that reach could only rise was wrong: it holds
+only while added evidence cannot displace what was already kept, and a selector
+that evicts by a criterion correlated with the answer makes displacement
+systematic.
+
+**The guard could not tell a bug from an interaction — nothing can — but it
+stopped 0.460 being written down as "a bigger cap is worse", which is true of
+the number and false about the cause.** Being forced to look is the return.
+
+No change to shipped trimming follows here. A repair this consequential gets
+its own entry with its own rule written first, which is the bar E-013 was held
+to; what this supplies is the target it has to beat.
+
 ## 2026-09-13 — Rendering one case withdrew the project's most-quoted number
 
 E-014's dry run was clean and every registered count matched. Before paying it,

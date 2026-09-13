@@ -61,6 +61,13 @@ RULE = "-" * 78
 FRONTIER_CAPS: tuple[int, ...] = (400, 1600)
 TOKEN_BUDGETS: tuple[int, ...] = (6000, 24000, 96000)
 
+#: Added by amendment 2026-09-13b. The original grid varied `frontier_cap`,
+#: which turned out to be inert: raising it admitted 2.5x more candidate
+#: triples and `add_evidence` discarded every extra one, because its cap is
+#: per (template, kind) and the template is `metaqa_expand_{distance}` — a
+#: thousand triples per level. The entry named the wrong second limit.
+KIND_CAPS: tuple[int, ...] = (E002_KIND_CAP,)
+
 #: Registered before the run. Branch 1 needs reach above 0.50; branch 2 is
 #: every cell below 0.20; anything else is branch 3 and draws no consequence
 #: for shipped trimming.
@@ -77,7 +84,11 @@ def median(values: list[int]) -> int:
 
 
 def cell(
-    session, questions: list[metaqa.Question], frontier_cap: int, token_budget: int
+    session,
+    questions: list[metaqa.Question],
+    frontier_cap: int,
+    token_budget: int,
+    kind_cap: int = E002_KIND_CAP,
 ) -> dict:
     """One grid cell: chain reach, and what it cost in items and tokens."""
     reached = 0
@@ -88,7 +99,7 @@ def cell(
             session,
             question,
             frontier_cap=frontier_cap,
-            kind_cap=E002_KIND_CAP,
+            kind_cap=kind_cap,
             token_budget=token_budget,
         )
         items.append(len(subgraph.evidence))
@@ -104,6 +115,7 @@ def cell(
     return {
         "frontier_cap": frontier_cap,
         "token_budget": token_budget,
+        "kind_cap": kind_cap,
         "n": len(questions),
         "reached": reached,
         "reach": interval.point,
@@ -122,19 +134,27 @@ def monotonicity(rows: list[dict]) -> list[str]:
     says no number is read until it is explained.
     """
     complaints: list[str] = []
-    by_key = {(row["frontier_cap"], row["token_budget"]): row for row in rows}
-    for (frontier, budget), row in sorted(by_key.items()):
+    by_key: dict[tuple[int, int, int], dict] = {}
+    for row in rows:
+        # Every limit is part of the key. Amendment 2026-09-13b added a third
+        # axis, and a key that still named two would have collapsed two cells
+        # onto one entry and dropped a comparison without saying so.
+        key = (row["frontier_cap"], row["token_budget"], row.get("kind_cap", 0))
+        if key in by_key:
+            complaints.append(f"two cells share the setting {key}")
+        by_key[key] = row
+    for smaller, row in sorted(by_key.items()):
         for bigger in sorted(by_key):
-            if bigger == (frontier, budget):
+            if bigger == smaller:
                 continue
-            if bigger[0] < frontier or bigger[1] < budget:
+            if any(b < s for b, s in zip(bigger, smaller)):
                 continue
             if by_key[bigger]["reached"] < row["reached"]:
                 complaints.append(
                     f"reach falls from {row['reached']}/{row['n']} at "
-                    f"(frontier {frontier}, budget {budget}) to "
-                    f"{by_key[bigger]['reached']}/{by_key[bigger]['n']} at "
-                    f"(frontier {bigger[0]}, budget {bigger[1]})"
+                    f"(frontier {smaller[0]}, budget {smaller[1]}, kind_cap {smaller[2]}) "
+                    f"to {by_key[bigger]['reached']}/{by_key[bigger]['n']} at "
+                    f"(frontier {bigger[0]}, budget {bigger[1]}, kind_cap {bigger[2]})"
                 )
     return complaints
 
@@ -204,6 +224,7 @@ def sweep(args: argparse.Namespace) -> int:
 
     frontiers = (args.frontier,) if args.frontier else FRONTIER_CAPS
     budgets = (args.budget,) if args.budget else TOKEN_BUDGETS
+    caps = tuple(args.kind_caps) if args.kind_caps else KIND_CAPS
 
     print(f"E-015 — {len(questions)} {HOPS}-hop question(s) from the {args.split} split.")
     print("Zero model calls. Chain reach is a RETRIEVAL metric, never a score.\n")
@@ -212,20 +233,24 @@ def sweep(args: argparse.Namespace) -> int:
     with driver_session(_require_bolt(metaqa_target())) as session:
         for frontier_cap in frontiers:
             for token_budget in budgets:
-                started = time.monotonic()
-                print(f"  collecting frontier={frontier_cap} budget={token_budget} ...",
-                      flush=True)
-                row = cell(session, questions, frontier_cap, token_budget)
-                row["seconds"] = round(time.monotonic() - started, 1)
-                rows.append(row)
+                for kind_cap in caps:
+                    started = time.monotonic()
+                    print(
+                        f"  collecting frontier={frontier_cap} budget={token_budget} "
+                        f"kind_cap={kind_cap} ...",
+                        flush=True,
+                    )
+                    row = cell(session, questions, frontier_cap, token_budget, kind_cap)
+                    row["seconds"] = round(time.monotonic() - started, 1)
+                    rows.append(row)
 
     print(f"\n{RULE}")
-    print(f"{'frontier':>10}{'budget':>10}{'reach':>28}{'items':>10}{'tokens':>10}")
+    print(f"{'frontier':>10}{'budget':>10}{'kind_cap':>10}{'reach':>28}{'items':>10}{'tokens':>10}")
     print(RULE)
     for row in rows:
         reach = f"{row['reach']:.3f} [{row['low']:.3f},{row['high']:.3f}] {row['reached']}/{row['n']}"
-        print(f"{row['frontier_cap']:>10}{row['token_budget']:>10}{reach:>28}"
-              f"{row['median_items']:>10}{row['median_tokens']:>10}")
+        print(f"{row['frontier_cap']:>10}{row['token_budget']:>10}{row['kind_cap']:>10}"
+              f"{reach:>28}{row['median_items']:>10}{row['median_tokens']:>10}")
     print(RULE)
 
     complaints = monotonicity(rows)
@@ -261,6 +286,14 @@ def main() -> int:
     sweeper.add_argument("--metaqa-dir", type=Path, default=METAQA_DIR)
     sweeper.add_argument("--frontier", type=int, default=0, help="one cap instead of the grid")
     sweeper.add_argument("--budget", type=int, default=0, help="one budget instead of the grid")
+    sweeper.add_argument(
+        "--kind-caps",
+        type=int,
+        nargs="+",
+        default=None,
+        dest="kind_caps",
+        help="amendment 2026-09-13b: the per-(template, kind) cap, which is what binds",
+    )
     sweeper.add_argument("--limit", type=int, default=0)
     sweeper.add_argument("--out", type=Path, default=None)
     sweeper.set_defaults(func=sweep)

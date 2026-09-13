@@ -5203,7 +5203,7 @@ _Not run. Suspended as above._
 
 ---
 
-## E-015 — does the three-hop chain survive retrieval, and what destroys it? (registered 2026-09-13, not yet run)
+## E-015 — does the three-hop chain survive retrieval, and what destroys it? (registered 2026-09-13, dev grid run 2026-09-13)
 
 - **Registered:** 2026-09-13, before any cell is collected and before
   `scripts/run_e015.py` exists. It follows E-012's amendment of the same day
@@ -5338,4 +5338,170 @@ is on so a long cell is visible rather than silent.
 
 ### Actual result
 
-_Not yet run._
+**Actual result (2026-09-13, dev split, 100 3-hop questions, zero model calls):
+branch 1 — the three-hop failure is substantially an artefact of the budget.**
+
+| frontier | budget | chain reach | median items | median tokens |
+|---:|---:|---|---:|---:|
+| 400 | 6,000 *(shipped)* | 0.030 [0.010, 0.085] 3/100 | 207 | 5,985 |
+| 400 | 24,000 | 0.180 [0.117, 0.267] 18/100 | 837 | 23,987 |
+| 400 | 96,000 | **0.650** [0.553, 0.736] 65/100 | 2,007 | 59,512 |
+| 1,600 | 6,000 | 0.030 [0.010, 0.085] 3/100 | 207 | 5,985 |
+| 1,600 | 24,000 | 0.180 [0.117, 0.267] 18/100 | 837 | 23,987 |
+| 1,600 | 96,000 | **0.650** [0.553, 0.736] 65/100 | 2,007 | 59,512 |
+
+Monotonicity held: reach never fell as a limit rose.
+
+**The registered rule fires: branch 1.** At the shipped configuration the chain
+the question needs survives retrieval on **3 of 100** questions. Sixteen times
+the token budget carries that to **65 of 100**, with nothing else changed. The
+three-hop evidence was there and was being thrown away.
+
+### Predictions, scored
+
+1. **"Reach at the shipped cell is below 0.10 on dev."** *Right* — 0.030,
+   matching the 3.3% measured on conf.
+2. **"Reach is monotone non-decreasing in both limits."** *Held.* The check
+   that could have returned negative did not.
+3. **"`frontier_cap` dominates `token_budget`."** *Wrong, and wrong in the way
+   that matters.* `frontier_cap` does not dominate; it does **nothing at all**.
+   Every cell at 1,600 is identical to its twin at 400 to the last digit —
+   same reach, same median items, same median tokens.
+4. **"Reach above 0.50 costs a context far outside what E-012 tested."**
+   *Right.* The cheapest cell clearing 0.50 has a median of **2,007 evidence
+   items**, against the 256 that is the largest size E-012's generator null
+   covers. Buying the chain and being able to use it are different purchases.
+
+### Why `frontier_cap` is inert, measured rather than reasoned
+
+On 40 dev questions at a 96,000-token budget:
+
+| | questions truncated | questions capped | **items discarded by `kind_cap`** | evidence at distance 1 / 2 / 3 |
+|---|---:|---:|---:|---|
+| `frontier_cap` 400 | 39/40 | 39/40 | **174,228** | 388 / 31,708 / 39,021 |
+| `frontier_cap` 1,600 | 33/40 | 39/40 | **430,137** | 388 / 31,708 / 39,021 |
+
+Raising the frontier admits **2.5× more candidate triples and every extra one
+is discarded**, because `add_evidence` caps per `(template, kind)` and the
+template is `metaqa_expand_{distance}` — **1,000 triples per distance level**,
+a ceiling of 3,000, which is the 2,007 median. The surviving evidence is
+identical, level by level.
+
+**So this entry named the wrong second limit.** Its design says it varies "the
+two limits that discard evidence"; there are three, the one it varied second is
+inert, and the one it never named is the binder. The grid caught it — two
+columns identical to the digit is not a result, it is a limit that never fired
+— but the registration should have listed `kind_cap` and did not.
+
+And the remaining 35% is not the budget's doing: at 96,000 the median question
+uses **59,512 tokens**, comfortably under. Whatever is keeping the chain from a
+third of these questions at that cell, it is no longer the budget.
+
+### What this changes, applied as registered
+
+- **E-012's branch-2 consequence about `enforce_budget` is amended.** It held
+  that the distance-first trim is not a hazard, inferred from a size null
+  measured on cells where `reduce_to_k` had already reinstated the chain. At
+  three hops the trim discards the answer's own hop on 97 of 100 questions.
+  The null was never evidence about the trim.
+- **The setting any future 3-hop work uses is a 96,000-token budget**, and it
+  should be written that way rather than as a pair: `frontier_cap` is inert
+  here and naming it would imply it was chosen.
+- **E-014 becomes answerable again — into a regime nobody has tested.** A
+  generator experiment at that setting runs on ~2,000-item contexts. E-012's
+  size null covers 256. Its amendment must say that the context is
+  extrapolated, or measure the null there first.
+- **Reach is not correctness.** 0.650 says the evidence could support an answer
+  on 65 of 100 questions. It says nothing about whether one would be right, and
+  the distance between those two sentences is the mistake the 2026-09-13
+  amendment to E-012 exists to correct.
+
+### Amendment 2026-09-13b — registering the limit the entry should have varied
+
+Registered **after** the grid above and **before** any `kind_cap` cell is
+collected, and marked as such. The extension rule fixed in the original design
+covers a further `frontier_cap` at 6,400 *if reach is still rising*; reach is
+flat in that axis, so that rule correctly does not fire and is not used as
+cover for a different arm.
+
+- **New arm.** `kind_cap` ∈ {1,000 *(shipped for MetaQA)*, 4,000, 16,000} at
+  the budget the grid named (96,000) and `frontier_cap` 1,600 — the larger
+  frontier, because at a higher `kind_cap` the extra candidates it admits can
+  finally survive, which is exactly what made it inert before.
+- **Prediction.** Reach rises above 0.650 and the rise is smaller than the
+  0.030 → 0.650 the budget bought, because at 96,000 the median question is
+  already under budget and the cap therefore binds on fewer of them than it
+  appears to. I do not expect reach above 0.90.
+- **The same monotonicity check applies** and is the reason a cell may not be
+  read on its own.
+- **Decision rule.** This arm changes no consequence already applied above. It
+  names the cheapest setting at which the chain reaches, and nothing else; if
+  `kind_cap` turns out to dominate, the correction is recorded against this
+  entry's design rather than used to re-open E-012's verdict a second time.
+- **Cost.** Zero model calls. The 16,000 cell collects hundreds of thousands of
+  triples per question and may be slow; if a cell exceeds ten minutes per
+  question it is abandoned and its absence recorded here.
+
+**Actual result (2026-09-13, dev split, 100 3-hop questions, zero model calls):
+the monotonicity check fired, the script exited non-zero, and the explanation
+is not a harness bug.**
+
+| frontier | budget | `kind_cap` | chain reach | median items | median tokens |
+|---:|---:|---:|---|---:|---:|
+| 1,600 | 96,000 | 1,000 | **0.650** [0.553, 0.736] 65/100 | 2,007 | 59,512 |
+| 1,600 | 96,000 | 4,000 | 0.460 [0.366, 0.557] 46/100 | 3,281 | 95,985 |
+| 1,600 | 96,000 | 16,000 | 0.460 [0.366, 0.557] 46/100 | 3,281 | 95,985 |
+
+**Reach falls as the cap rises**, twice, and per the rule fixed in the original
+design no number here was read until it was explained. What follows is the
+explanation, measured on 40 of the same questions rather than argued:
+
+| `kind_cap` | surviving evidence at distance 1 / 2 / 3 | share at distance 3 | questions hitting the budget | items dropped |
+|---:|---|---:|---:|---:|
+| 1,000 | 388 / 31,708 / **39,021** | **54.9%** | **0 / 40** | 0 |
+| 4,000 | 388 / 76,876 / **40,696** | **34.5%** | **34 / 40** | 110,780 |
+
+Raising the cap admits roughly **45,000 more distance-2 triples** and barely
+1,600 more at distance 3. That pushes the subgraph over the token budget — from
+zero questions trimmed to 34 of 40 — and `enforce_budget` evicts farthest
+first, which at three hops is the hop the answer lives on. Nearer, irrelevant
+evidence displaces the chain.
+
+**Prediction, scored: wrong, and the registered monotonicity claim with it.**
+The amendment predicted reach would rise above 0.650 and not past 0.90. It
+**fell**, to 0.460. And the original entry's prediction 2 — *"raising a cap or a
+budget can only add evidence, so reach cannot fall"* — is false as stated. It
+holds only while the added evidence cannot displace what was already kept. A
+downstream selector that evicts by a criterion **correlated with what the
+question needs** makes displacement not just possible but systematic.
+
+**The guard is what makes this readable.** It could not tell a bug from an
+interaction — nothing can — but it stopped 0.460 from being written down as
+"a bigger cap is worse", which is true of the number and false about the cause.
+Being forced to look is the whole return on registering it.
+
+### The finding, and it is the opposite of what E-012 concluded
+
+E-012's branch 2 kept `enforce_budget`'s distance-first trim, on a size null
+measured where `reduce_to_k` had already reinstated the chain. This measures the
+trim directly, and at three hops **it converts extra retrieval into worse
+coverage of exactly the questions multi-hop retrieval exists for.** Retrieval
+that brings back more is punished for it.
+
+That is a mechanism, not a mandate. **No change to shipped trimming follows
+from it here**, for the reason E-013 was held to: a repair this consequential
+gets its own entry, with its own decision rule written before the run, rather
+than being adopted off the back of a guard firing. What this entry supplies is
+the target such an entry would aim at, and the measurement it has to beat.
+
+### What stands from the original grid
+
+Unchanged. The cheapest setting at which the chain reaches is still
+**`kind_cap` 1,000 at a 96,000-token budget** — the amendment said in advance
+that this arm names a setting and changes no consequence already applied, and
+it does not. Branch 1 was read off the registered grid and stays read.
+
+The three-hop reach figures now have a second bound on them: **0.650 is what
+this retriever achieves when the budget does not bind at all**, and every
+attempt so far to buy more by retrieving more has cost reach rather than
+bought it.
