@@ -90,6 +90,64 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — The same audit on the Magic side: no falsified claim, and the best explanation the null has had
+
+The MetaQA audit found three defects, so the same pass was run against the
+claims that actually ship. **Nothing in the repository is falsified by it.**
+Two checks and one exploratory reading, in order of what they cost to learn.
+
+**Grounding holds.** Across all three arms, **zero** answers scored `correct`
+cited nothing. The discipline the project is built on — no uncited claims —
+survives inspection at the level of individual answers rather than as an
+assertion. Worth recording precisely because the audit was looking for the
+opposite.
+
+**But roughly 60% of correct answers cite no CR rule at all** — they are
+grounded in rulings and card text. On `interaction_multihop`, the stratum the
+hypothesis was written about, the graph arm answers 6 correctly and **one** of
+those cites a rule. That is not a defect: rulings are registered as legitimate
+citations. It does mean gold-rule recall is a narrower quantity than the
+sentences built on it imply.
+
+**The reading that follows, and it is exploratory.** On the 42 evaluation
+questions carrying `gold_cr_rules`, split by whether retrieval actually brought
+one:
+
+| arm | gold rule retrieved | correct when present | when absent |
+|---|---:|---:|---:|
+| A vector | 14/42 | 0.786 | 0.393 |
+| B graph | 16/42 | 0.812 | 0.308 |
+| C hybrid | 17/42 | 0.824 | 0.360 |
+
+**All three arms sit near 0.80 when the governing rule is in context and near
+0.35 when it is not, and all three bring it on about a third of the questions.**
+The between-arm difference E-001 measured is 0.01. The within-arm difference
+made by getting the rule is 0.39 to 0.51.
+
+That is the best explanation E-001's null has had: **the arms are
+indistinguishable because they fail at the same thing, and the thing is
+bringing the governing rule.** It converges with the MetaQA side, which spent
+the day concluding that retrieval — not generation — is what breaks at depth.
+
+**It decides nothing and is not published as a result.** Conditioning on
+whether retrieval succeeded is post-selection: the questions where the gold
+rule arrives may be the easy ones, which is the confound that invalidated
+E-012a. It is recorded as a hypothesis for an entry that assigns rather than
+observes, and quoted as exploratory wherever it appears.
+
+**One gap that is fair to call a gap.** The README's "7 of 64 gold rules"
+bullet is measured on the 26 questions the pipeline had already failed — a
+failure-selected population, declared as such. The unselected version was
+available on the full evaluation split the whole time and is both cleaner and
+more informative. Choosing the selected population was not wrong; not also
+taking the unselected one was a missed measurement.
+
+**And the instrument was checked against itself.** The first pass regexed rule
+numbers out of the serialized context, which admits a weaker reading — a ruling
+quoting `613.4b` in prose would count. Re-run against the retrieved evidence
+handles, the counts are identical (14 / 16 / 17). The check was sound, and that
+is only known because it was repeated the strict way.
+
 ## 2026-09-13 — An audit for the same defect elsewhere, and it found three more
 
 After the three-hop withdrawal, the question was whether the same defect class
