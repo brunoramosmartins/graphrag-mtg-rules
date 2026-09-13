@@ -661,17 +661,32 @@ verdict, and letting it overturn a pre-registered threshold is the move this
 whole apparatus exists to prevent. The floor is measured as registered:
 **0.884, FAIL.**
 
-## The finding: generation, not retrieval
+## The finding: generation, not retrieval — WITHDRAWN AT THREE HOPS, 2026-09-13
+
+> **The 3-hop row below is withdrawn.** Not the number — the number is what
+> was computed — but what it may be read to mean. `answer_shown` is
+> `any(hits_at_1(name, question) for name in shown)`: the answer *string*
+> appearing among the evidence's entity names, with no chain required. Behind
+> the 224 three-hop cases it selects, **213 have a real chain of one step**
+> and 11 have three. So "conditional on the answer being present in the
+> evidence the model received" does not say what its words say, and the
+> conclusion drawn from it at three hops does not follow. See E-002's and
+> E-012's amendments of 2026-09-13 in
+> [experiments/registry.md](../experiments/registry.md).
+>
+> **1-hop and 2-hop are unaffected** — their chains match their declared depth
+> on every question — so the fall from 0.884 to 0.677 stands as a real,
+> correctly-conditioned depth effect.
 
 The registered prediction "grounded generation is not the bottleneck at any
 hop" is **falsified**, and that is the transferable result. Conditional on
 the answer entity being present in the evidence the model actually received:
 
-| hop | correct given the answer was shown |
-|---|---|
-| 1-hop | 0.884 [0.853, 0.909] |
-| 2-hop | 0.677 [0.631, 0.720] |
-| 3-hop | **0.339** [0.280, 0.404] |
+| hop | correct given the answer was shown | |
+|---|---|---|
+| 1-hop | 0.884 [0.853, 0.909] | stands |
+| 2-hop | 0.677 [0.631, 0.720] | stands |
+| 3-hop | **0.339** [0.280, 0.404] | **withdrawn — 213 of 224 are one-step chains** |
 
 At three hops the model uses **one third** of what retrieval hands it.
 
@@ -683,7 +698,7 @@ E-012 ran questions at **matched context sizes** across hops with the
 answer-bearing chain guaranteed present, on a frozen confirmatory draw of
 300 per hop taken from the complement of E-002's subset.
 
-| *k* | 1-hop | 2-hop | 3-hop |
+| *k* | 1-hop | 2-hop | 3-hop *(withdrawn)* |
 |---|---|---|---|
 | 8 | 0.883 [0.842, 0.915] | 0.660 [0.599, 0.716] | 0.489 [0.407, 0.572] |
 | 16 | 0.890 | 0.672 | 0.511 |
@@ -691,8 +706,24 @@ answer-bearing chain guaranteed present, on a frozen confirmatory draw of
 | 256 | 0.897 | 0.628 | 0.518 |
 | untrimmed | 0.893 | 0.628 | 0.533 |
 
-**Depth at matched size: every row separated, spread 0.30 to 0.39.** Holding
-the context at 8 items, accuracy still falls 0.883 to 0.660 to 0.489.
+> **The 3-hop column is withdrawn, 2026-09-13.** `answer_path` returned the
+> shortest chain to any accepted answer *string*, and `reduce_to_k` preserved
+> whatever it returned. **126 of the 137 questions in that cell (92%) were
+> accepted on a one-step chain**, so the model received a one-hop context with
+> a three-hop question stapled to it — and 43 of its refusals there were the
+> grounding prompt being obeyed, scored as generation failures. The repair
+> requires a chain of the declared depth; applied to this split it leaves
+> **10 usable 3-hop questions of 300**, and leaves the 1-hop and 2-hop
+> exclusion counts **byte-identical** (0 and 50), which is the mechanical
+> check that the columns below survive.
+>
+> With that column gone, **no figure in this document supports "generation is
+> the bottleneck, not retrieval" at three hops.** What replaces it is a
+> question, not a result: retrieval reaches the genuine three-step chain on
+> 3.0% of 3-hop questions, and nothing has registered a rule to test that yet.
+
+**Depth at matched size, on the columns that survive: 0.890 to 0.672 at
+*k*=16, separated.** Holding the context at 8 items, 0.883 to 0.660.
 
 **Size at fixed depth: nothing.** 1-hop moves between 0.883 and 0.897 across
 a 32x change in context. Paired within question, untrimmed against *k*=8:
@@ -706,10 +737,15 @@ a named bound.
 
 ## What Act 1 transfers, and what it does not
 
-- **Transfers.** The bottleneck at depth is compositional reasoning, not
-  context size and not retrieval volume. MetaQA questions are templated and
-  their chains uniform, so the depth effect measured here is a **floor** on
-  the depth effect in judge-level Magic questions, not an estimate of it.
+- **Transfers, narrowed 2026-09-13.** Between one and two hops, depth costs
+  accuracy and context size does not — 0.890 to 0.672 at a matched *k*=16,
+  with the size null flat across a 32x change. MetaQA questions are templated
+  and their chains uniform, so that effect is a **floor** on the depth effect
+  in judge-level Magic questions, not an estimate of it.
+- **No longer claimed.** That the bottleneck at *three* hops is compositional
+  reasoning. The cell that said so was 92% one-step chains; see the withdrawal
+  above. Whether three hops fails on reasoning, on retrieval, or on the
+  grounding prompt's refusal rule is now unmeasured.
 - **Does not transfer.** No number in Act 1 is a Magic number. The budget
   does not currently fire on the Magic corpus at all — `dropped` is 0 across
   all 42 E-007 questions, all 18 E-008 probes, and all 20 Phase 6
@@ -939,6 +975,24 @@ counting as a win lets the headline move with how generously it is applied
 | ~~Evaluation split, 57 questions, opened once in Phase 8~~ — **opened 2026-09-12; the gate is recorded in the decision journal** | — |
 | E-010's reliability ceiling: a second pass over >= 50 relevance judgements on >= 10 questions, **not before 2026-09-19** | E-010a's precision figures carrying any annotator-reliability bound |
 | E-010a's `legality_1hop` stratum, removed from the sample by a filter the human pass did not need | the registered per-stratum precision prediction, which is now readable on `definition_1hop` only |
+| **E-014**, registered 2026-09-13, **suspended 2026-09-13 before its first call** | nothing, for now — see below |
+| A 3-hop cell that measures three hops: the repaired `answer_path` leaves **10 usable questions of 300**, so a new frozen draw is required | any future claim about depth beyond two hops, E-014 included |
+
+E-014 was registered to ask whether the depth effect is a property of the task
+or of `gpt-4o-mini`, pairing across models on MetaQA's frozen split so that
+earning a **second** opening of the MTG evaluation split would be the outcome
+rather than the method. Its dry run was clean and every registered count
+matched — 824 calls, 213 exclusions, 163 at 3-hop, about US$5.80.
+
+It was suspended the same day, unspent. The 3-hop cell it pairs across models
+was withdrawn: 92% of it is one-step chains, so a stronger model run against it
+would produce a number carrying the same defect and looking exactly like an
+answer. The entry stands unedited in the registry; it does not run until a
+depth cell exists that measures depth.
+
+**The evaluation split has been opened once, on 2026-09-12**, and nothing since
+has touched it. E-001's numbers are unaffected by any of this — different
+corpus, different scorer, and `answer_path` has no part in it.
 
 ## The judge, published ungated
 
