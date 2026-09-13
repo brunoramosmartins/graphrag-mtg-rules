@@ -264,7 +264,9 @@ def run(args: argparse.Namespace) -> int:
                 kind_cap=E002_KIND_CAP,
                 token_budget=DEFAULT_TOKEN_BUDGET,
             )
-            chain = metaqa.answer_path(subgraph.evidence, question.seed, question.answers)
+            chain = metaqa.answer_path(
+                subgraph.evidence, question.seed, question.answers, hops=question.hops
+            )
             if chain is None:
                 # The answer is not reachable through the evidence, so no
                 # size can hold it. Excluded and counted: a size comparison

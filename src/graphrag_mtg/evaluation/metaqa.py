@@ -452,29 +452,58 @@ def _endpoints(item: Evidence) -> tuple[str, str]:
 
 
 def answer_path(
-    evidence: Sequence[Evidence], seed: str, answers: Sequence[str]
+    evidence: Sequence[Evidence], seed: str, answers: Sequence[str], *, hops: int
 ) -> list[Evidence] | None:
-    """One shortest chain of evidence from the seed to any accepted answer.
+    """One chain of exactly ``hops`` evidence steps from the seed to an answer.
 
-    E-012 asks whether long contexts fail on size or on depth, and it can
-    only ask that if the answer is present at every context size. This finds
-    the chain that has to be kept: a breadth-first walk over the evidence
-    itself, so the returned items are ones the model would have been shown.
+    E-012 asks whether long contexts fail on size or on depth, and it can only
+    ask that if the evidence actually answers the question. Until 2026-09-13
+    this returned the *shortest* chain to any accepted answer string, which is
+    a weaker thing and reads identically — a non-empty chain either way.
+
+    That gap decided the entry's headline. A 3-hop question asking *"the movies
+    written by the screenwriter of The Best Intentions were directed by who"*
+    accepted the one-step chain ``The Best Intentions | written_by | Ingmar
+    Bergman``, because Bergman is in the answer set (he directed some of his
+    own screenplays). The chain proves ``written_by``; the question asks
+    ``directed_by``. Across the confirmatory split, 126 of the 137 questions in
+    the 3-hop cell were accepted on a one-step chain, so the cell handed the
+    model a one-hop context with a three-hop question stapled to it, and its
+    refusals were scored as generation failures. See E-012's amendment of
+    2026-09-13.
+
+    ``hops`` is keyword-only and required. A caller that does not say how deep
+    the chain must be is the defect, so there is no default to fall into.
 
     Args:
         evidence: Triple evidence from one retrieval.
         seed: The entity the question named.
         answers: Every accepted answer.
+        hops: The question's declared depth. A chain of any other length is
+            not the reasoning the question asks for, and is rejected even when
+            it reaches an accepted answer.
 
     Returns:
-        The items along one shortest chain, seed-first, or ``None`` when no
-        accepted answer is reachable through this evidence — in which case
-        the question is excluded from E-012 and counted, because a size
-        comparison on a context that never held the answer measures nothing.
+        The items along one chain of exactly ``hops`` steps, seed-first, or
+        ``None`` when the evidence holds no such chain — in which case the
+        question is excluded and counted, because a comparison run on a
+        context that does not answer the question measures the harness.
+
+    Note:
+        The walk is breadth-first and marks nodes seen at the depth it first
+        reaches them, so an entity reachable both above and at ``hops`` is
+        consumed by the shallower path and the question is excluded. That
+        errs toward excluding a usable question rather than accepting an
+        unusable one, which is the direction this function was wrong in.
+
+    Raises:
+        ValueError: If ``hops`` is not at least 1. Depth zero would mean the
+            seed is the answer, which no MetaQA question asks.
     """
+    if hops < 1:
+        raise ValueError(f"hops must be at least 1, got {hops}")
+
     wanted = {_norm(a) for a in answers}
-    if _norm(seed) in wanted:
-        return []
 
     adjacency: dict[str, list[tuple[str, Evidence]]] = {}
     for item in evidence:
@@ -485,7 +514,7 @@ def answer_path(
     previous: dict[str, tuple[str, Evidence]] = {}
     seen = {seed}
     frontier = [seed]
-    while frontier:
+    for depth in range(1, hops + 1):
         nxt: list[str] = []
         for node in frontier:
             for neighbour, item in adjacency.get(node, ()):
@@ -493,7 +522,7 @@ def answer_path(
                     continue
                 seen.add(neighbour)
                 previous[neighbour] = (node, item)
-                if _norm(neighbour) in wanted:
+                if depth == hops and _norm(neighbour) in wanted:
                     chain: list[Evidence] = []
                     cursor = neighbour
                     while cursor in previous:

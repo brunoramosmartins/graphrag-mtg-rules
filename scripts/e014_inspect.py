@@ -159,7 +159,9 @@ def show(args: argparse.Namespace) -> int:
                 kind_cap=E002_KIND_CAP,
                 token_budget=DEFAULT_TOKEN_BUDGET,
             )
-            chain = metaqa.answer_path(subgraph.evidence, question.seed, question.answers)
+            chain = metaqa.answer_path(
+                subgraph.evidence, question.seed, question.answers, hops=question.hops
+            )
             if chain is None:
                 print(f"\n{RULE}\n{question.qid} — the answer is not reachable now.")
                 print("This question was excluded from the run, or the KB changed.")

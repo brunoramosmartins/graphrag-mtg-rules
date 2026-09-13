@@ -204,7 +204,7 @@ class TestTheE012ReductionKeepsTheAnswerAtEverySize:
         return items
 
     def test_the_path_to_the_answer_is_found_through_the_evidence(self) -> None:
-        path = metaqa.answer_path(self.chain(), seed="A", answers=("C",))
+        path = metaqa.answer_path(self.chain(), seed="A", answers=("C",), hops=2)
         assert path is not None
         assert [item.text for item in path] == [
             "A | directed_by | B",
@@ -213,14 +213,11 @@ class TestTheE012ReductionKeepsTheAnswerAtEverySize:
 
     def test_an_unreachable_answer_is_none_not_an_empty_path(self) -> None:
         """None excludes the question; an empty list would silently keep it."""
-        assert metaqa.answer_path(self.chain(), seed="A", answers=("Z",)) is None
-
-    def test_the_seed_itself_being_the_answer_needs_no_chain(self) -> None:
-        assert metaqa.answer_path(self.chain(), seed="A", answers=("A",)) == []
+        assert metaqa.answer_path(self.chain(), seed="A", answers=("Z",), hops=2) is None
 
     def test_reduction_keeps_the_chain_and_cuts_the_noise(self) -> None:
         evidence = self.chain()
-        keep = metaqa.answer_path(evidence, seed="A", answers=("C",))
+        keep = metaqa.answer_path(evidence, seed="A", answers=("C",), hops=2)
         reduced = metaqa.reduce_to_k(evidence, keep, k=8)
         assert len(reduced) == 8
         assert "A | directed_by | B" in [item.text for item in reduced]
@@ -228,23 +225,99 @@ class TestTheE012ReductionKeepsTheAnswerAtEverySize:
 
     def test_a_k_below_the_chain_length_still_keeps_the_chain(self) -> None:
         evidence = self.chain()
-        keep = metaqa.answer_path(evidence, seed="A", answers=("C",))
+        keep = metaqa.answer_path(evidence, seed="A", answers=("C",), hops=2)
         reduced = metaqa.reduce_to_k(evidence, keep, k=1)
         assert len(reduced) == 2
 
     def test_reduction_is_deterministic(self) -> None:
         evidence = self.chain()
-        keep = metaqa.answer_path(evidence, seed="A", answers=("C",))
+        keep = metaqa.answer_path(evidence, seed="A", answers=("C",), hops=2)
         first = metaqa.reduce_to_k(evidence, keep, k=6)
         second = metaqa.reduce_to_k(evidence, keep, k=6)
         assert [i.key for i in first] == [i.key for i in second]
 
     def test_retrieval_order_survives_the_cut(self) -> None:
         evidence = self.chain()
-        keep = metaqa.answer_path(evidence, seed="A", answers=("C",))
+        keep = metaqa.answer_path(evidence, seed="A", answers=("C",), hops=2)
         reduced = metaqa.reduce_to_k(evidence, keep, k=10)
         positions = [evidence.index(item) for item in reduced]
         assert positions == sorted(positions)
+
+
+class TestAChainMustBeAsDeepAsTheQuestion:
+    """The defect that decided E-012's headline, pinned so it cannot return.
+
+    Until 2026-09-13 `answer_path` returned the shortest chain to any accepted
+    answer *string*. A 3-hop question whose answer set happens to contain an
+    entity sitting one hop from the seed was accepted on that one-step chain,
+    `reduce_to_k` preserved it, and the model was handed a one-hop context with
+    a three-hop question stapled to it. 126 of the 137 questions in E-012's
+    3-hop cell were accepted this way.
+
+    Every test in this class fails against that version.
+    """
+
+    def shortcut(self) -> list:
+        """The Bergman shape: a 1-hop edge to an entity also in the answer set.
+
+        `A | written_by | B` and `B | wrote | M`, `M | directed_by | C`. The
+        question is 3-hop and asks for directors; B is in the answer set for a
+        different reason, and sits one hop away.
+        """
+        triples = [
+            metaqa.Triple("A", "written_by", "B"),
+            metaqa.Triple("B", "wrote", "M"),
+            metaqa.Triple("M", "directed_by", "C"),
+        ]
+        return metaqa.triple_evidence(triples, distance=1, start=1)
+
+    def test_a_one_step_chain_is_refused_for_a_three_hop_question(self) -> None:
+        # B is an accepted answer and is one hop from the seed. The shortest
+        # chain reaches it; the question does not ask for it.
+        assert metaqa.answer_path(self.shortcut(), seed="A", answers=("B",), hops=3) is None
+
+    def test_the_full_chain_is_returned_when_it_exists(self) -> None:
+        path = metaqa.answer_path(self.shortcut(), seed="A", answers=("C",), hops=3)
+        assert path is not None
+        assert [item.text for item in path] == [
+            "A | written_by | B",
+            "B | wrote | M",
+            "M | directed_by | C",
+        ]
+
+    def test_the_shortcut_is_refused_even_when_a_deeper_answer_also_exists(self) -> None:
+        """Both B (1 hop) and C (3 hops) are accepted; only C's chain qualifies."""
+        path = metaqa.answer_path(self.shortcut(), seed="A", answers=("B", "C"), hops=3)
+        assert path is not None
+        assert len(path) == 3
+        assert path[-1].text == "M | directed_by | C"
+
+    def test_a_deeper_chain_is_refused_for_a_shallower_question(self) -> None:
+        # The mirror case. A 1-hop question is not answered by a 3-step walk.
+        assert metaqa.answer_path(self.shortcut(), seed="A", answers=("C",), hops=1) is None
+
+    def test_the_seed_being_an_accepted_answer_no_longer_returns_an_empty_chain(
+        self,
+    ) -> None:
+        """It used to return `[]`, which kept the question with nothing required.
+
+        `reduce_to_k` was then free to drop every supporting fact, so the cell
+        recorded a context that provably did not answer its own question.
+        """
+        assert metaqa.answer_path(self.shortcut(), seed="A", answers=("A",), hops=3) is None
+
+    def test_hops_is_required_so_a_caller_must_say_what_it_means(self) -> None:
+        with pytest.raises(TypeError):
+            metaqa.answer_path(self.shortcut(), seed="A", answers=("C",))
+
+    def test_a_depth_below_one_is_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            metaqa.answer_path(self.shortcut(), seed="A", answers=("A",), hops=0)
+
+    def test_the_returned_chain_always_has_exactly_the_requested_depth(self) -> None:
+        for hops, answer in ((1, "B"), (2, "M"), (3, "C")):
+            path = metaqa.answer_path(self.shortcut(), seed="A", answers=(answer,), hops=hops)
+            assert path is not None and len(path) == hops
 
 
 class TestThePredictionRuleUnderPromptA2:
