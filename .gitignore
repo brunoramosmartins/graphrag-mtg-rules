@@ -80,3 +80,13 @@ Thumbs.db
 .vscode/
 *.swp
 *~
+
+# ─────────────────────────────────────────────────────────────────────────
+# Source recordings, not deliverables
+# ─────────────────────────────────────────────────────────────────────────
+# The README ships a compressed GIF; the raw capture behind it is tens of
+# megabytes and would sit in the history forever. Commit the GIF, keep the
+# master recording local — the same reasoning that keeps bulk card data out.
+*.mp4
+*.mov
+*.webm

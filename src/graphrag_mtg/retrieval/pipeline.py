@@ -63,6 +63,7 @@ def retrieve(
     token_budget: int = DEFAULT_TOKEN_BUDGET,
     kind_cap: int = DEFAULT_KIND_CAP,
     always_text_search: bool = False,
+    reference_hop: bool = False,
 ) -> Subgraph:
     """Retrieve evidence for one question.
 
@@ -93,6 +94,28 @@ def retrieve(
             null comparison by construction. E-001 publishes both states,
             the same pattern its reranker and iterative-retrieval pins
             already use.
+        reference_hop: After the planned traversals, run
+            `rule_neighbourhood` on the rules they found. E-013, and off by
+            default for the same reason `always_text_search` is: off is the
+            shipped system until a registered run says otherwise.
+
+            The planner cannot schedule this itself. `rule_neighbourhood`
+            takes a rule number, the routed plan starts from cards and
+            keywords, and so the one template that walks `REFERENCES` ran
+            in **none** of the 27 attributable failures. Phase 8's error
+            analysis measured what that costs: `DEFINED_BY` reaches only
+            chapter 700 and `HAS_SUBRULE` stays there, so the graph
+            supplied 7 of the 64 CR rules those answers needed.
+
+            **Measured 2026-09-11, and it does not help.** Gold-rule recall
+            went 0.094 to 0.109 over 26 questions: one rule gained against a
+            registered ceiling of 18. That ceiling was mis-specified — it
+            counted rules reachable from *any* keyword-defined rule in the
+            graph, and recomputed against the rules each question actually
+            retrieved it is **zero**. The hop is not weak here, it is empty.
+            The flag stays because the implementation is not what failed and
+            a measured negative is cheaper to keep than to rediscover; it is
+            off because off is what the measurement supports.
 
     Returns:
         A :class:`Subgraph`. Its ``outcome`` is ``RESOLVED`` only when
@@ -212,6 +235,9 @@ def retrieve(
                 },
             )
 
+    if reference_hop:
+        _reference_hop(subgraph, run, kind_cap=kind_cap)
+
     _budget(subgraph, token_budget)
 
     if subgraph.is_empty:
@@ -224,6 +250,62 @@ def retrieve(
 
     subgraph.note = "; ".join([chosen.reason, *chosen.notes])
     return subgraph
+
+
+#: How many rules the reference hop expands from. The traversals can leave
+#: fifty rules in the subgraph, and `rule_neighbourhood` on each would turn a
+#: repair into the context bloat E-012 measured as harmful. Nearest first:
+#: `distance` is hops from an entity the question named, so the rules the
+#: question is actually about are expanded and the tail is not.
+REFERENCE_HOP_SEEDS = 8
+
+
+def _reference_hop(subgraph: Subgraph, run: Runner, *, kind_cap: int) -> None:
+    """Walk `REFERENCES` out of the rules the traversals already found.
+
+    E-013. The planner cannot schedule this — `rule_neighbourhood` needs a
+    rule number and the routed plan starts from cards and keywords — so the
+    only template that leaves chapter 700 never ran. This is that template,
+    run as a second round over what the first round produced.
+
+    It adds nothing on a question whose traversals found no rule, which is
+    the honest behaviour: there is nothing to take a hop from.
+    """
+    from graphrag_mtg.retrieval.templates import BY_NAME
+
+    template = BY_NAME["rule_neighbourhood"]
+    seeds: list[str] = []
+    for item in sorted(subgraph.evidence, key=lambda e: e.distance):
+        if item.kind == "rule" and item.key not in seeds:
+            seeds.append(item.key)
+        if len(seeds) >= REFERENCE_HOP_SEEDS:
+            break
+    if not seeds:
+        return
+
+    with stage(spans.TRAVERSAL, **{spans.TEMPLATE: template.name}) as span:
+        subgraph.templates_run.append(template.name)
+        before = len(subgraph.evidence)
+        rows: list[dict[str, Any]] = []
+        for number in seeds:
+            rows.extend(run(template.cypher, {"rule_number": number, "limit": 1}))
+        add_evidence(subgraph, to_evidence(template, rows), kind_cap=kind_cap)
+        added = subgraph.evidence[before:]
+        annotate(
+            span,
+            **{
+                spans.ROWS: len(rows),
+                spans.DEPTH: len(seeds),
+                spans.EVIDENCE_ADDED: len(added),
+                spans.EVIDENCE_CAPPED: sum(subgraph.capped.values()),
+                spans.EVIDENCE_KEYS: spans.first_n(
+                    f"{item.kind}:{item.key}" for item in added
+                ),
+                spans.PATHS: spans.first_n(
+                    item.path or "(no path recorded)" for item in added
+                ),
+            },
+        )
 
 
 def _budget(subgraph: Subgraph, token_budget: int) -> None:

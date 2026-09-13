@@ -29,6 +29,7 @@ never imports an LLM client and the caller keeps control of cost.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -106,6 +107,17 @@ def build_prompt(question: str, subgraph: Subgraph, *, notice: bool = True) -> s
             hedge that another cannot receive.
     """
     return f"## CONTEXT\n{serialize(subgraph, notice=notice)}\n\n## QUESTION\n{question}\n"
+
+
+def prompt_digest(system: str, prompt: str) -> str:
+    """SHA-256 of exactly what the model was sent, system prompt included.
+
+    Recorded so a later reconstruction can be *verified* instead of assumed.
+    Rebuilding a prompt from the same frozen inputs usually reproduces it, and
+    a rebuild that quietly differs looks identical to one that does not — the
+    failure this project keeps paying for.
+    """
+    return hashlib.sha256(f"{system}\n\n{prompt}".encode()).hexdigest()
 
 
 @dataclass
@@ -212,7 +224,8 @@ def answer(
                 context_incomplete=incomplete,
             )
 
-        text = generate(system, build_prompt(question, subgraph, notice=notice)).strip()
+        prompt = build_prompt(question, subgraph, notice=notice)
+        text = generate(system, prompt).strip()
         rendered, unknown = expand(text, subgraph)
         handles = cited_handles(text)
         annotate(
@@ -220,6 +233,21 @@ def answer(
             **{
                 spans.GENERATED: True,
                 spans.REFUSED: is_refusal(text),
+                # What the model was sent and what it returned. `generation`
+                # has been an LLM span since Phase 7 — the kind Phoenix renders
+                # with a prompt and a completion — and both were empty, so the
+                # trace could say what an answer cited and never what the model
+                # was looking at. See the 2026-09-13 amendment to E-012: a cell
+                # that had been handing the model the wrong evidence for months
+                # was invisible in every trace of it.
+                spans.LLM_INPUT: spans.clip(f"{system}\n\n{prompt}"),
+                spans.LLM_INPUT_MIME: "text/plain",
+                spans.LLM_OUTPUT: spans.clip(text),
+                spans.LLM_OUTPUT_MIME: "text/plain",
+                # Of the whole prompt, not of the clipped attribute, so a
+                # rebuilt prompt can be checked against what was sent instead
+                # of being trusted because it looks right.
+                spans.PROMPT_SHA256: prompt_digest(system, prompt),
                 spans.CITATIONS: len(handles),
                 # Which ones, not only how many. A count of 2 beside a
                 # traversal that added 8 pieces of evidence says the answer

@@ -1001,7 +1001,15 @@ def run_compare(args: argparse.Namespace) -> int:
         print("NOT the head-to-head. The per-stratum correctness comparison is the headline.")
     else:
         print(f"At or below the registered gate of {ORDER_DISAGREEMENT_GATE:.2f}.")
-    print("\nUnaudited and on the development split. Not a result.")
+    # Hardcoding the side was safe only while `eval` was unreachable. It is
+    # reachable now, and a footer that calls an evaluation-split artefact a
+    # development one is the artefact mislabelling itself — the same defect
+    # that let a text retriever's output be filed as arm B.
+    if side == "dev":
+        print("\nUnaudited and on the development split. Not a result.")
+    else:
+        print("\nOn the evaluation split — the single registered draw. The judge is")
+        print("published ungated (2026-09-11) with its audit beside it.")
     return 0
 
 
@@ -1230,9 +1238,21 @@ def run_report(args: argparse.Namespace) -> int:
             result = mcnemar(before, after)
             print(f"  {left} vs {right:<28} +{result.improved}/-{result.regressed}  "
                   f"p={result.p_value:.4f}")
-    print("\nUncorrected and unaudited, on the development split. E-001's registered")
-    print("family is Holm-corrected over four strata on the evaluation split, and it")
-    print("cannot run until the judge is audited against the correctness ceiling.")
+    if side == "dev":
+        print("\nUncorrected and unaudited, on the development split. E-001's registered")
+        print("family is Holm-corrected over four strata on the evaluation split.")
+    else:
+        # The old text said this could not run until the judge was audited
+        # against the correctness ceiling. The audit ran, it did not pass, and
+        # the registered `sufficiency` precedent published the judge ungated
+        # with its ceiling beside it. Leaving the sentence in would have made
+        # a completed decision look like an open blocker.
+        print("\nUncorrected. E-001's registered family is Holm-corrected over four")
+        print("strata; these p-values are raw and the correction is applied in the")
+        print("write-up. The judge is ungated (2026-09-11): agreement 0.727 [0.598,")
+        print("0.827] against a 0.720 threshold, published descriptively. This two-way")
+        print("collapse does not depend on the partial/incorrect boundary the audit")
+        print("found unreliable; three-way figures from this judge do.")
     return 0
 
 

@@ -166,16 +166,24 @@ class TestAttributeNames:
         # The namespace rule has exactly one class of exception: keys the
         # viewer defines, which are only useful spelled its way. Listing
         # them is what keeps "the invariant has an exception" from becoming
-        # "the invariant is a suggestion" — a new `llm.*` or `openinference.*`
-        # constant added without thought fails here.
+        # "the invariant is a suggestion" — a foreign constant added without
+        # thought fails here.
         outside = {
             value
             for value in attribute_constants().values()
             if not value.startswith("graphrag.")
         }
         assert outside == set(spans.FOREIGN_ATTRIBUTES)
+        # The allowed spellings are OpenInference's own. `input.value` and
+        # `output.value` carry no prefix at all in that convention, and using
+        # a prefixed variant would mean Phoenix reads nothing — the point of
+        # spelling a foreign key the viewer's way. Widened 2026-09-13 from
+        # `llm.`/`openinference.` when the generation span finally started
+        # carrying the prompt and the completion it had always claimed to.
         assert all(
-            value.startswith(("llm.", "openinference.")) for value in spans.FOREIGN_ATTRIBUTES
+            value.startswith(("llm.", "openinference."))
+            or value in {"input.value", "output.value", "input.mime_type", "output.mime_type"}
+            for value in spans.FOREIGN_ATTRIBUTES
         )
 
     def test_no_two_constants_name_the_same_attribute(self) -> None:
@@ -523,3 +531,39 @@ class TestKeysAndPathsLineUp:
     def test_an_empty_path_holds_its_place(self) -> None:
         # The alignment cannot depend on every template filling in a path.
         assert spans.first_n(["a", "", "c"]) == ["a", "", "c"]
+
+
+class TestTheReferenceHop:
+    """E-013's repair, kept off and kept measured.
+
+    Gold-rule recall moved 0.094 to 0.109 over 26 questions against a
+    registered ceiling of 18, and the ceiling was wrong: recomputed from the
+    rules each question actually retrieved, zero of the 58 missing rules
+    were one hop away. These tests pin the behaviour, not the hypothesis.
+    """
+
+    def test_it_is_off_by_default(self, recorded) -> None:
+        # Off is what the measurement supports, and a default that drifts on
+        # would change the shipped system without a run saying so.
+        retrieve("What does Flying do?", linker=linker(), run=runner())
+        assert "rule_neighbourhood" not in names(recorded)
+
+    def test_it_runs_as_its_own_traversal_span(self, recorded) -> None:
+        retrieve("What does Flying do?", linker=linker(), run=runner(), reference_hop=True)
+        templates = [
+            span.attributes.get(spans.TEMPLATE) for span in by_name(recorded, spans.TRAVERSAL)
+        ]
+        assert "rule_neighbourhood" in templates
+
+    def test_a_question_with_no_rule_takes_no_hop(self, recorded) -> None:
+        # Ten of E-013's 26 questions had no rule to seed from. Expanding
+        # nothing is the honest behaviour, and it must not invent a span.
+        empty = {"keyword_definition": [{"keyword": "Flying", "glossary": "g",
+                                         "rule_number": None, "rule_text": None,
+                                         "subrules": []}]}
+        retrieve("What does Flying do?", linker=linker(), run=runner(empty),
+                 reference_hop=True)
+        templates = [
+            span.attributes.get(spans.TEMPLATE) for span in by_name(recorded, spans.TRAVERSAL)
+        ]
+        assert "rule_neighbourhood" not in templates

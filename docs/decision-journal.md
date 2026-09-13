@@ -90,6 +90,824 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — Phase 9 opens on a gate, and Phase 8 closes with three items moved rather than finished
+
+Phase 9 opened the same day the Magic-side audit landed, with the objective
+**retrieval that reaches the governing rule** — and with E-018 as a gate in
+front of it rather than a task inside it. The ordering is the decision: if
+assignment shows no effect, the phase's objective is wrong and the three
+engineering fronts behind it would have been built on a post-selected
+correlation, which is the confound that inverted E-012a. The fronts do not
+open before the gate returns.
+
+**The phase carries no hour budget and no date.** The roadmap's effort table
+stops at Phase 8 and stays there. This is a personal project with no deadline;
+a shirt size on Phase 9 would exist only to be missed, and elapsed time was
+never a metric this project could read honestly.
+
+**Gate carry-overs from Phase 8, and what was decided for each.**
+
+- **The tags `v1.0.0` and `v1.1.0` did not exist.** The CHANGELOG asserted two
+  releases that the repository could not show — the only published
+  inconsistency in it. Carried over and done at the close of the Phase 8
+  branch: `v1.0.0` on the last commit that stood at that version, `v1.1.0` on
+  the head. The phase tags before them keep their `vN.M-topic` names; the
+  release tags are plain semver, as the CHANGELOG header already said.
+- **The P3 closing issue was dropped, not deferred.** Its body is written and
+  versioned at [handoff/p3-agentic-rag.md](handoff/p3-agentic-rag.md), which is
+  the part that has to survive; `gh` is not installed on this machine, so every
+  `gh issue create` this project has produced was ceremony. The handover is a
+  document in `docs/`, and that is where it stays.
+- **Two Phase 8 DoD items move to Phase 10**: an outside reader following the
+  README on a clean machine, and pinning the repository. Both are checks on a
+  README that Phase 10 will rewrite to carry two verdicts side by side.
+  Checking it now means checking it twice.
+
+**One risk was raised and is not resolved.** Phase 9's roadmap marks
+"repairing retrieval while looking at the 42 evaluation questions" as
+`Critical`, and mitigates it with "iterate only on the development split". But
+E-018 *is* a second reading of the evaluation split, declared, and Front C will
+be iterated by a person who has that number in mind. The mitigation as written
+does not survive contact with the phase it is meant to protect. Whether the
+development split has to grow before any front opens — which pulls part of
+Phase 10's curation forward — is **open, and recorded here undecided** rather
+than silently answered by whatever happens first.
+
+## 2026-09-13 — The same audit on the Magic side: no falsified claim, and the best explanation the null has had
+
+The MetaQA audit found three defects, so the same pass was run against the
+claims that actually ship. **Nothing in the repository is falsified by it.**
+Two checks and one exploratory reading, in order of what they cost to learn.
+
+**Grounding holds.** Across all three arms, **zero** answers scored `correct`
+cited nothing. The discipline the project is built on — no uncited claims —
+survives inspection at the level of individual answers rather than as an
+assertion. Worth recording precisely because the audit was looking for the
+opposite.
+
+**But roughly 60% of correct answers cite no CR rule at all** — they are
+grounded in rulings and card text. On `interaction_multihop`, the stratum the
+hypothesis was written about, the graph arm answers 6 correctly and **one** of
+those cites a rule. That is not a defect: rulings are registered as legitimate
+citations. It does mean gold-rule recall is a narrower quantity than the
+sentences built on it imply.
+
+**The reading that follows, and it is exploratory.** On the 42 evaluation
+questions carrying `gold_cr_rules`, split by whether retrieval actually brought
+one:
+
+| arm | gold rule retrieved | correct when present | when absent |
+|---|---:|---:|---:|
+| A vector | 14/42 | 0.786 | 0.393 |
+| B graph | 16/42 | 0.812 | 0.308 |
+| C hybrid | 17/42 | 0.824 | 0.360 |
+
+**All three arms sit near 0.80 when the governing rule is in context and near
+0.35 when it is not, and all three bring it on about a third of the questions.**
+The between-arm difference E-001 measured is 0.01. The within-arm difference
+made by getting the rule is 0.39 to 0.51.
+
+That is the best explanation E-001's null has had: **the arms are
+indistinguishable because they fail at the same thing, and the thing is
+bringing the governing rule.** It converges with the MetaQA side, which spent
+the day concluding that retrieval — not generation — is what breaks at depth.
+
+**It decides nothing and is not published as a result.** Conditioning on
+whether retrieval succeeded is post-selection: the questions where the gold
+rule arrives may be the easy ones, which is the confound that invalidated
+E-012a. It is recorded as a hypothesis for an entry that assigns rather than
+observes, and quoted as exploratory wherever it appears.
+
+**One gap that is fair to call a gap.** The README's "7 of 64 gold rules"
+bullet is measured on the 26 questions the pipeline had already failed — a
+failure-selected population, declared as such. The unselected version was
+available on the full evaluation split the whole time and is both cleaner and
+more informative. Choosing the selected population was not wrong; not also
+taking the unselected one was a missed measurement.
+
+**And the instrument was checked against itself.** The first pass regexed rule
+numbers out of the serialized context, which admits a weaker reading — a ruling
+quoting `613.4b` in prose would count. Re-run against the retrieved evidence
+handles, the counts are identical (14 / 16 / 17). The check was sound, and that
+is only known because it was repeated the strict way.
+
+## 2026-09-13 — An audit for the same defect elsewhere, and it found three more
+
+After the three-hop withdrawal, the question was whether the same defect class
+sits under other load-bearing claims. The class, stated so it can be searched
+for: **a quantity supporting a claim, whose definition admits a reading weaker
+than the claim, and which nobody has inspected at the level of one case.**
+
+**1. "The 1-hop and 2-hop columns are clean" was my own overclaim, written
+yesterday, in the entry about this defect.** Chain length matching the declared
+depth does not establish that the chain's *relations* answer the question. An
+unambiguous check — the question asks about a person relation, the chain uses
+only attribute relations — finds **3.0% of 1-hop and 3.2% of 2-hop** chains are
+shortcuts, with examples like `[release_year, release_year]` answering *"which
+films have the same director of If a Man Answers"*. At 3% the depth effect is
+unaffected and the columns stand; the word "clean" does not, and it had reached
+`docs/evaluation.md`, the README, the changelog and two TILs.
+
+**2. The README's claim about the graph arm's refusals was wrong in
+mechanism.** It read the seven as the model declining. Reading all seven:
+**six carry `generated=False` — retrieval resolved no entity and the model was
+never called** (five `no_seed`, one `no_match`). That is entity linking
+failing. The seventh is a genuine refusal and a correct one — the model walked
+the rules and said the context never supplied the creature's toughness. The
+`Answer` dataclass already separates `generated` from `refused` and documents
+why; the claim pooled them anyway. Seven instances is ten minutes of reading
+and nobody had read them.
+
+**3. The audit's own instrument had the defect.** A hand-written keyword map
+flagged *"what **kind** of movie is The King"* as inconsistent because its
+`has_genre` synonyms were "genre" and "type of". Its looser reading (10% and
+27%) is therefore an unreliable ceiling and only the tight check is quoted.
+
+**And one consequence that lands on an entry run the same day.** E-017 reads
+its relation sequence off the chain `answer_path` returns — and this audit
+established that chain is *arbitrary among several* when more than one relation
+joins the same pair. So E-017's typed expansion may have followed the wrong
+relations on some questions. Its direction is not in doubt (a 30x reduction
+does not come from noise) and neither is the hub finding, but the figures carry
+that threat and it is recorded rather than discovered later.
+
+**What the audit found sound** — reported so the finding has a denominator,
+which is itself the defect being hunted. E-001's headline; the judge published
+ungated at 0.727; blinding withdrawn at 0.778; the 3.38x budget confound;
+E-010's four denominator defects; E-013's mis-specified ceiling. Every one is a
+**declared** limitation already written down where it is quoted. The defect
+class is not "this project has limitations" — it is a limitation nobody could
+see because the supporting quantity was never rendered.
+
+## 2026-09-13 — The three-hop problem is hub traversal, not depth
+
+E-017 asked whether the three-hop haystack is the depth or the untyped walk,
+before P3 builds an agent on E-016's closing sentence. Free, retrieval only,
+and it measures size rather than reach — the relation sequence is read off the
+gold chain, so a reach figure would be a tautology and the entry says so twice.
+
+Typing the walk takes the median three-hop context from **193,797 tokens to
+5,676**, a 30.6x reduction, against a 6,000-token budget. It fits by three
+hundred tokens, for **half** the questions.
+
+**The residual has a name.** Of the 44 questions that do not fit, **39 pass
+through `has_genre` or `release_year` at the middle hop** — hub relations, where
+one node has thousands of neighbours. Median hop-2 fan-out is 22 on the
+questions that fit and 493 on the ones that do not. Nineteen fit at no budget
+tested, including 96,000.
+
+So the thing this project has been calling a depth problem since E-002 is
+**hub traversal**. A chain of three person-shaped relations is cheap at any
+depth; one genre or one year in the middle builds the haystack.
+
+**Branch 3 applies: no build direction is decided.** The rule refuses to hand
+P3 a mandate on a fit rate of 0.522, which is the same bar that stopped E-016
+adopting a statistically significant result the day before. What P3 inherits is
+sharper than a mandate — typed expansion is necessary, is not sufficient, and
+the target is hubs rather than depth; a design that helps with depth in general
+and not with hubs in particular would be solving the wrong half. An agent is
+still not obviously the answer: noticing that an intermediate set has 493
+members and filtering is something a rule can do.
+
+One of four predictions was right, and the reasoning attached to a second was
+wrong independently of the prediction — it tied a median reduction factor to a
+branch that reads a fit rate, two quantities defined in the same entry by the
+same person.
+
+## 2026-09-13 — A significant result was refused because the effect size was registered first
+
+E-016 asked whether an eviction policy that knows nothing about the answer can
+keep the answer. Four oracle-free policies trimmed the identical pool, paired
+by construction. Two of them beat the shipped trim and beat random decisively —
+chain reach 0.030 → 0.120, adjusted *p* = 0.023, and the connectivity arm beats
+random +11/−0 at *p* = 0.001.
+
+**The registered rule asked for a gain of 0.20 and the best arm returned
+0.090, so nothing is added to `enforce_budget`.** Without that number fixed
+beforehand, "significantly better than what ships, and better than chance" is
+an extremely easy thing to adopt; it would have changed shipped behaviour to
+close a seventh of the gap it was pointed at. The p-value said yes and the
+effect size said no, and the effect size was right.
+
+**Why no ordering could have worked.** A 6,000-token budget holds ~200 triples;
+an equal share gives distance 3 about 66 slots against 1,000 candidates.
+Ordering decides which 66 and cannot make 66 cover 1,000. The chain costs 90
+tokens — the price was never the problem, finding those 90 among 200,000 is.
+What an order *can* fix is the systematic part, not discarding the needle's
+half of the haystack first, and that is worth nine points exactly.
+
+**So the three-hop problem is the walk.** Breadth-first expansion builds a
+shell and a chain is a path; at depth three the shell is four orders of
+magnitude larger. Neither sixteen times the budget (E-015: 0.650) nor a better
+eviction order (0.120) closes it.
+
+Four predictions were registered: one half right, two wrong, one unsupported —
+including the entry's own hypothesis, that connectivity-first beats
+proportional, which returned a difference of two questions and is recorded as
+nothing rather than as a direction.
+
+## 2026-09-13 — The three-hop evidence was there, and the budget was throwing it away
+
+E-015 ran, free, on the 100 three-hop dev questions. At the shipped
+configuration the chain the question needs survives retrieval on **3 of 100**.
+At sixteen times the token budget, with nothing else changed, **65 of 100**.
+The registered branch-1 consequence is applied: E-012's holding that the
+distance-first trim is not a hazard was inferred from a size null measured on
+cells where `reduce_to_k` had already reinstated the chain, and is amended.
+
+**Two things went wrong in the entry's own design, and both are recorded rather
+than smoothed.** It said it varied "the two limits that discard evidence" and
+`frontier_cap` turned out to be inert — every cell at 1,600 identical to its
+twin at 400 to the last digit, because `add_evidence` caps per
+`(template, kind)` and the template carries the distance, so a thousand triples
+per level is the real ceiling and it swallowed 2.5x more candidates without
+changing what survived. The limit that binds was never named.
+
+Then the amendment that added `kind_cap` **fired the monotonicity check**, and
+the explanation is not a bug: raising the cap admits ~45,000 more distance-2
+triples, that pushes 34 of 40 questions over the budget where none had been,
+and `enforce_budget` evicts farthest first — the hop the answer lives on. Reach
+falls from 0.650 to 0.460. **More retrieval buys worse multi-hop coverage**,
+and the registered prediction that reach could only rise was wrong: it holds
+only while added evidence cannot displace what was already kept, and a selector
+that evicts by a criterion correlated with the answer makes displacement
+systematic.
+
+**The guard could not tell a bug from an interaction — nothing can — but it
+stopped 0.460 being written down as "a bigger cap is worse", which is true of
+the number and false about the cause.** Being forced to look is the return.
+
+No change to shipped trimming follows here. A repair this consequential gets
+its own entry with its own rule written first, which is the bar E-013 was held
+to; what this supplies is the target it has to beat.
+
+## 2026-09-13 — Rendering one case withdrew the project's most-quoted number
+
+E-014's dry run was clean and every registered count matched. Before paying it,
+the author asked to see the evidence behind the claim it was built on — a
+rendered prompt with the model failing in front of it — rather than the
+aggregate. `scripts/e014_inspect.py` was written to print one scored cell: the
+prompt as sent, the answer key, the chain `answer_path` found, the outcome.
+
+The first case it printed was a 3-hop question, *"the movies written by the
+screenwriter of The Best Intentions were directed by who"*, whose context held
+hop one and eleven films released in 1992 — nothing about what Bergman wrote,
+nothing about who directed those films. The model refused. Under the grounding
+prompt's own rule it was right to, and the harness scored it as a generation
+failure.
+
+Measured across the split: **126 of the 137 questions in E-012's 3-hop cell
+(92%) carry a one-step chain**, because `answer_path` searches for any accepted
+answer *string* rather than a chain that answers the question. E-002 is worse
+still — its condition requires no chain at all — and splits 213 / 11 the same
+way. Both reproduce their published figures exactly, which is what makes the
+decomposition trustworthy rather than a competing measurement.
+
+**What this cost.** The sentence "generation is the bottleneck, not retrieval"
+is withdrawn at three hops, and it had already been repeated in
+`docs/evaluation.md`, the README, two TILs, the P3 handoff issue and E-014's
+entire motivation. E-014 is suspended before its first call. What survives is
+the clean half: 1-hop and 2-hop chains match their declared depth on every
+question, so 0.890 → 0.672 is a real depth effect, the size null holds where it
+was measured, and E-001's numbers are untouched.
+
+**The lesson is not that pre-registration failed.** It did every job it was
+pointed at — the decision rule, the buckets, three predictions recorded and
+scored wrong. It cannot protect a quantity nobody has rendered. Two of this
+project's own recorded lessons decided this entry's headline months after being
+written down: a denominator is a claim about what counts, and a check whose
+negative case is invisible reads as a pass. The cheap repair is now routine:
+**print one case and read it before quoting a number built on it.**
+
+## 2026-09-13 — E-014 registered: the generator ceiling is tested on MetaQA, not on the evaluation split
+
+E-001 came back `inconclusive` on all four strata with the direction running
+against the thesis on `interaction_multihop`. One explanation for that is live
+and unmeasured: the comparison may have run at a generator ceiling low enough
+to mask any retrieval difference. E-012 measured that ceiling on `gpt-4o-mini`
+— Hits@1 falling 0.890 → 0.672 → 0.511 across hops at a matched 16-item
+context — but it varied size and depth, never the model. So the project cannot
+currently say whether "the generator cannot chain three facts" is a fact about
+the task or a fact about one small model.
+
+**The decision is where to ask.** The tempting version re-runs the 57 MTG
+questions on a stronger generator. That spends the evaluation split's second
+look — the split was opened once, on 2026-09-12, and that single opening is
+the most defensible thing in the repository — to learn something the
+calibration benchmark answers for under twenty-five dollars. So E-014 runs on
+MetaQA's frozen confirmatory split instead, changing exactly one pinned value
+(`gpt-4o-mini` → `gpt-4o`, same family so the swap does not also move prompt
+idiom, refusal behaviour and answer formatting), and **earning** a registered
+second opening is the outcome rather than the method.
+
+**Two things are recorded against the author rather than the result.** First,
+E-014 is registered with its motivating results already known, which is stated
+in the entry's header instead of being left for a reader to notice; the
+mitigation is structural — no branch of its decision rule permits editing
+E-001 or E-012. Second, the branch boundaries were checked against E-012's own
+D of 0.379 before being written down, so the rule could not have been drawn to
+pass the prior it is testing; `tests/test_e014_analysis.py` pins that property.
+
+**What this closes, and it is a scope error rather than a rigor one.** Phase 8
+had otherwise ended at a diagnosis — the bottleneck is generation, retrieval
+quality is worth roughly 19 of the 66 points missing at three hops — with no
+registered attempt at the thing it identified. Stopping there was a choice
+about how far to go, not a consequence of the pre-registration; pre-registration
+forbids undisclosed iteration, not iteration. The asymmetry that keeps the
+follow-up honest is registered with it: a depth gap that *survives* on MetaQA
+is a floor on the gap over judge-level questions, while a gap that *closes*
+there proves nothing about Magic, whose chains are not templated.
+
+## 2026-09-12 — The 3x gate fired, so the retrieval comparison is confounded
+
+E-010 part (b) ran on the split it was always registered for. Two things came
+out of it and both change what has already been written today.
+
+**Amendment item 7 fired.** Median retrieved items per question: A 40.5, B 12.0
+— **3.38×**, above the registered 3×. The consequence was pinned in August:
+E-001's retrieval comparison is published as **budget-confounded** and the
+headline retrieval statement is the token-normalised figure (A 0.030 vs B
+0.112). I had written E-001's result earlier today without applying this, which
+is the ordinary way a registered consequence gets lost — it lives in one
+entry's amendment and bites on a different entry's result. It is now recorded in
+both, and `run_e010.py proxy` applies the gate itself rather than leaving it to
+be remembered.
+
+Token parity stays the registered choice. It is what both arms face at
+generation, and this is the price it charges, named before the run.
+
+**A fourth denominator picked by one arm.** The per-question mean printed "over
+N questions", and N differs per arm because it counts only questions where that
+arm retrieved at least one rule number. So the mean was over whichever
+questions an arm chose to speak about, flattering the quietest one. Printed as
+N-of-M it says **arm A retrieves no CR rule number at all on 17 of 42
+questions**. The fix is one line of formatting; the reason it matters is that
+this is the same defect as passage-vs-rule-item, rule-numbers-vs-everything,
+and scorable-vs-relevant — a denominator is a claim about what counts, and this
+experiment has now got it wrong four times in four different disguises.
+
+**An observation I am deliberately not promoting to a finding.** Arm A leads on
+`interaction_multihop` (0.41 vs 0.27) while bringing zero rules on 40% of
+questions and spending 88% of its budget on cards and rulings. The arm winning
+the multi-hop stratum is not reasoning over rules — it is reading rulings, the
+CR already applied to a card in the register the question uses. That fits the
+vocabulary-not-topology finding from 2026-09-11 exactly, which is precisely why
+it needs saying that it is a correlation between two measurements on one run
+and was not tested.
+
+## 2026-09-12 — E-001 returns four inconclusives, and that is the result
+
+The single draw ran. Three arms, 57 questions, applied by
+`scripts/e001_analysis.py` under the decision rule amendment 2026-08-15c pinned
+in August: B vs A on the four strata with n ≥ 7, exact McNemar, Holm at
+α = 0.05, three-valued verdict per stratum.
+
+**All four strata come back `inconclusive`.** Holm-adjusted p = 1.0000
+everywhere. Aggregate 0.60 / 0.61 / 0.65 for A / B / C. The central hypothesis
+of this project is neither confirmed nor falsified, and the registered rule
+does not offer a fourth value to round it into.
+
+The decision here was what to *call* that, and the answer is: exactly what it
+is. The temptation available was real — arm B leads on `definition_1hop` (0.91
+vs 0.73) and `legality_1hop` (0.93 vs 0.80), and a table of those two rows
+would read like a win. But `definition_1hop` is the **declared falsifier**: a
+graph lead there was registered in 2026-07-19 as the sign to *distrust the
+harness*, not to celebrate. And `legality_1hop` is the stratum the 2026-08-15b
+amendment already described as a data-availability result rather than a
+retrieval one. Quoting either as a win would be quoting the two strata the
+registration warned about in advance.
+
+**The distance to significance was known before the run and is not news.** The
+registry computed that exact McNemar needs 6 discordant pairs one way, and
+Holm's strictest step 8:0. The largest discordance observed is 5. Writing that
+down in August is what stops it being written now as an excuse.
+
+**One finding is new and is not from the registered test.** Six of arm B's
+seven refusals sit on `interaction_multihop` — the stratum carrying the thesis.
+Pin 11 suppressed the incompleteness notice precisely so B and C would not be
+invited to hedge where A cannot (`notice = 0` confirms it), and B hedges
+anyway, where its context is thinnest. Dropping the refused questions narrows
+the gap from −0.136 to −0.063. That exclusion is post-hoc and favours B, so it
+is published as an exploratory sensitivity and never as the number — but it
+locates roughly half of the graph's deficit in *declining to answer* rather
+than in answering wrongly, which is a generation problem stacked on the
+retrieval floor E-013 measured.
+
+**A hypothesis from the dress rehearsal replicated on held-out data.** In
+September this document recorded, beside the dev-split gate figures, that
+position bias plausibly rises when the two answers differ in shape — and
+labelled it "a hypothesis from three numbers, untested". The evaluation split
+returns the same ordering, the same two pairs above the 0.20 gate and the same
+one below. It is still three numbers, now observed twice, and it is the same
+kind-difference that made E-010's blinding unachievable.
+
+## 2026-09-12 — The evaluation split opens, and what was checked before it did
+
+The 57-question evaluation split is opened today, once, for E-001. `runs/`
+artefacts on the `eval` side are the single draw; there is no second one, and
+`run_eval.py` refuses `--split-side eval` without `--open-the-evaluation-split`
+and without this entry existing. Recorded here is the gate, checked rather than
+assumed.
+
+**The split is intact.** Drawn 2026-08-09 at seed 20260809: 20 dev / 57 eval,
+every dev id resolving, strata on the evaluation side
+`interaction_multihop` 22, `legality_1hop` 15, `definition_1hop` 11,
+`negative_temporal` 7, `keyword_rule_2hop` 2.
+
+**The dress rehearsal is complete and binding.** All three arms have retrieval,
+answers and verdicts on the development split, and all three pairwise
+comparisons exist. That gate was written because E-006's first run read 0.067
+from two harness bugs and was re-runnable only because it was the development
+side.
+
+**Pin 10 is satisfied, and it needed a script that did not exist.** Fifteen of
+the 57 are `legality_1hop`, whose answer is a fact about a ban list, not about
+the rules — and ingestion is a daily Scryfall bulk. The amendment registered
+that the legality keys are re-verified against the bulk the run will read, with
+any changed answer marked `key_stale` and excluded. Nothing implemented that
+check; `scripts/verify_legality_keys.py` does now, recomputing
+`sha256(oracle_id|format|status)` per question against the current bulk.
+**20/20 hold, 0 stale, 0 missing.** The script exits non-zero on any drift, so
+it can gate a run rather than be read.
+
+**The rubric is frozen here, by hash, before anything on the evaluation side is
+judged.** Version `p6-c1`, hash `dfcfb0851c8ca081`. The registered rule is that
+rubric iteration happens on dress-rehearsal and Phase 5 answers only; if
+judge–human agreement fails on the evaluation audit, the result is published
+**with the failed agreement** and the evaluation split is not rescored. Writing
+the hash down now is what makes that checkable afterwards rather than
+assertable.
+
+**The judge runs ungated**, per the 2026-09-11 decision, with its audit
+published beside its numbers.
+
+## 2026-09-12 — The comparison publishes unblinded, and blinding it was never possible
+
+E-010 part (a) finished: 180 relevance judgements over 15 question clusters,
+with a 36-slot seeded subsample where the annotator guessed the producing arm
+before labelling. Accuracy **28/36 = 0.778**, above the 0.70 the amendment
+registered in advance, so the blind claim is **withdrawn** and part (a)
+publishes as an unblinded comparison. The rule fired mechanically; no judgement
+was required and none was exercised.
+
+What required judgement was the follow-up. A rule that looks at **nothing but
+the evidence kind** — fitted on the 144 slots outside the subsample, applied to
+the 36 inside — scores **0.722**, itself above the threshold. Twenty-six of the
+twenty-eight correct guesses need no tell beyond *what type of thing this is*.
+The amendment had stripped `template`, `path`, handle syntax and chunk
+boundaries and mapped `glossary`/`keyword` onto a shared `term`, and all of
+that was beside the point: the vector arm returns cards and rulings, the graph
+arms return rules and terms, and **that difference is the treatment**. A
+normalisation strong enough to hide it hides what is being compared.
+
+So the decision is not "fix the blinding". It is: **item-level blinding is
+withdrawn as an achievable property of this comparison**, recorded in the
+registry as such, with the kind baseline published as the reason. Stripping
+more formatting in a future round is explicitly ruled out in advance, because
+that is the move this measurement says cannot work.
+
+Two further calls, both against my own instrument:
+
+**The 0.70 threshold was written for a coin flip and the guess is not one.**
+The realised subsample is 21 graph against 15 A, so "always say graph" scores
+0.583 free; the real margin was 0.117, not 0.20. The verdict is unchanged and
+the error is conservative, so nothing is restated. Future blinding checks in
+this project state the threshold as a **margin over the realised majority
+baseline**, not as an absolute accuracy.
+
+**A filter deleted a registered stratum.** `build()` drew from questions
+carrying `gold_cr_rules`. Part (b) needs that field — it is the relevance
+oracle. Part (a) does not; a human judges against the answer key. The filter
+came across anyway and removed all five `scry-leg-*` questions, which is the
+entire `legality_1hop` stratum and one of the two strata the registered
+prediction names. Same shape as E-013's ceiling: a population computed for one
+purpose reused for another with the difference never stated. The drawn sample
+is not re-drawn — it is the registered sample — and the prediction is now
+testable only in aggregate.
+
+Every paired contrast crosses zero (A−B token-normalised **−0.051**, 95%
+[−0.344, +0.250]). That is not a disappointment: amendment item 6 registered in
+advance that 20 development questions cannot do this job and built part (b) for
+that reason. The instrument behaved as its own registration predicted, which is
+the best thing a null can have.
+
+The two parts agree on sign and disagree on size — 3.5× in the proxy, 1.13× in
+the human pass — because `gold_cr_rules` cannot score a card or a ruling, and
+cards and rulings are most of what arm A retrieves. **Part (b)'s gap is an
+upper bound**, and that is now written where the number is.
+
+The mandatory ceiling (≥ 50 judgements, ≥ 10 questions) has not run and is
+recorded as outstanding rather than dropped.
+
+## 2026-09-11 — Phase 8 ships as planned, and the measurement is the deliverable
+
+Decision taken by the author after the floor measurement: **close Phase 8 as
+scoped** — demo, portfolio README, `v1.0.0` — rather than pull the vocabulary
+work forward. The alternative was named and declined, which is what makes this
+a decision rather than a default.
+
+The reasoning worth keeping: three independent measurements say the remaining
+gap is vocabulary and that no single experiment on the table closes it. Holding
+the release for an uncertain fix is the perfectionism the roadmap's own risk
+register warns about, with a 6-day timebox as its registered mitigation. And
+what the phase actually has to show is unusual on its own terms — a system
+whose limits were measured, whose causes were named from three directions, and
+which published where it loses.
+
+**What this commits the phase to, and it is not a softer bar.** Shipping
+honestly is more work than shipping quietly. The README has to state the
+correctness a human measured (0.250–0.474), has to say the judge is not gated
+and why, and has to carry the three convergent measurements rather than a
+sentence about "limitations". A release that omits those would be the same
+release with the evidence removed.
+
+**The sequence, in the order the registry forces.** E-009 and E-010 are
+registered and unrun, and both are prerequisites of opening the evaluation
+split; the split opens once and the head-to-head table the README needs comes
+from it. So: E-009 and E-010, then the split, then the table, then the demo
+built over numbers that will not move, then README and tag.
+
+## 2026-09-11 — Nothing reaches these rules, and that is a different problem than a wrong graph
+
+The last cheap alternative got measured. A plain lexical index over all 3,308
+CR rules, queried with the question text, on the same 26 failed questions:
+
+| retriever | gold-rule recall |
+|---|---|
+| the graph, as shipped | 7/64 = 0.109 |
+| lexical, top-25 | 6/64 = **0.094** |
+| lexical, top-100 | 12/64 = 0.188 |
+
+**At a realistic context size, full-corpus lexical search does worse than the
+graph.** Pulling a hundred rules per question — far past any token budget —
+it reaches twelve of sixty-four.
+
+That closes a line of thinking I had been carrying since the error analysis:
+that the 74%-evidence attribution meant *the graph is the wrong instrument and
+text retrieval is the right one*. It does not. On this population no retriever
+this project has finds the rules the answers need. The graph is not losing to
+text; both are losing to the same thing.
+
+The same thing is **vocabulary**. Three measurements, three directions, one
+answer: the `REFERENCES` hop is empty because the needed rules are adjacent to
+nothing retrieved (E-013); the glossary links at 0.22 because the terms that
+point at the rules are not the terms anyone writes; and lexical retrieval tops
+out at 0.188 because a question naming cards and player verbs shares little
+surface with a rule written in defined terms.
+
+**The bound, written before it gets overread.** These 26 are the questions
+where the pipeline already failed — a population selected for retrieval being
+hard. This says what nothing reaches *here*. It is not an estimate of
+retrieval quality overall, and the run that would give one covers the
+successes too.
+
+**What it does to Phase 8.** The phase's remaining deliverables are a demo, a
+portfolio README and v1.0.0, and the number a human measured — between 0.250
+and 0.474 of answers correct — is not moved by anything on the phase's list.
+The measurements above say it is not moved by one experiment either. That is
+now a scoping decision rather than an engineering one, and it belongs to the
+author: ship Phase 8 as a documented, honestly-limited system, or pull the
+vocabulary work forward first. Recording it here so the decision is dated
+whichever way it goes.
+
+## 2026-09-11 — The bridge material exists, and the vocabulary to cross it does not
+
+A `literature-scout` pass on the bridge problem pointed at something already
+in this repository. `graph/loader.py` documents, in the docstring of
+`keyword_definition_rows`, that the CR glossary holds **772 (term, rule)
+pairs of which 476 point at general rules** — "Ability" → 113, "Active
+Player" → 102.1 — and that they are *"deliberately not modeled: no golden-set
+question needs a general glossary node"*.
+
+Measured against today's CR: **482 pairs outside chapters 701/702**, aimed at
+100 (138), 300 (58), 600 (49), 200 (47), 500 (39), 400 (13). And measured
+against the rules the failed answers needed: **52 of the 58 missing gold
+rules (89.7%) are the target of one of those pairs.**
+
+So the deterministic bridge into chapters 100–600 was parsed, present, and
+excluded by an ontology decision whose stated reason — no question needs it —
+the error analysis had just refuted.
+
+**Then the linking side was measured, before registering anything.** That
+order is the lesson E-013 taught this morning: compute the ceiling from the
+inputs the run will actually see. It does not hold up.
+
+| bridge | recall of the 58 missing | rules pulled per question |
+|---|---|---:|
+| target side (the rule is pointed at by some term) | 52/58 = **0.897** | — |
+| linking from the **question** text, all 408 terms | 12/58 = 0.207 | 2.5 |
+| linking from the **cards'** oracle text | 13/58 = 0.224 | 14.7 |
+| multiword terms only | 1/58 = 0.017 | 0.3 |
+
+**The gap between 0.897 and 0.22 is the finding.** The rules are pointed at;
+the vocabulary that points at them is not the vocabulary anyone writes. A
+question says *"Nicholas controls a Traveling Philosopher and Ari casts
+Defeat"* — cards and player verbs, not CR defined terms. Card oracle text is
+closer to the CR's register and buys 0.017 of recall for six times the noise.
+And the terms that link at all are the ones the 2026-08 docstring warned
+about: of the 408 terms, **169 are a single word** — "X", "Pay", "Hand",
+"Day", "Case", "Move". Restricting to multiword terms collapses recall to one
+rule in fifty-eight.
+
+**So the ontology decision was right for a reason it did not state.** It was
+justified as "no question needs these"; that was wrong. What is true is that
+the link cannot be made precisely from the text either side supplies. A
+`USES_TERM` edge built from this lexicon would carry 15 rules of context per
+question to recover 13 of 58.
+
+**What this redirects.** The failure is **vocabulary, not topology.** Three
+measurements now say the same thing from different angles: `REFERENCES` gains
+one rule because the needed rules are adjacent to nothing retrieved (E-013);
+the glossary lexicon links at 0.22 because the terms are not what anyone
+writes; and the scout's reading of SearchFireSafety puts the citation-graph
+contribution at +1 to +4.6 recall points against 25–30 for dense-over-lexical.
+No edge is going to fix this. The next experiments are on the text side —
+expansion of each rule into the vocabulary questions actually use
+(Doc2Query--'s shape, with its filter, which sidesteps `extraction/gate.py`
+because nothing an LLM writes is asserted as a fact), and hierarchy as a
+retrieval signal rather than a traversal (G-DSR's shape, which reuses the
+`HAS_SUBRULE` tree this project already parses and tests).
+
+**Nothing is registered yet, on purpose.** Both candidates need their ceiling
+computed from the inputs the run will see before an entry is written. This
+entry exists so that the 89.7% figure cannot later be quoted as a ceiling for
+a bridge experiment: it is a ceiling on the target side of a link whose other
+side measures 0.22.
+
+## 2026-09-11 — The graph reaches chapter 700 and almost nothing else
+
+The error analysis ran the same afternoon it was added to the phase, and it
+did not need a single judgement call: the golden set records `gold_cr_rules`
+per question, so "was the rule this answer needed actually retrieved?" is a
+set comparison against the retrieval record.
+
+**Retrieval did not fail. It succeeded and returned the wrong rules.** All 27
+attributable failures have `outcome: resolved`, every one returned between 7
+and 57 pieces of evidence, and **not one lost anything to the token budget**.
+The budget and the generator are not where this system is losing: exactly one
+case had its complete gold context and still answered wrongly.
+
+Across the 26 questions carrying gold rules, the answers needed **64** CR
+rules and retrieval supplied **7 — 10.9%**. Six of the seven are chapter 700.
+Zero came from 100, 200, 300, 400 or 500, and one of thirty from 600.
+
+The cause is structural and took one Cypher query to confirm:
+`Keyword-[:DEFINED_BY]->Rule` lands only in chapter 700, 257 rules; adding
+`HAS_SUBRULE` to depth two still lands only in 700, 1,067 rules. The first
+edge that leaves 700 is `REFERENCES`, the only template that walks it is
+`rule_neighbourhood`, and it **ran in none of the 27**.
+
+This is the consequence the journal predicted on 2026-08-09, when G3 withdrew
+inferred `CITES_RULE` at F1 0.125: *"roughly 87% of the CR rules
+`interaction_multihop` needs sit in chapters with no deterministic edge from
+any card. `CITES_RULE` was going to be that bridge. It is gone, and it was
+never good enough to be it anyway."* Measured thirteen months of project-time
+later: **89.1%**. The prediction was recorded before the retrieval existed to
+test it, and it was right to within two points.
+
+**The ranked repair, which is the point of having done this.** Of the 52
+distinct gold rules that were needed and missed, **18 (34.6%) are already
+reachable** with the edges in the graph — one `REFERENCES` hop from a
+keyword-defined rule, using a template that exists and a router that never
+plans it. No model call, no new data. The other 34 need a bridge from card to
+rules outside chapter 700, which is the problem `CITES_RULE` was withdrawn
+from rather than solved, and F1 0.125 is the prior any attempt starts from.
+
+Both are measurable against this same population before any answer is
+regenerated, because asking whether a gold rule is in a retrieved set costs
+nothing. That is the first cheap, decisive experiment this project has had in
+a while, and it exists because the author asked what would have to improve
+before showing this to a Magic player.
+
+**A gap the analysis found in the record itself.** Ten of the 37 failures are
+batch 2, whose answers and verdicts were kept and whose retrieval rows were
+never written. They are left unattributed rather than reconstructed:
+re-running retrieval today would query a graph loaded from a different
+Scryfall bulk, and attributing a stage from evidence that did not produce the
+answer is the provenance failure this project keeps finding. `run_eval.py run`
+writes all three files together, which is what stops this recurring.
+
+## 2026-09-11 — Three ways to polish a ruler, and none of them moves the number
+
+The judge audit ended with three options: collect ~17 more labels to gate the
+one reachable label, revise the rubric's `partial` boundary, or publish
+ungated with the decomposition beside it. The author asked the right question
+about all three — *if this were a product for Magic players, wouldn't we have
+to improve performance before shipping?*
+
+**The answer is yes, and none of the three options does that.** A, B and C
+are all about the judge, and the judge is a measuring instrument. Pick any of
+them, spend two afternoons, and not one answer a player would read has
+changed.
+
+The number that decides shippability was produced without the judge at all: a
+human read the answers and called **0.250 [0.138, 0.411]** of batch 1 and
+**0.474 [0.273, 0.683]** of batch 2 correct. Between a quarter and a half.
+That is what would stop a release, it was already measured, and it is
+insensitive to every option on the table.
+
+So: **C**, and not as resignation. The instrument is understood well enough to
+stop measuring it — key fidelity 30/30, agreement 0.804 where the human is
+stable and 0.333 where they are not, the weakness named as the `partial`
+boundary where `partial` and `incorrect` overlap with no precedence rule. More
+calibration buys precision about a ruler nobody is going to ship.
+
+The condition that keeps C from being an excuse is that the limitation has to
+be **actionable**. "Agreement is 0.727, moving on" is resignation. "Agreement
+is 0.727, the judge follows a deliberately wrong key 30 times out of 30, it
+dissents where the human's own passes move, and the boundary is `partial`"
+tells the next person what to repair. Published limitations that do not name
+a repair are resignation with better vocabulary.
+
+And the error analysis over the 37 answers a human called `partial` or
+`incorrect` goes into the Phase 8 deliverables **ahead of the demo**. It uses
+labels that already exist, costs nothing, and produces a ranked list of
+repairs. I had spent the day offering better rulers because the phase gate
+asked about the gate; the author's question is what moved the work back to the
+system.
+
+## 2026-09-10 — The judge audit's first finding was a batch effect I reported as structural
+
+Phase 8's first task was the judge audit to n ≥ 30 per label. It produced
+three things before any label was collected, and the third one reverses the
+first two.
+
+**The floor is unreachable with the questions that exist.** E-011 requires
+≥ 30 answers *and* ≥ 30 question clusters per label, and for correctness a
+cluster is a question. Today: correct 18, partial 14, incorrect 23. Exactly
+**seven** unlabelled questions exist outside the closed evaluation split.
+Reaching the floor means drawing ~64 new RulesGuru questions, as the E-007
+pool was drawn — its 42 sit entirely outside the golden 77.
+
+**So I looked at the disagreements instead, and found a pattern that was
+not there.** All 15 have the judge stricter than the human, never the
+reverse. Agreement was 1.000 on single-verdict strata and ~0.68 on the two
+compound-verdict strata, and I registered E-011b saying the rubric has
+three labels written for one verdict while the questions have several.
+
+**The red-team decomposed the table by batch and the effect vanished.**
+Within b2, the only batch holding both kinds, single verdict is 9/10 and
+compound is 8/9 — 0.900 against 0.889. The whole contrast was b1 (0.639)
+against b2 (0.895), and stratum is collinear with batch. The count that
+looked like a finding, 14 disagreements in the compound strata, is 12 under
+a flat rate. Every cell interval overlaps every other. I published five bare
+proportions with no interval and no correction in a project whose rule says
+otherwise, and built a hypothesis on them.
+
+**The worse miss.** There is a third explanation I never considered and
+which the evidence supports better: a judge correcting from its own Magic
+knowledge. Tie-break 2 forbids calling an unsupported assertion `incorrect`,
+and ten `partial → incorrect` rows with zero in the other direction is that
+violation's signature. The control for it — `perturbed_key` — is registered,
+coded, and has never run. The revision I was about to write gives `partial`
+precedence over `incorrect`, which **suppresses that failure's only visible
+symptom**: agreement rises, the rubric takes the blame, and a judge that
+favours whichever arm resembles what it already believes goes into the
+head-to-head validated.
+
+**And "collecting is hopeless" was arithmetic on the wrong number.** I
+computed it on the pooled 0.727 against 0.720. E-011 gates per label, and
+per label `incorrect` is 23/23, about seventeen answers short of a floor it
+would clear at 28/30. Collecting is not a bet; it is a cheap measurement
+that gates one label and demonstrates two failing.
+
+The decision: the key-fidelity control runs before any rubric text is
+written, the judge's own rationales are coded against the keys, and the
+judge is cross-tabulated against the frozen second human pass. None of the
+three spends blindness, and two of them were available while I was calling
+the alternative untestable.
+
+## 2026-09-10 — Phase 8 opens, and the release DoD outranks the demo
+
+Phase 7 closed with every box ticked, and the gate check found every
+artefact on disk. Three decisions taken at the kickoff, before any work.
+
+**The carried experiments are the phase's critical path, not the demo.**
+Phase 6 sent four items here and Phase 7 forwarded them untouched: E-009,
+E-010, the judge audit to n ≥ 30 per label, and the head-to-head table.
+The first three are prerequisites of opening the 57-question evaluation
+split, and the fourth cannot be written until correctness is validated,
+which is what the judge audit decides. The roadmap lists the demo first
+and it is the more visible deliverable, but a demo over unvalidated
+numbers is a demo that has to be rebuilt when the numbers arrive. So the
+order is: judge audit, then E-009 and E-010, then the split, then the
+table, then the demo built over results that will not move.
+
+**The evaluation split opens once, and opening it is irreversible.** Every
+number in `docs/evaluation.md` today comes from the 20-question
+development split. The 57 held-out questions have been closed since Phase
+1 and `--open-the-evaluation-split` exists to make opening them a
+deliberate act. Once opened they stop being held out, so the phase gets
+one attempt, after the judge is gated and not before.
+
+**Arm A's vector index is stale and will be rebuilt on the corpus the
+split runs against, not before.** The bulk-path fix moved the corpus from
+a legacy July array to the daily bulk, `corpus_sha256` changed, and the
+709 MB cache no longer matches. Rebuilding costs about twenty minutes and
+$0.17 of embeddings, and Scryfall regenerates its bulk daily — so
+rebuilding now means rebuilding twice. The corpus for the eval run is
+frozen at that run's date and recorded with it.
+
 ## 2026-09-10 — A citation path stays wrong because a hash covers it
 
 Making the trace readable made a defect readable with it. Every subrule of

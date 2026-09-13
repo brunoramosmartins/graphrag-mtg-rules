@@ -13,4 +13,13 @@ a link back to the repo. These double as LinkedIn post seeds.
 | 5 | _a path is a citation_ | A citation stops being a passage and becomes path + rule number. |
 | 6 | [calibrate before you claim](./til-phase-6-calibrate-before-you-claim.md) | Five failure modes a GraphRAG evaluation hides — found on a benchmark with an answer key, before a single domain question was scored. |
 | 7 | _trace the traversal_ | One span per stage: observability of graph traversal. |
-| 8 | _let the vector baseline win somewhere_ | Honest evaluation: the graph has to lose in some stratum. |
+| 8 | [the rule decides, or it decided nothing](./til-phase-8-the-rule-decides-or-it-decided-nothing.md) *(skeleton)* | The hypothesis came back inconclusive on all four strata — and "inconclusive" means something only because the detectable effect was computed in August, before any arm ran. §4 then withdraws a finding of its own. |
+
+Three more are drafted as skeletons. They are not tied to a phase: each is a
+shape that recurred across several, which is what made them worth extracting.
+
+| TIL | Insight |
+|---|---|
+| [a check that cannot run](./til-a-check-that-cannot-run.md) *(skeleton)* | A broken probe and a broken subject produce the same output, so the operator debugs the wrong half. Six instances — and the costliest runs the shape backwards: a guard that returned a pass for two different reasons, one of them the failure it existed to catch. |
+| [the p-value said yes and the effect size said no](./til-the-p-value-said-yes-and-the-effect-size-said-no.md) *(skeleton)* | A registered effect size refused two statistically significant results in twenty-four hours, and was right both times. The test says whether a difference is real; only a number written beforehand says whether it is worth acting on. |
+| [a denominator is a claim](./til-a-denominator-is-a-claim.md) *(skeleton)* | Precision is hits over *something*, and whoever picks the something picks the winner. Five instances — the fifth was a conditioning clause that meant something weaker than its words, and it withdrew the project's most-quoted number. |

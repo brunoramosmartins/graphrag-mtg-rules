@@ -30,7 +30,7 @@ from graphrag_mtg.evaluation import metaqa
 from graphrag_mtg.evaluation.metaqa import HOPS
 from graphrag_mtg.evaluation.metrics import mcnemar, wilson_interval
 from graphrag_mtg.extraction.llm import LlmClient, estimate_cost
-from graphrag_mtg.generation.answerer import answer, build_prompt
+from graphrag_mtg.generation.answerer import answer, build_prompt, prompt_digest
 from graphrag_mtg.graph.connection import driver_session, metaqa_target
 from graphrag_mtg.retrieval.subgraph import DEFAULT_TOKEN_BUDGET, Subgraph
 
@@ -180,8 +180,60 @@ def sample(args: argparse.Namespace) -> int:
     return 0
 
 
+def parse_sizes(text: str) -> tuple[int, ...]:
+    """Parse a `--sizes` list, refusing any size E-012 did not register.
+
+    E-014 runs a subset of `SIZES` on a stronger generator; it may not invent
+    a size, because a cell with no `gpt-4o-mini` counterpart has nothing to
+    pair against and the whole design is the pairing.
+    """
+    chosen: list[int] = []
+    for token in text.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            size = int(token)
+        except ValueError:
+            raise SystemExit(f"--sizes: {token!r} is not an integer") from None
+        if size not in SIZES:
+            raise SystemExit(f"--sizes: {size} is not one of the registered sizes {SIZES}")
+        if size in chosen:
+            raise SystemExit(f"--sizes: {size} listed twice")
+        chosen.append(size)
+    if not chosen:
+        raise SystemExit("--sizes: no size given")
+    # Registered order, not the order they were typed: the output ordering is
+    # part of what `report` and `e014_analysis` read back.
+    return tuple(size for size in SIZES if size in chosen)
+
+
+def refuse_if_unloaded(total: int, excluded: int) -> None:
+    """Refuse a run in which every question was excluded.
+
+    Exclusion means the answer is not reachable through the retrieved evidence,
+    and E-012 measured 213 of 900 on a loaded KB. **All** of them is not a
+    property any KB has — it is what an empty graph looks like, because no seed
+    resolves and every subgraph comes back bare.
+
+    Without this the script prints `Nothing to answer`, exits 0, and a dry run
+    reads as clean: the harness reporting its own absence in the same words it
+    uses for a real result. That shape has cost this project four times.
+    """
+    if total and excluded == total:
+        raise SystemExit(
+            f"All {total} question(s) were excluded, which means the MetaQA KB is "
+            f"empty — not that its questions are unreachable.\n"
+            f"  Load it:  python scripts/run_e002.py load\n"
+            f"  Check it: MATCH (e:MQ_Entity) RETURN count(e) AS n\n"
+            f"A loaded KB excludes some questions and answers the rest; E-012 "
+            f"excluded 213 of 900."
+        )
+
+
 def run(args: argparse.Namespace) -> int:
     """Answer every question at every assigned context size."""
+    sizes = args.sizes if getattr(args, "sizes", None) else SIZES
     _, _, path = SPLITS[args.split]
     if not path.exists():
         raise SystemExit(f"No {args.split} split at {path}. Run `sample` first.")
@@ -212,7 +264,9 @@ def run(args: argparse.Namespace) -> int:
                 kind_cap=E002_KIND_CAP,
                 token_budget=DEFAULT_TOKEN_BUDGET,
             )
-            chain = metaqa.answer_path(subgraph.evidence, question.seed, question.answers)
+            chain = metaqa.answer_path(
+                subgraph.evidence, question.seed, question.answers, hops=question.hops
+            )
             if chain is None:
                 # The answer is not reachable through the evidence, so no
                 # size can hold it. Excluded and counted: a size comparison
@@ -220,7 +274,7 @@ def run(args: argparse.Namespace) -> int:
                 # retrieval, not the generator.
                 excluded += 1
                 continue
-            for k in SIZES:
+            for k in sizes:
                 if (question.qid, k) in done:
                     continue
                 kept = (
@@ -230,6 +284,7 @@ def run(args: argparse.Namespace) -> int:
                 pending.append((question, k, cell))
 
     print(f"{len(questions)} question(s), {excluded} excluded (answer unreachable)")
+    refuse_if_unloaded(len(questions), excluded)
     if not pending:
         print("Nothing to answer.")
         return 0
@@ -240,7 +295,7 @@ def run(args: argparse.Namespace) -> int:
         output_tokens_per_call=MAX_ANSWER_TOKENS,
         system=system,
     )
-    print(f"model {client.model} @ temperature 0, prompt {version}, sizes {SIZES}")
+    print(f"model {client.model} @ temperature 0, prompt {version}, sizes {sizes}")
     print(f"estimate: {estimate}")
     if args.dry_run:
         print("\nDry run: nothing was sent.")
@@ -266,6 +321,20 @@ def run(args: argparse.Namespace) -> int:
                         "predicted": predicted,
                         "correct": metaqa.hits_at_1(predicted, question),
                         "refused": result.refused,
+                        # `parse_prediction` returns None on a reply that
+                        # skipped the ANSWER: marker, and `hits_at_1(None, ...)`
+                        # is False — so without the raw text a format failure
+                        # and a wrong entity are the same row on disk. They are
+                        # different findings: at two hops the run splits 39
+                        # refusals / 19 unparseable / 24 wrong.
+                        "raw": result.text,
+                        # Of exactly what was sent. `e014_inspect.py` rebuilds
+                        # the prompt from the frozen split and checks it against
+                        # this; without it a reconstruction that quietly differs
+                        # is indistinguishable from one that does not.
+                        "prompt_sha256": prompt_digest(
+                            system, build_prompt(question.text, cell)
+                        ),
                         "prompt_version": version,
                         "model": client.model,
                     },
@@ -383,6 +452,15 @@ def main() -> int:
     runner.add_argument("--hops", type=int, choices=HOPS, default=0)
     runner.add_argument("--out", type=Path, default=None)
     runner.add_argument("--model", default=None)
+    runner.add_argument(
+        "--sizes",
+        type=parse_sizes,
+        default=None,
+        help=(
+            "comma-separated subset of the registered sizes, e.g. '16' or '16,256'. "
+            "E-014 uses this to skip the size sweep E-012 already measured as null."
+        ),
+    )
     runner.add_argument("--limit", type=int, default=0)
     runner.add_argument("--dry-run", action="store_true")
     runner.add_argument("--resume", action="store_true")
