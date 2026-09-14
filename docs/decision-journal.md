@@ -90,6 +90,52 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — The order alarm I raised did not survive the entry written to test it
+
+Two days ago — same day — I read E-018's secondary subset, found **4 of 13**
+collapsed discordance across orderings of identical content against a floor of
+0.050, and wrote that it might be *"a larger effect than anything E-001
+measured between arms"*. E-020 was registered to test exactly that.
+
+**It found 0.105 against a floor of 0.053, on 19 development questions, and
+cannot separate them.** Exact McNemar 1:0, *p* = 1.000. Order minus floor
+**+0.053** against a registered bar of 0.175 — not met, and not close. Branch
+3: inconclusive. Nothing adopted, nothing cancelled.
+
+**E-018's 0.205 is not quoted again.** It came from a re-cut of a run built for
+something else; the run built for this found less. That is the entry doing the
+job it was registered for, which was to stop a vivid number from becoming a
+front — and the vivid number was mine.
+
+**Prediction 3 failed, and the first reading of this run got it backwards.** I
+predicted the movers would carry the most evidence. They carry 36 and 8 items,
+while the four largest contexts — **50, 41, 38 and 34** — did not move at all.
+The analysis script printed "median 36" from a two-element list because
+`sorted(x)[len(x) // 2]` takes the upper value on an even length, so two points
+were dressed as a central tendency **in the direction of the prediction**.
+Fixed to `statistics.median`, with the full sorted lists printed beside it. The
+defect is written into the registry rather than only into a commit message,
+because the uncorrected version supported what I had predicted.
+
+**An unregistered cut explains the rows better than the registered one.** All
+three movers are `interaction_multihop` — 3 of 8 — against 0 of 11 everywhere
+else, including 0 of 4 on `hand-def-*`. In E-018 the movers *were* the
+`hand-def-*` questions. Two small runs disagree about which questions are
+fragile, which is what two small runs do. Printed as exploratory; it fires
+nothing.
+
+**One fix is kept anyway, and on different grounds than it was registered on.**
+E-018's amendment said E-019 would share one ordering across conditions. That
+stays — but on **design** grounds, not on E-020's evidence: holding a variance
+source constant costs nothing whether or not the source is large, and a
+comparison whose conditions differ in two ways when one would do is worse
+regardless. Recorded so nobody later cites E-020 as having justified it.
+
+What is not settled: three orderings sample the permutation space almost not at
+all, so 0.105 is a lower bound; n = 19 is compatible with a true rate of 0.15;
+and no order front opens — not because order was shown not to matter, but
+because nothing here justifies spending on it.
+
 ## 2026-09-13 — A front I proposed is refuted by measurement, and half the budget turns out to go somewhere else
 
 After `rg-271` I proposed that wrong-sense linking was systemic and that

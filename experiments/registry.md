@@ -7081,7 +7081,7 @@ How large that variance is on the primary is unknown and is what fix 1 buys.
 
 ---
 
-## E-020 — does reordering identical evidence change the answer? (registered 2026-09-13, not yet run)
+## E-020 — does reordering identical evidence change the answer? (registered 2026-09-13, run 2026-09-13, **inconclusive**)
 
 - **Registered:** 2026-09-13, after E-018's secondary subset and **before any
   code exists**. `E-019` is reserved for Phase 10's three-arm comparison on a
@@ -7214,7 +7214,102 @@ measured on a different split and does not transfer.
 
 ### Actual result
 
-_Not yet run._
+Run 2026-09-13, development split, arm B. 20 questions, **1 excluded** because
+its context cannot be rendered in three different orders, so **n = 19**. Four
+samples each, 76 generations and 76 judge calls, US$ 0.07.
+
+**Branch 3 — inconclusive, and it is the default. Nothing is adopted and
+nothing is cancelled.**
+
+| | rate | Wilson 95% |
+|---|---:|---|
+| same prompt (the floor) | **1/19 = 0.053** | [0.009, 0.246] |
+| different order | **2/19 = 0.105** | [0.029, 0.314] |
+
+Exact McNemar paired within question: discordant **1:0**, *p* = 1.000. Order
+minus floor **+0.053** against the registered bar of **0.175** — not met, and
+not close.
+
+#### The alarm did not survive its own test
+
+This entry was registered because E-018's secondary subset showed **4 of 13**
+collapsed discordance across orderings of identical content, and it was written
+up as possibly *"a larger effect than anything E-001 measured between arms"*.
+
+The designed measurement finds **0.105 against a floor of 0.053**, on 19
+questions, and cannot separate the two. **E-018's 0.205 is not quoted again.**
+It came from a re-cut of a run built for something else, and the run built for
+this found less. That is the entry doing its job, and the job was to stop a
+vivid number from becoming a front.
+
+#### Predictions, scored
+
+1. **"Same-prompt discordance between 0.00 and 0.10."** **Held** — 0.053.
+2. **"At least one different-order pair disagrees on 0.15 to 0.35."**
+   **Failed** — 0.105, below the registered range.
+3. **"The questions that move are the ones with the most evidence items."**
+   **Failed, and the first reading of this run got it backwards.** The movers
+   carry 36 and 8 items; the four largest contexts — **50, 41, 38 and 34
+   items** — did not move at all. The analysis script reported a "median 36"
+   from a two-element list because `sorted(x)[len(x) // 2]` returns the upper
+   value on an even length, which dressed two points as a central tendency.
+   Fixed to `statistics.median` and the full sorted lists are now printed
+   beside it. The defect and the correction are recorded here rather than in a
+   commit message, because the uncorrected reading supported the prediction.
+4. **"Changes will be by omission rather than contradiction."** Not scored:
+   two collapsed movers is too few to characterise a mechanism, and reading
+   them would produce an anecdote wearing a finding's clothes.
+
+#### What moved, in full, because three cases can be read rather than summarised
+
+| question | A1 | A2 | B | C | items |
+|---|---|---|---|---|---:|
+| `hand-humility-plus-counter` | incorrect | incorrect | incorrect | **correct** | 8 |
+| `rg-1951` | correct | **incorrect** | incorrect | correct | 36 |
+| `rg-705` | incorrect | incorrect | **partial** | **partial** | 12 |
+
+`rg-1951` is the floor firing: `A1` and `A2` share a prompt and disagree, so
+that question's later disagreements carry decoding noise and cannot be
+attributed to order. `rg-705` is the most suggestive row in the run — **both**
+reorderings moved it the same way, which a single coin flip does not usually
+do — and it is one question.
+
+#### An unregistered cut that explains the rows better than the registered one
+
+All three movers are `interaction_multihop`: **3 of 8**, against **0 of 11**
+across `definition_1hop` (0/4), `legality_1hop` (0/4), `negative_temporal`
+(0/2) and `keyword_rule_2hop` (0/1).
+
+This is **exploratory and fires no branch** — it was not registered and it is
+printed because a cut by size *was* registered and a cut by stratum explains
+the same rows better. It also cuts against E-018's reading from the other
+direction: there the movers were `hand-def-*`, and here the four `hand-def-*`
+questions were completely stable across all four samples. Two small runs
+disagree about which questions are fragile, which is what two small runs do.
+
+#### What is kept anyway, and on what grounds
+
+E-018's amendment registered that **E-019 shares one ordering across
+conditions**, inserting injected items at seeded positions. **That fix stays** —
+but it is kept on **design grounds, not on this entry's evidence**. Holding a
+variance source constant costs nothing whether or not the source is large, and
+a comparison whose conditions differ in two ways when one would do is worse
+regardless of what this run measured. The distinction is recorded so a later
+reader does not cite E-020 as having justified it.
+
+#### What this does not settle
+
+- **Three orderings sample the permutation space almost not at all.** 0.105 is
+  a **lower bound**, not an estimate.
+- **n = 19, and the design needed far more.** A true rate of 0.15 would be
+  entirely compatible with what was observed. The entry is registered as
+  better able to confirm than to rule out, and it did neither — the same
+  shape E-018 ended in, for the same reason.
+- **Development split.** No rate transfers to the evaluation split, and the
+  one cut that looks structural — `interaction_multihop` — is the stratum with
+  8 questions here.
+- **No order front opens.** Not because order was shown not to matter, but
+  because nothing here justifies spending on it.
 
 ---
 

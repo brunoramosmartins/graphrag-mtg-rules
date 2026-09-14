@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from statistics import median
 from pathlib import Path
 
 from graphrag_mtg.evaluation.metrics import mcnemar, wilson_interval
@@ -129,10 +130,28 @@ def main() -> int:
     for flag, name in ((True, "moved on order"), (False, "did not move")):
         sizes = [complete[q]["A1"]["items"] for q, o in zip(ids, orders, strict=True) if o == flag]
         if sizes:
-            print(f"  {name:<16} n={len(sizes):>2}  median evidence items "
-                  f"{sorted(sizes)[len(sizes) // 2]}")
-    print("  Prediction 3 said the movers carry the most evidence. If the movers are")
-    print("  the shortest contexts instead, the mechanism is not order.")
+            # `statistics.median`, not `sorted(x)[len(x) // 2]`. The latter
+            # returns the UPPER value on an even-length list, so at n = 2 it
+            # reports the maximum and dresses a two-point sample as a central
+            # tendency — which is how the first reading of this run made
+            # prediction 3 look supported when the four largest contexts had
+            # not moved at all. The full sorted list is printed beside it.
+            print(f"  {name:<16} n={len(sizes):>2}  median {median(sizes):>5.1f}  "
+                  f"items {sorted(sizes, reverse=True)}")
+    print("  Prediction 3 said the movers carry the most evidence. A median over two")
+    print("  questions is not a tendency — read the lists, not the summary.")
+
+    print(f"\n{THIN}\nDOES STRATUM PREDICT MOVEMENT?")
+    strata: dict[str, list[int]] = {}
+    for qid in ids:
+        row = strata.setdefault(complete[qid]["A1"]["stratum"], [0, 0])
+        row[0] += label_shift(complete[qid])
+        row[1] += 1
+    for name, (moved, total) in sorted(strata.items(), key=lambda kv: -kv[1][0] / kv[1][1]):
+        print(f"  {name:<24} {moved}/{total}")
+    print("  Exploratory: this cut was not registered and the entry fires no branch")
+    print("  on it. It is printed because a cut by size was registered and a cut by")
+    print("  stratum explains the same rows better, which is worth saying out loud.")
 
     print(f"\n{RULE}\nVERDICT — the branches as registered")
     rejects = test.p_value <= ALPHA
@@ -143,7 +162,7 @@ def main() -> int:
         print("Phase 9 front, because an ordering that is chosen rather than incidental")
         print("is free.")
     elif rejects:
-        print(f"\nBRANCH 1 NOT MET — the contrast clears its test but the gap is")
+        print("\nBRANCH 1 NOT MET — the contrast clears its test but the gap is")
         print(f"{gap:+.3f} against a registered {EFFECT_BAR:+.3f}. Reported as real and")
         print("smaller than the bar this project set for acting on it.")
     elif sum(orders) <= sum(floors):

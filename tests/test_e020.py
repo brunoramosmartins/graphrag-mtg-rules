@@ -106,7 +106,7 @@ class TestTheTwoIndicators:
         )
 
     def test_the_floor_fires_when_the_same_prompt_disagrees(self) -> None:
-        floor, order = ana.indicators(self.rows("correct", "incorrect", "correct", "correct"))
+        floor, _ = ana.indicators(self.rows("correct", "incorrect", "correct", "correct"))
         assert floor is True
 
     def test_either_reordering_disagreeing_fires_order(self) -> None:
