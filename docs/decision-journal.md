@@ -90,6 +90,58 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — E-025 is withdrawn before its first reading, and the worry that produced it is answered the other way
+
+Asked whether the marking task was sound before spending an hour on it, I went
+after the provenance of `gold_cr_rules` instead of defending the design. It did
+not survive.
+
+**The annotation is RulesGuru's citation, transcribed.** `docs/annotation-guide.md`
+step 4 says *"seeded from RulesGuru `citedRules`"*, and measured across the 24
+golden-set questions carrying one, the chapter sets are **identical 24/24** and
+the exact rule sets **23/24**. The seeding was not a starting point that got
+revised; it is the annotation.
+
+So E-025's 22 split three ways: **6** whose key names the rule (author wrote
+key and annotation), **13** whose annotation *is* `citedRules`, and **3** the
+author filled in. **The question "would the author reproduce their own
+judgement" has a population of three.** This morning's amendment moved the
+population from 22 to 16 and was still wrong by a factor of five, because it
+split on where the *key* came from and never asked where the *annotation* did.
+
+**And the boundaries could not have resolved it at any reachable n.** 0.70 and
+0.85 are 0.15 apart; a 95% interval that fits inside that band near 0.78 needs
+**n ≈ 122**. The golden set has nothing like it. E-025 was designed to return
+inconclusive at every n available to it and that was knowable before it was
+registered. Two independent fatal defects: no population, and no power.
+
+**The worry is answered, in the opposite direction.** The fear was that
+`gold_cr_rules` is one reader's arbitrary pick. It is not — on 13 of 22 it is a
+**judge-curated** citation, which is the stated reason this project curates
+RulesGuru instead of authoring questions. The target has external provenance,
+which **strengthens** every figure scored against it: the 2/22 gold-rule reach
+is measured against what a curated source cited. And E-024's six disagreements
+re-read as a model disagreeing with a judge-curated citation, which is sharper
+than what the entry set out to find.
+
+What remains open is smaller than the entry: **nine of the 22 are
+author-sourced** and none has had a second reader. Recorded as a limitation
+rather than pursued, because nine questions cannot support a determinacy
+measurement either.
+
+E-024's successor is **unblocked rather than gated** — determinacy is answered
+by provenance, and its only remaining obstacle is the power the amendment
+already measured, 5:0 where 6 are needed.
+
+**A note on how this was caught.** The first provenance cut said "13 seeded, 3
+judged" with a plausible table. It was wrong twice: `citedRules` is a dict being
+iterated as a list, and the evidence was printed through `sorted(nums)[:4]`,
+which made a four-rule citation look complete. **What caught it was a second
+calculation disagreeing with the first** — 24/24 identical against a table that
+had just shown rules differing. One calculation alone would have passed, and
+the entry would have been withdrawn for the wrong reason with a fabricated
+split inside it.
+
 ## 2026-09-14 — E-024 returns nothing, because I turned one of its predictions into a gate
 
 The entry registered branch 3 as *"even the key-given arm fails"* and **never

@@ -1753,6 +1753,15 @@ finding a property of the problem rather than of one implementation.
   items over 6 questions reach the graph arm as a bare name, and power and
   toughness are never serialized for any card. Zero occurrences in the vector
   arm. Small, specific, cheap to close, and it does not move the 2/22.
+- **The target these figures are scored against has external provenance, and
+  nine questions are the exception.** `gold_cr_rules` reproduces RulesGuru's
+  judge-curated `citedRules` on **24 of 24** golden-set questions carrying one
+  at chapter level and **23 of 24** exactly, which is what the project's
+  curate-don't-author decision was for. The exceptions are the six `hand-*`
+  questions, where the author wrote key and annotation, and three RulesGuru
+  questions whose `citedRules` was empty. **None of those nine has been read by
+  a second annotator**, and nine is too few to measure determinacy on — see
+  E-025, withdrawn 2026-09-14 before its first reading.
 
 ## Why the phase is reported this way
 

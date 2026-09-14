@@ -8085,7 +8085,7 @@ do not pass through either entry.
 
 ---
 
-## E-025 — is the governing chapter determined, or is it the annotator's choice? (registered 2026-09-14, not yet run)
+## E-025 — is the governing chapter determined, or is it the annotator's choice? (registered 2026-09-14, **withdrawn 2026-09-14 before the first reading**)
 
 - **Registered:** 2026-09-14, from a hypothesis E-024 produced and could not
   test. Its boundaries are **numeric and fixed below**, which is the one thing
@@ -8209,6 +8209,96 @@ The worksheet still renders all 22 and does not tell the reader which group a
 question is in. The split is applied at scoring; knowing it in advance would be
 a hint about how hard the judgement is supposed to be.
 
-### Actual result
+### Withdrawn 2026-09-14, before the first reading — the population for this question is three
 
-_Not yet run._
+The entry asks whether the **author** would reproduce their **own** judgement.
+Chasing the provenance of `gold_cr_rules` before the reading started shows that
+on this golden set there is almost no author judgement to reproduce.
+
+#### `gold_cr_rules` is RulesGuru's citation, transcribed
+
+`docs/annotation-guide.md` step 4 says *"Seeded from RulesGuru `citedRules`"*.
+Measured across the 24 RulesGuru questions in the golden set that carry one:
+
+| | |
+|---|---:|
+| chapter sets identical to `citedRules` | **24 / 24 = 1.000** |
+| exact rule sets identical | **23 / 24 = 0.958** |
+
+The seeding was not a starting point that got revised. It is the annotation.
+
+#### So E-025's 22 split three ways, and only one of them is its question
+
+| provenance | n |
+|---|---:|
+| key names the rule — `hand-*`, author wrote both key and annotation | 6 |
+| annotation **is** RulesGuru's `citedRules` | **13** |
+| `citedRules` empty, author filled it in — `rg-2249`, `rg-3`, `rg-198` | **3** |
+
+**The question "would the author reproduce their own judgement" has a
+population of three.** The amendment earlier today moved the population from 22
+to 16 and was still wrong by a factor of five, because it split on whether the
+*key* names the rule and never asked where the *annotation* came from.
+
+#### And the boundaries could not have resolved it at any reachable n
+
+Arithmetic that should have been in the entry and was not: the registered
+boundaries are **0.70 and 0.85**, which are **0.15 apart**. A 95% interval
+narrow enough to sit inside that band around a rate near 0.78 needs
+**n ≈ 122**. The golden set does not hold 122 questions of any kind, let alone
+122 carrying an author-made rule annotation.
+
+**E-025 was designed to return `inconclusive` at every n available to it**, and
+that was knowable before it was registered. Two independent defects, and either
+alone is fatal: no population, and no power.
+
+#### The worry that produced this entry is answered, in the other direction
+
+E-024 showed a model holding the key naming a different chapter on 6 of 22, and
+the fear was that `gold_cr_rules` is *one reader's arbitrary pick*.
+
+**It is not.** On 13 of the 22 it is RulesGuru's citation — **judge-curated**,
+which is the stated reason this project sources questions there rather than
+authoring them (ADR-era decision, 2026-07-18: *"curate, don't author"*). The
+target has **external provenance**.
+
+That **strengthens** the figures scored against it. The 2/22 gold-rule reach on
+`interaction_multihop` is measured against what a curated source cited, not
+against a preference. And E-024's six disagreements re-read as *a model
+disagreeing with a judge-curated citation*, which is a sharper observation than
+the one the entry was written to chase.
+
+#### What stays open, and it is smaller than the entry
+
+**Nine of the 22 are author-sourced** — the six `hand-*` and the three
+fill-ins — and none has been read by a second annotator. That is a real
+limitation and it is now the whole of it. It is recorded here and in
+`docs/evaluation.md`'s limitations rather than pursued: nine questions cannot
+support a determinacy measurement either.
+
+#### What this does to E-024's successor
+
+E-024's amendment made E-025 the gate on a successor: *"if the governing
+chapter is a choice rather than a determination, the successor's question is
+ill-posed."* **That gate is lifted, not met** — the determinacy question is
+answered by provenance rather than by re-annotation. The successor's remaining
+obstacle is the one the amendment already measured: 5:0 discordant where 6 are
+needed, and roughly 31 questions of the stratum required against the 22 that
+exist. **It stays a Phase 10 artefact and is not blocked on anything else.**
+
+#### Cost of finding out
+
+Zero API spend, no reading, and one afternoon that would otherwise have been
+spent reading 22 keys to produce a number about three of them.
+
+#### A note on how it was caught, because it nearly was not
+
+The first provenance cut reported *"13 seeded, 3 judged"* with a table that
+looked plausible. It was wrong twice over: `citedRules` is a **dict** and was
+being iterated as a list, and the printed evidence was truncated with
+`sorted(nums)[:4]`, which made a four-rule citation look like the whole of it.
+
+**What caught it was a second calculation disagreeing with the first** — 24/24
+identical against a table that had just shown rules differing. One calculation
+alone would have passed, and this entry would have been withdrawn for the wrong
+reason with a fabricated split in it.

@@ -1,6 +1,23 @@
 #!/usr/bin/env python
 """E-025: is the governing chapter determined, or is it the annotator's choice?
 
+**WITHDRAWN 2026-09-14, before its first reading. Do not run this.**
+
+Chasing the provenance of `gold_cr_rules` before the reading started showed
+there is almost no author judgement to reproduce: on the 24 RulesGuru questions
+carrying a `citedRules` field, the annotation reproduces it on **24/24 at
+chapter level and 23/24 exactly**. Of this entry's 22 questions, 6 have keys
+that name the rule, 13 have annotations that *are* RulesGuru's citation, and
+**3** were filled in by the author. The question this file asks has a population
+of three.
+
+The registered boundaries could not have resolved it either: 0.70 and 0.85 are
+0.15 apart and need n near 122, which the golden set does not hold.
+
+The instrument is kept because it is correct and the finding came out of
+building it — the blind-leak check in `key_names_the_rule` is what started the
+provenance trail. See E-025's withdrawal in `experiments/registry.md`.
+
 E-024's control arm held the **answer key** and still named the annotator's
 chapter on only 16 of 22. `docs/annotation-guide.md` asks for *"the most
 specific rule that carries the answer"*, and "most specific" and "carries" are
