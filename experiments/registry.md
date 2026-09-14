@@ -7786,3 +7786,125 @@ the reason not to run it.
 
 _Not run, deliberately. Registered so that the lead is on the record with its
 size attached: four questions._
+
+---
+
+## E-024 — can the governing rule be named from the question alone? (registered 2026-09-14, not yet run)
+
+- **Registered:** 2026-09-14, after Phase 9 closed every retrieval front and
+  before Phase 10 spends any curation. **It runs before that curation**,
+  because it is the only cheap thing that could change what Phase 10 should
+  measure.
+
+- **Where this comes from, and it reframes Phase 9 in hindsight.** Three
+  measurements, in increasing order of how much they change the question:
+
+  1. The graph cannot reach it — **1 of 39** missing gold rules at one hop
+     (E-022).
+  2. The source data cannot bridge it — **28 of 78,949** Scryfall rulings cite
+     a CR rule number at all (0.04%), and **0 of the 39** appear in a ruling
+     retrieval brought.
+  3. **The target was defined from the answer.** `docs/annotation-guide.md`,
+     step 4: *"Cite the **most specific rule that carries the answer**"*, with
+     the annotator holding the question **and the key**. `gold_cr_rules` is a
+     function of the answer.
+
+  Point 3 is the one that matters. *"Retrieval does not reach the target"* and
+  *"the target is not determinable from the question"* are different claims,
+  and **Phase 9 spent itself measuring the first while assuming the second was
+  false.** Nothing in this project has ever tested it.
+
+- **The decision this informs.** Whether the scope statement published in
+  `docs/evaluation.md` is **final** or **premature**. If a model can name the
+  CR area from the question alone, a bridge exists, it costs one call, and
+  Phase 9's objective was achievable by a route nobody tried. If it cannot,
+  option (A) — an extraction programme over the CR — is the only path left, and
+  the scope statement stands as written.
+
+### Design
+
+- **Population.** The 22 `interaction_multihop` evaluation questions, which is
+  where the gap is. A **third declared reading** of the evaluation split; it
+  draws no arm comparison and scores no system.
+- **Task.** Given the **question text only** — no retrieved evidence, no key,
+  no card data — the model names the CR **chapter** (the leading three digits:
+  `613`, `614`, `400`, `603`, `500`) it believes governs. Chapter and not the
+  lettered leaf: the leaf is what the annotator chose knowing the answer, and
+  asking for it would test a harder thing than retrieval needs. **Retrieving a
+  chapter's subtree is a thing the graph can already do.**
+- **Outcome.** Whether the named chapter contains at least one of the
+  question's `gold_cr_rules`. Reported with a Wilson interval.
+- **Control, and it is the point of the design.** The same task given the
+  question **plus the key**. That arm should be near-perfect — the annotator
+  did exactly it — and it is what separates *"the model cannot name it"* from
+  *"the task is impossible as posed"*. Without this control a null means
+  nothing.
+- **Three samples per condition** at a recorded seed, because E-020 measured
+  that one sample is not a reading.
+
+### Ceiling, computed before the run
+
+Counted rather than estimated — a first draft of this paragraph said "9
+distinct chapters" from memory and the number is **17**:
+
+```
+613:6  603:5  510:3  702:3  305:2  707:2  614:2  700:2
+706:1  616:1  610:1  120:1  704:1  400:1  701:1  608:1  500:1
+```
+
+**17 distinct chapters over 22 questions**, and the **majority baseline is
+6/22 = 0.273** — a model answering `613` every time. No result from this entry
+is read against zero; the baseline is the comparator and it is fixed here,
+before the run.
+
+The spread also bounds branch 1: a router that has to pick one of seventeen
+chapters from a question is doing real work, and 0.273 is what it has to beat
+before "a bridge exists" means anything.
+
+### Decision rule, fixed before the run
+
+1. **Question-only accuracy clears the majority baseline by a margin the entry
+   fixes before running, and the key-given arm is near-perfect.** A bridge
+   exists. Consequence: a question→chapter router is registered as a Phase 9
+   front after all, the scope statement in `docs/evaluation.md` gains a
+   "premature" notice, and Phase 10's design is reconsidered before curation.
+2. **Question-only is at the baseline and the key-given arm is near-perfect.**
+   The governing rule is determinable **from the answer and not from the
+   question**. Consequence: the scope statement stands, option (A) is the only
+   remaining path, and this becomes the sharpest sentence Phase 9 produced.
+3. **Even the key-given arm fails.** The task is ill-posed as operationalised —
+   most likely because a chapter is the wrong granularity — and the entry says
+   so rather than reporting the question-only number.
+
+### Predictions, recorded before the run
+
+1. **Key-given lands above 0.80.** The annotator did this task by hand.
+2. **Question-only lands between the majority baseline and 0.50**, and I expect
+   branch 2. The cases read in E-018 are ones where naming the area requires
+   already seeing how the interaction resolves.
+3. **Where question-only succeeds it will be on the questions whose surface
+   text names the mechanism** — "layers", "replacement", "triggers" — and those
+   are the questions retrieval was least likely to fail on anyway. That
+   correlation is checked, because a bridge that only works where it is not
+   needed is not a bridge.
+
+### Threats to validity, recorded before the run
+
+- **n = 22** and nine chapters. Underpowered for anything but a large gap.
+- **Third reading of the evaluation split**, declared. If the author judges
+  that too expensive, the entry moves to the development split and says so.
+- **A model that names `613` may be pattern-matching the question's vocabulary
+  rather than reasoning** — which is fine for retrieval and is not evidence
+  about reasoning. The entry claims nothing about the latter.
+- **The key-given control shares a model with the question-only arm**, so a
+  shared blind spot inflates neither in a direction that helps branch 1.
+- **This is an oracle-adjacent design.** No figure from it is a system score.
+
+### Cost
+
+22 questions × 2 conditions × 3 samples = 132 calls, no judge. Under
+**US$ 0.05**.
+
+### Actual result
+
+_Not yet run._

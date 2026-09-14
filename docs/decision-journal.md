@@ -90,6 +90,57 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — The target was defined from the answer, and Phase 9 never tested whether it was reachable from the question
+
+Asked what could actually be done about the gap Phase 9 measured, I went to
+count instead of to reason, and the third count changed the shape of the whole
+phase.
+
+**The edge is not in the graph.** Of 39 missing gold rules, expanding
+`REFERENCES` and parent/child in both directions from what retrieval already
+delivers reaches **1 at one hop**.
+
+**The edge is not in the source data either.** Of Scryfall's **78,949
+rulings, 28 cite a CR rule number** — 0.04% — and **none of the 39** appears in
+a ruling retrieval brought. Phase 3's withdrawal of `CITES_RULE` was correct and
+restoring it would bring nothing. That closes the obvious repair.
+
+**And the target was defined from the answer.** `docs/annotation-guide.md`,
+step 4: *"Cite the **most specific rule that carries the answer**"*, with the
+annotator holding the question **and the key** open. `gold_cr_rules` is a
+function of the answer.
+
+*"Retrieval does not reach the target"* and *"the target is not determinable
+from the question"* are different claims. **Phase 9 spent itself measuring the
+first while assuming the second was false, and nothing in this project has ever
+tested it.** Every ceiling the phase computed was honest and every one of them
+was answering a question downstream of an assumption nobody had written down.
+
+That is registered as **E-024**, and it is the only cheap thing that could
+reopen the scope statement: given the question text alone, can a model name the
+CR chapter that governs? A control arm gets the question **and the key** and
+should be near-perfect, since the annotator did exactly that task — without it
+a null means nothing. Counted before the run: **17 distinct chapters over 22
+questions, majority baseline 6/22 = 0.273.** (A first draft of the entry said
+nine chapters from memory; counting gave seventeen.)
+
+Branch 2 is my prediction and it is the one that hurts least to be right about:
+the governing rule is determinable from the answer and not from the question,
+the scope statement in `docs/evaluation.md` stands, and an extraction programme
+over the CR is the only remaining path — which does not fit in what is left.
+
+**E-024 runs before Phase 10's curation**, because it costs under US$ 0.05 and
+it is the only result that would change what Phase 10 should measure.
+
+**Phase 10's own gate is revised rather than met.** It read *"Phase 10 does not
+open until Phase 9 hits the retrieval target it registered"*, and Phase 9 will
+not. Its premise — a second measurement over a repaired system — falls with it,
+so E-019 is re-scoped from a replication of E-001 to the verdict E-001 could not
+reach: **the stratum × arm interaction**, where the graph leads on
+`definition_1hop` (10/11 against 8/11) and trails on `interaction_multihop`
+(6/22 against 9/22). `keyword_rule_2hop` runs against that hypothesis at n=2
+and is named in the entry as its falsifier rather than left out of it.
+
 ## 2026-09-13 — Phase 9's last front is abandoned at its ceiling, and the phase has no front left
 
 E-022 was registered as Front C, the bridge out of chapter 700, and abandoned
