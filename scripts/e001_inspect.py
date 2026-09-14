@@ -43,6 +43,7 @@ project keeps paying for. Three states, and the header always says which:
 
 Usage:
     python scripts/e001_inspect.py --counts
+    python scripts/e001_inspect.py --arm B --context
     python scripts/e001_inspect.py --arm B --each
     python scripts/e001_inspect.py --arm B --outcome refused_by_pipeline
     python scripts/e001_inspect.py --qid rg-1469
@@ -63,7 +64,7 @@ from graphrag_mtg.generation.answerer import (
     build_prompt,
     prompt_digest,
 )
-from graphrag_mtg.retrieval.subgraph import serialize
+from graphrag_mtg.retrieval.subgraph import Evidence, serialize
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_correctness import CACHE_DIR as E007_CACHE_DIR
@@ -186,6 +187,66 @@ def retrieved_rules(record: dict) -> set[str]:
     this way after the first pass did exactly that.
     """
     return {item["key"] for item in record.get("evidence", ()) if item.get("kind") == "rule"}
+
+
+#: The two traversals that expand a keyword into its CR definition and
+#: subrules. E-013 measured that `Keyword-[:DEFINED_BY]->Rule` reaches only
+#: chapter 700; this names the share of the budget that reaching it costs.
+KEYWORD_TEMPLATES = frozenset({"card_keyword_rules", "keyword_definition"})
+
+
+def context_share(
+    records: list[dict], verdicts: dict[str, dict], wanted: dict[str, list[str]]
+) -> int:
+    """Where an arm's context goes, and what it buys, per stratum.
+
+    EXPLORATORY — a re-cut of a finished run, not a registered contrast. It
+    conditions on nothing and tests nothing; it reports how the token budget
+    was actually spent beside the two outcomes already recorded.
+
+    The question it answers is E-013's from the other side. E-013 asked which
+    rules the graph cannot reach. This asks what it reaches *instead*, which
+    is the number a repair has to beat and which no aggregate over correctness
+    can show.
+    """
+    print("EXPLORATORY — a re-cut of a completed run, not a registered contrast.\n")
+    buckets: dict[str, dict[str, int]] = {}
+    for record in records:
+        row = buckets.setdefault(
+            record["stratum"], {"n": 0, "tokens": 0, "keyword": 0, "gold": 0, "hit": 0, "correct": 0}
+        )
+        row["n"] += 1
+        for item in record.get("evidence", ()):
+            size = Evidence(**item).tokens
+            row["tokens"] += size
+            if item["template"] in KEYWORD_TEMPLATES:
+                row["keyword"] += size
+        qid = record["question_id"]
+        if qid in wanted:
+            row["gold"] += 1
+            row["hit"] += bool(retrieved_rules(record) & set(wanted[qid]))
+        verdict = verdicts.get(qid)
+        row["correct"] += bool(verdict and verdict.get("label") == "correct")
+
+    print(f"{'stratum':<24}{'n':>4}{'tokens':>9}{'keyword':>9}{'gold rule':>11}{'correct':>9}")
+    print(THIN)
+    for name, row in sorted(buckets.items(), key=lambda kv: -kv[1]["keyword"] / kv[1]["tokens"]):
+        reach = f"{row['hit']}/{row['gold']}" if row["gold"] else "—"
+        scored = f"{row['correct']}/{row['n']}"
+        print(
+            f"{name:<24}{row['n']:>4}{row['tokens']:>9,}"
+            f"{row['keyword'] / row['tokens']:>9.0%}{reach:>11}{scored:>9}"
+        )
+    total = sum(row["tokens"] for row in buckets.values())
+    keyword = sum(row["keyword"] for row in buckets.values())
+    print(THIN)
+    print(f"{'all':<24}{sum(r['n'] for r in buckets.values()):>4}{total:>9,}{keyword / total:>9.0%}")
+    print("\n`keyword` is the share of the token budget spent expanding keywords into")
+    print("their CR definitions and subrules — chapter 700, which is the only chapter")
+    print("E-013 found reachable from a card. It is the right answer where the")
+    print("question is about a keyword and the budget's largest line item where it")
+    print("is not.")
+    return 0
 
 
 def verification(answer: dict, record: dict, prompt: str, context: str) -> tuple[str, list[str]]:
@@ -396,6 +457,11 @@ def main() -> int:
     parser.add_argument("--caches", type=Path, nargs="+", default=[CACHE_DIR, E007_CACHE_DIR])
     parser.add_argument("--counts", action="store_true", help="the outcome split per arm")
     parser.add_argument(
+        "--context",
+        action="store_true",
+        help="where one arm's token budget goes, per stratum (exploratory)",
+    )
+    parser.add_argument(
         "--each",
         action="store_true",
         help="one case per outcome category — standing rule 8 in one command",
@@ -409,6 +475,13 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=2, help="0 for every match")
     args = parser.parse_args()
 
+    if args.context:
+        retrieval_path, _, verdicts_path = artefacts(args.arm, args.split)
+        return context_share(
+            load_jsonl(retrieval_path, what="retrieval"),
+            {r["question_id"]: r for r in load_jsonl(verdicts_path, what="verdicts")},
+            gold_rules(args.golden),
+        )
     if args.counts:
         slugs = available(args.split)
         if not slugs:

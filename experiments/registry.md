@@ -5010,6 +5010,96 @@ built on it is quoted anywhere.
 
 ---
 
+### Exploratory, 2026-09-13 — where the budget actually goes, and a linking hypothesis refuted
+
+A re-cut of E-001's finished arm-B evaluation run. It conditions on nothing,
+tests nothing, and fires no branch. It exists because E-018's first rendered
+case suggested a front this entry had not named, and the cheapest way to find
+out was to measure rather than argue.
+
+#### The hypothesis, and it does not survive
+
+`rg-271` asks about an additional combat **phase**; the linker resolved the
+keyword `Phase`, whose glossary entry carries two numbered senses — *"1. A
+subsection of a turn… 2. A permanent 'phases in'…"* — and the traversal pulled
+the whole of `702.26` into a question about turn structure. **1,123 of that
+question's 2,373 context tokens are about phasing.** The rule it needed,
+`500.8`, is one sentence.
+
+Proposed reading: wrong-sense linking is systemic, and Phase 9's first front
+should be routing rather than the bridge — reversing E-013's own decision.
+
+Measured instead. The CR glossary has **739 entries, 28 of them carrying two or
+more numbered senses** (`Phase`, `Counter`, `Copy`, `Draw`, `Exile`, `Play`,
+`Power`, `Toughness`, `Type`, `Color`…). Across the 57 evaluation questions:
+
+| arm | questions linking a polysemous keyword | tokens from those keywords' rules |
+|---|---:|---:|
+| A vector | **0** of 57 | 0% |
+| B graph | **4** of 57 | 1,477 of 42,417 — **3.5%** |
+| C hybrid | 4 of 57 | 2.3% |
+
+Three of arm B's four are `Counter` at 9–16% of their context, and on
+`hand-replacement-order-counters` the sense retrieved is the right one.
+**`rg-271` is the only severe case.** The hypothesis is **refuted**: one vivid
+case, not a pattern, and no front opens on it.
+
+#### What the same pass found instead, and it is larger
+
+Arm B's 42,417 evaluation context tokens, by the traversal that produced them:
+
+| template | items | tokens | share |
+|---|---:|---:|---:|
+| `card_rulings` | 230 | 17,007 | **40.1%** |
+| `card_keyword_rules` | 205 | 11,894 | 28.0% |
+| `keyword_definition` | 172 | 9,353 | 22.1% |
+| `card_core` | 84 | 3,696 | 8.7% |
+| `card_legality` | 14 | 332 | 0.8% |
+| `card_interaction` | 5 | 135 | 0.3% |
+
+**Half the graph arm's budget — 50.1% — expands keywords into chapter 700.**
+That is the only chapter E-013 measured as reachable from a card, so this is
+E-013's finding from the other side: not *which rules the graph cannot reach*
+but *what it reaches instead*.
+
+Split by stratum, which is the cut that decides a front:
+
+| stratum | n | keyword share | gold rule retrieved | correct |
+|---|---:|---:|---:|---:|
+| `definition_1hop` | 11 | **100%** | 11/11 | 10/11 |
+| `keyword_rule_2hop` | 2 | 98% | 2/2 | 1/2 |
+| `negative_temporal` | 7 | 57% | 2/7 | 4/7 |
+| `legality_1hop` | 15 | 46% | — | 14/15 |
+| `interaction_multihop` | 22 | **36%** | **2/22** | 6/22 |
+
+The graph arm is a **keyword-definition machine**. Where the question is about
+a keyword definition it spends the entire budget on exactly the right thing and
+answers 10 of 11. On `interaction_multihop` — 22 questions, the hardest stratum
+and the one the project was built for — it still spends over a third of the
+budget on keyword definitions and the governing rule arrives on **2 of 22**.
+
+#### What this licenses, and what it does not
+
+- **Front C, the bridge, is confirmed as the right front** and by a measurement
+  rather than by inheritance. The entities resolve; the gold rule does not
+  arrive because from a card or a keyword the reachable rules *are* keyword
+  definitions.
+- **The routing/linking front does not open.** 3.5% of context and one case.
+- **It does not establish that reaching the rule would help.** E-018's gate
+  returned unresolved. This measures where the budget goes, not what a
+  different budget would buy, and the two must not be conflated.
+- **Rulings are doing work that rules are not.** They are 40.1% of the budget,
+  and on `interaction_multihop` four of the six correct answers arrived with
+  the gold rule absent. E-018 injected **rules only** and said so as a limit on
+  its scope; nothing here or there has tested injecting gold *rulings*, and on
+  this evidence that is the cheaper question.
+- **Exploratory, and on the evaluation split**, whose readings are declared. No
+  figure here is a system score or a registered contrast.
+
+Reproducible as `python scripts/e001_inspect.py --arm B --context`, so the same
+cut can be taken again after any front lands and the before/after is the same
+measurement rather than two.
+
 ## E-014 — is the depth effect a property of the task, or of the generator? (registered 2026-09-13, **suspended 2026-09-13**, never run)
 
 - **Registered:** 2026-09-13, before any call is made and before

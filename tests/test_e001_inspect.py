@@ -229,6 +229,69 @@ class TestOneCasePerCategory:
         assert [row["question_id"] for row in chosen] == ["b"]
 
 
+class TestWhereTheBudgetActuallyWent:
+    """E-013 asked which rules the graph cannot reach. This asks what it
+    reaches instead, which is the number a repair has to beat."""
+
+    def test_the_keyword_templates_are_the_two_that_expand_a_keyword(self) -> None:
+        # Adding a third traversal to the graph without adding it here would
+        # silently shrink the share and read as a repair.
+        assert insp.KEYWORD_TEMPLATES == {"card_keyword_rules", "keyword_definition"}
+
+    def test_the_share_is_computed_over_tokens_not_items(self, capsys) -> None:
+        # One 900-token ruling and nine 20-token subrules are not "90% rules".
+        # The budget is spent in tokens and that is what a trim would free.
+        records = [
+            {
+                "question_id": "q",
+                "stratum": "s",
+                "evidence": [
+                    {
+                        "kind": "rule",
+                        "key": "702.9a",
+                        "text": "x" * 400,
+                        "template": "keyword_definition",
+                        "path": "(:Rule)",
+                        "distance": 1,
+                    },
+                    {
+                        "kind": "ruling",
+                        "key": "abc",
+                        "text": "y" * 400,
+                        "template": "card_rulings",
+                        "path": "(:Card)",
+                        "distance": 1,
+                    },
+                ],
+            }
+        ]
+        insp.context_share(records, {}, {})
+        out = capsys.readouterr().out
+        assert "EXPLORATORY" in out
+        assert "50%" in out
+
+    def test_a_question_with_no_gold_rules_shows_a_dash_not_a_zero(self, capsys) -> None:
+        # `0/0` would read as a reach failure on a stratum that has no target.
+        records = [
+            {
+                "question_id": "q",
+                "stratum": "legality_1hop",
+                "evidence": [
+                    {
+                        "kind": "card",
+                        "key": "X",
+                        "text": "t",
+                        "template": "card_core",
+                        "path": "(:Card)",
+                        "distance": 0,
+                    }
+                ],
+            }
+        ]
+        insp.context_share(records, {}, {})
+        assert "—" in capsys.readouterr().out
+
+
 class TestTheFilenameNamesTheConfiguration:
     """Arm discovery reads the slug, because a slug is the exact config."""
 

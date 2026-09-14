@@ -90,6 +90,50 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — A front I proposed is refuted by measurement, and half the budget turns out to go somewhere else
+
+After `rg-271` I proposed that wrong-sense linking was systemic and that
+Phase 9's first front should be routing rather than the bridge — reversing
+E-013's own decision on the strength of one vivid case. Measured before
+arguing, because E-013 is on the record for what happens otherwise.
+
+**Refuted.** The CR glossary has 739 entries, 28 with two or more numbered
+senses. Across the 57 evaluation questions, arm B links a polysemous keyword on
+**4**, and those keywords' rules are **3.5% of its context**. Three of the four
+are `Counter`, and on `hand-replacement-order-counters` the sense retrieved is
+the right one. `rg-271` is the only severe case. **The routing front does not
+open**, and I was wrong in the direction the project is most prone to: a case I
+had just read felt like a pattern.
+
+**The same pass found something larger.** Arm B's context, by traversal:
+`card_rulings` 40.1%, `card_keyword_rules` 28.0%, `keyword_definition` 22.1%,
+`card_core` 8.7%. **Half the graph arm's token budget expands keywords into
+chapter 700** — the only chapter E-013 found reachable from a card. That is
+E-013's result from the other side: not which rules cannot be reached, but what
+is reached instead.
+
+By stratum it decides the front. On `definition_1hop` the keyword expansion is
+**100%** of the budget, the gold rule arrives 11/11 and the arm answers 10 of
+11 — exactly the right thing, spent entirely on it. On `interaction_multihop`,
+22 questions and the stratum this project exists for, it is still **36%** of
+the budget and the governing rule arrives on **2 of 22**. The graph arm is a
+keyword-definition machine, and the hard stratum is not a keyword-definition
+problem.
+
+**So Front C is confirmed as the right front, by measurement rather than
+inheritance**, and the reversal I floated is withdrawn before it cost anything.
+
+**One thing the table says that nobody planned.** Rulings are 40.1% of the
+budget, and on `interaction_multihop` four of the six correct answers arrived
+with the gold rule **absent**. E-018 injected rules only and declared that as a
+limit on its scope. Nothing has yet tested injecting gold *rulings*, and on
+this evidence that is the cheaper question — and possibly the right one.
+
+It does **not** establish that reaching the rule would help: E-018's gate came
+back unresolved, and this measures where the budget goes, not what a different
+budget would buy. Reproducible as `e001_inspect.py --arm B --context`, so the
+same cut is available after any front lands.
+
 ## 2026-09-13 — The negative control passed, and it found that reordering the same evidence changes the answer
 
 The secondary subset ran: 17 questions where retrieval had already brought a
