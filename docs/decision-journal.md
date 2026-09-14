@@ -90,6 +90,67 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — E-018 ran, and reading the two cases that carried it halved the result
+
+The gate ran. **Branch 3 does not fire; Phase 9's objective is unresolved.**
+Nothing is cancelled and nothing is adopted. Treatment 8 of 20 against control
+6, discordant **2:0**, exact *p* = 0.500. Placebo 5 of 20 — slightly *below*
+control, which is the strongest form prediction 2 could have held in. Total
+spend, floor included, US$ 0.10.
+
+**Two discordant pairs, against a noise floor of one.** Two identical control
+runs disagreed on one question of twenty under the two-way collapse. The
+design needed 7:0 and got 2:0. The entry registered before the run that it was
+far better able to confirm the effect than to rule it out; it did neither, and
+that was foreseeable arithmetic rather than bad luck.
+
+**Then the case reading changed what the number means.** Standing rule 8 says
+no comparative figure is quoted before the cases are read with the prompt as
+sent. Both flips were rendered and both digests verified. `rg-6370` cited the
+injected `613.1f` and is attributable. **`rg-271` cited nothing that was
+injected**: its treatment answer reaches the right verdict and builds the whole
+argument on a Time Stop *ruling that was in the control context too*. Rule
+500.8 is in the prompt and nowhere in the answer. Under a prompt that demands a
+citation per claim, that flip is **not attributable to the treatment by this
+run's own instrument** — uncited use cannot be excluded, but the run gives no
+evidence for it.
+
+So the effect the design was built to detect is, after reading, **one case
+against a floor of one.** The aggregate said +0.100. Citation uptake is the
+only reason that sentence can be written, and it should be a default instrument
+on any injection experiment from here.
+
+**The residual is larger than the effect and it is the finding.** The ceiling
+read before the run said 17 of 20 are answerable with the injected rules;
+treatment reached 8. Nine questions where a reader judged the evidence
+sufficient, the model had it, and the answer was still wrong — and on **five of
+them the model cited the injected gold rule and was still scored incorrect**
+(`rg-102`, `rg-1591`, `rg-2249`, `rg-3155`, `rg-778`). That is prediction 4,
+registered before the run, confirmed. It is the Magic-side counterpart of what
+E-016 measured: the price of having the evidence and not using it.
+
+**It points away from Phase 9's premise and it is not allowed to.** If the
+generator fails on nine of seventeen answerable questions, perfect retrieval
+buys less than the phase assumes. But that rests on one reader's ceiling, n =
+20, and citation as a proxy for use. It is a lead that needs its own registered
+entry before any front spends on it — writing it up as a conclusion here would
+be the same move the project spent this month undoing.
+
+**One thing nobody had on a list.** `rg-271`'s control context is 2,373 tokens,
+most of them about *phasing*: the question asks about an additional combat
+phase, the linker resolved the keyword `Phase` — whose glossary entry covers
+both a subsection of a turn and permanents phasing in and out — and the
+traversal pulled all of `702.26` into a question about turn structure. The rule
+it needed is one sentence. That is a **linking defect, and Phase 9's three
+fronts are all aimed at reachability.** One case is not a survey; it is
+recorded because it was visible in the first case anyone opened.
+
+**And a design lesson for E-019, recorded now rather than after it bites
+again**: a bar placed on a multiple of 1/n is a bar that lands on itself. At
+n = 20 every difference is a multiple of 0.05, so the registered 0.15 construct
+bar could only be hit exactly or missed by 0.05 — and it was hit exactly, as
+was the 50% uptake floor. Bars belong between attainable values.
+
 ## 2026-09-13 — The ceiling is 17 of 20, and reading it found a key that does not answer its own question
 
 E-018's ceiling was read before any API call: with what retrieval already

@@ -6728,4 +6728,144 @@ mechanically, only read.
 
 ### Actual result
 
-_Not yet run._
+Run 2026-09-13. Noise floor first, then the three conditions, 20 primary
+questions, arm B, US$ 0.10 in total. **Branch 3 does not fire, and Phase 9's
+objective is UNRESOLVED: nothing is cancelled and nothing is adopted.**
+
+#### The contrasts
+
+| | control | placebo | treatment |
+|---|---:|---:|---:|
+| `correct` | 6/20 | 5/20 | **8/20** |
+| `partial` | 3 | 1 | 2 |
+| `incorrect` | 11 | 14 | 10 |
+
+- **treatment vs control** — discordant **2:0**, exact McNemar *p* = 0.500,
+  Holm-adjusted 1.000. Difference **+0.100** [+0.000, +0.250].
+- **placebo vs control** — discordant **0:1**, *p* = 1.000. Difference
+  **−0.050** [−0.150, +0.000].
+- **treatment − placebo** — **+0.150**, landing *exactly* on the registered
+  0.15 bar. Reported as landing on it, not as clearing it; the bar is moot
+  because branch 1 requires the Holm step first and the Holm step was not met.
+- **Noise floor, collapsed: 1 discordant pair of 20.** The floor run announced
+  2 over three labels; one of them (`rg-2711`, `partial` against `incorrect`)
+  does not survive the two-way collapse the contrasts use, and comparing a
+  two-label signal against a three-label floor would compare a number with
+  somebody else's noise.
+
+**The treatment contrast rests on two discordant pairs. Two identical control
+runs produced one.**
+
+#### Which branch, and why it is not branch 3
+
+Neither contrast clears its Holm step, so branch 3 is reached — and one of the
+two conditions registered in the 2026-09-13 amendment to stop it firing did
+fire. The three-label distribution shifted toward the key by **+3 net steps**
+(`rg-271` incorrect→correct, `rg-6370` partial→correct, `rg-650`
+incorrect→partial, against `rg-2711` partial→incorrect) while the collapse did
+not clear. That is the registered case for *"the rule improves the answer below
+the resolution of the registered outcome"*, and it means the entry may not
+report evidence of absence. Gold-rule citation uptake was **10 of 20, exactly
+50.0%** — the other registered blocker asks for *below* 50%, so it did not
+fire, and that is recorded as landing on the boundary.
+
+#### Reading the cases, which is what standing rule 8 is for — and it changes the result
+
+Two flips carry the whole contrast, so both were rendered with the prompt as
+sent and the digests verified.
+
+| question | control → treatment | injected | cited an injected rule? |
+|---|---|---:|---|
+| `rg-271` | incorrect → **correct** | 500.8 | **no** |
+| `rg-6370` | partial → **correct** | 15 rules under 613.1f/613.7 | **yes, 613.1f** |
+
+`rg-271`'s treatment answer reaches the right verdict — *"there is no
+additional combat phase"* — and builds the whole argument on a **Time Stop
+ruling that was in the control context too**. Rule 500.8 appears in the prompt
+and nowhere in the answer. Under a prompt that requires a citation on every
+claim, that flip is **not attributable to the injected rule by this run's own
+instrument**. Uncited use cannot be ruled out; what can be said is that the
+run provides no evidence for it.
+
+So of the two gains, **one is attributable to the treatment and one is not.**
+The effect this design was built to detect is, after reading, **one case**,
+against a noise floor of one.
+
+That reading was available only by rendering. The aggregate said +0.100.
+
+#### Predictions, scored
+
+1. **"Treatment lifts correctness on the rule-absent subset by 0.25 to 0.45."**
+   **Failed.** Observed +0.100, not significant, and after the case reading the
+   attributable part is one question.
+2. **"Placebo lifts by less than 0.10."** **Held**, in the strongest direction:
+   the placebo came in at **−0.050**, slightly below control. Adding
+   token-matched, level-matched, non-gold rules did not help and marginally
+   hurt. The 2026-09-13 Magic-side reading does not have to be retracted on
+   volume grounds.
+3. **"No lift on the already-present subset."** **Not tested.** The 17-question
+   present subset was not run; only the primary was. It remains available.
+4. **"Some treatment answers will be wrong *with* the gold rule in front of
+   them, and that residual is the interesting number."** **Confirmed, and it is
+   the largest thing in the run.** See below.
+
+#### The residual, which is bigger than the effect
+
+The ceiling read before the run said **17 of 20** questions are answerable from
+what retrieval brought plus the gold rules. Treatment reached **8**.
+
+**Residual: 9 questions where a reader judged the evidence sufficient, the
+model had it, and the answer was still not right.**
+
+And the citation record makes part of that concrete. **Five questions cite an
+injected gold rule and are still scored `incorrect`** — `rg-102` (510.4,
+702.19b), `rg-1591` (307.5), `rg-2249` (707.10), `rg-3155` (120.6), `rg-778`
+(103.6, 103.6a). The rule arrived, the model quoted it, and the answer did not
+follow. On another five the model cited nothing injected at all.
+
+This is the Magic-side counterpart of what E-016 measured on MetaQA: the price
+of having the evidence and not using it. It was registered as prediction 4 and
+it is the finding this run actually produced.
+
+#### What this does not license
+
+- **It does not cancel Phase 9's objective.** Branch 3 did not fire. The run
+  is underpowered by its own registered arithmetic — 2 discordant pairs where
+  7:0 was needed — and an underpowered null is not evidence of absence.
+- **It does not establish the generator as the bottleneck either.** The
+  residual is striking and it rests on one reader's ceiling judgement, on n =
+  20, and on citation as a proxy for use. It is a **lead that needs its own
+  registered entry**, not a conclusion, and it must not be quoted as one.
+- **No figure here is a system score.** Injecting the gold rule is an oracle
+  intervention. It measures the generator's use of evidence, never any
+  retriever's ability to find it.
+- **E-001's verdict is untouched.** This was a within-arm intervention on arm
+  B and the second declared reading of the evaluation split.
+
+#### What the run exposed that was not on anyone's list
+
+`rg-271`'s control context is **2,373 tokens, most of them about phasing**. The
+question asks about an additional combat *phase*; the linker resolved the
+keyword `Phase`, whose glossary entry covers both a subsection of a turn **and**
+permanents phasing in and out, and the traversal then pulled the whole of
+`702.26` — `702.26b`, `702.26d`, `702.26h`, `702.26m`, `702.26p` — into a
+question about turn structure. The gold rule it needed, `500.8`, is one
+sentence.
+
+That is a **linking defect, not a reachability defect**, and Phase 9's fronts
+are all aimed at reachability. It is recorded here because it was visible in
+the first case anyone opened, and one case is not a survey.
+
+#### Design lessons for E-019, recorded now
+
+- **A bar placed on a multiple of 1/n is a bar that lands on itself.** At
+  n = 20 every difference is a multiple of 0.05, so the 0.15 construct bar can
+  only be hit exactly or missed by 0.05, and uptake can only be 0.45, 0.50 or
+  0.55. Two of this entry's thresholds landed exactly on their boundary. Bars
+  belong *between* attainable values.
+- **Citation uptake is the instrument that made the case reading possible**,
+  and it should be recorded by default on any injection experiment. Without it
+  `rg-271` would have been counted as an effect.
+- **The noise floor earned its cost.** It is the only reason the sentence "two
+  discordant pairs against a floor of one" can be written at all, and at
+  US$ 0.04 it was the cheapest part of the entry.
