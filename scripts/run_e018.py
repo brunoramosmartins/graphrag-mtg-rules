@@ -75,7 +75,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_correctness import CACHE_DIR as E007_CACHE_DIR
 from audit_correctness import question_and_key
 from e001_inspect import artefacts, gold_rules, load_jsonl
-from e018_ceiling import ABSENT_IDS, ARM, SPLIT
+from e018_ceiling import ABSENT_IDS, ARM, PRESENT_IDS, SPLIT
 from run_e007 import MAX_ANSWER_TOKENS, rebuild
 from run_eval import CACHE_DIR, GOLDEN_DIR, NOTICE
 
@@ -86,6 +86,13 @@ THIN = "-" * 78
 
 FLOOR_PATH = Path("runs/e018_floor.jsonl")
 RUN_PATH = Path("runs/e018.jsonl")
+
+#: The primary fires the branches. The secondary is the registered negative
+#: control: on it the gold rule was already retrieved, so after de-duplication
+#: the treatment injects nothing on most questions and any movement it shows is
+#: resampling noise. A lift there is evidence the intervention does something
+#: other than what it claims — and it would invalidate the primary too.
+POPULATIONS = {"primary": ABSENT_IDS, "present": PRESENT_IDS}
 
 #: Raised for every condition alike so nothing is evicted and the comparison
 #: is not silently measuring `enforce_budget`. E-013 measured `dropped` empty
@@ -252,14 +259,30 @@ def conditions_for(
     shuffle itself is not a difference between conditions.
     """
     control = rebuild(record, question)
-    treatment_items = [item for number in wanted for item in subtree_evidence(number, cr)]
     by_number = cr.by_number  # type: ignore[attr-defined]
+    # De-duplicated against what retrieval already brought, per amendment
+    # 2026-09-13. Without it, a question whose gold rule was already retrieved
+    # receives that rule twice and the treatment becomes a repetition
+    # manipulation — which is a different experiment wearing this one's name.
+    # On the secondary subset this empties the injection on most questions,
+    # and that is the point: there the treatment is a no-op *by construction*,
+    # so any movement it shows is resampling noise and nothing else.
+    already = {item.key for item in control.evidence if item.kind == "rule"}
+    injectable = [number for number in wanted if number not in already]
+    treatment_items = [
+        item
+        for number in injectable
+        for item in subtree_evidence(number, cr)
+        if item.key not in already
+    ]
     # Excluded by subtree, not by the gold numbers alone: a placebo drawn as a
     # subrule of a gold rule would be gold text wearing a random label.
-    pools = rule_pools(cr, {item.key for item in treatment_items})
-    levels = [by_number[number].level for number in wanted]
-    placebo_items = draw_placebo(
-        rng, pools, cr, levels, tokens_of(treatment_items), len(treatment_items)
+    pools = rule_pools(cr, {item.key for item in treatment_items} | already)
+    levels = [by_number[number].level for number in injectable]
+    placebo_items = (
+        draw_placebo(rng, pools, cr, levels, tokens_of(treatment_items), len(treatment_items))
+        if treatment_items
+        else []
     )
 
     built = {}
@@ -344,14 +367,25 @@ def generators(args: argparse.Namespace) -> tuple[object, object, str]:
 
 
 def population(args: argparse.Namespace) -> list[str]:
-    """The frozen primary ids, in file order, honouring `--limit`."""
-    if not ABSENT_IDS.exists():
+    """The frozen ids for the requested subset, honouring `--limit`."""
+    path = POPULATIONS[args.population]
+    if not path.exists():
         raise SystemExit(
-            f"No frozen population at {ABSENT_IDS}.\n"
-            f"  python scripts/e018_ceiling.py freeze"
+            f"No frozen population at {path}.\n  python scripts/e018_ceiling.py freeze"
         )
-    ids = json.loads(ABSENT_IDS.read_text(encoding="utf-8"))["ids"]
+    ids = json.loads(path.read_text(encoding="utf-8"))["ids"]
     return ids[: args.limit] if args.limit else ids
+
+
+def outputs(name: str) -> tuple[Path, Path]:
+    """Where a population's floor and run are written. Never a shared path.
+
+    E-007 lost ten answers to a shared default path and E-011a points at a run
+    file with nineteen finished labels behind it. `runs/` is gitignored, so a
+    generated answers file is the only copy of the prose a label describes.
+    """
+    suffix = "" if name == "primary" else f"_{name}"
+    return Path(f"runs/e018{suffix}_floor.jsonl"), Path(f"runs/e018{suffix}.jsonl")
 
 
 def prepare(args: argparse.Namespace) -> tuple[list[dict], object]:
@@ -519,7 +553,7 @@ def floor(args: argparse.Namespace) -> int:
             scored["condition"] = replicate
             rows.append(scored)
             print(f"  {row['question_id']:<34} {replicate}: {scored['label']}")
-    write(FLOOR_PATH, rows)
+    write(outputs(args.population)[0], rows)
 
     by_qid: dict[str, dict[str, str]] = {}
     for scored in rows:
@@ -539,9 +573,13 @@ def floor(args: argparse.Namespace) -> int:
 
 def run(args: argparse.Namespace) -> int:
     """The three conditions, interleaved by question."""
-    if not FLOOR_PATH.exists() and not args.dry_run:
+    floor_path, run_path = outputs(args.population)
+    # Required only where branches fire. The secondary subset fires none, and
+    # on most of its questions the three conditions are the same prompt, so the
+    # run is its own floor — a separate one would double the cost for nothing.
+    if args.population == "primary" and not floor_path.exists() and not args.dry_run:
         raise SystemExit(
-            f"No noise floor at {FLOOR_PATH}. It runs first, and this refuses without it:\n"
+            f"No noise floor at {floor_path}. It runs first, and this refuses without it:\n"
             f"  python scripts/run_e018.py floor\n"
             f"A threshold of six or seven discordant pairs means nothing until the "
             f"number two identical runs produce on their own is known."
@@ -549,7 +587,22 @@ def run(args: argparse.Namespace) -> int:
     prepared, _ = prepare(args)
     print(f"E-018   arm {ARM}   split {SPLIT}   {len(prepared)} question(s), 3 conditions")
     print(f"budget {TOKEN_BUDGET:,}   seed {RANDOM_SEED}   prompt {PROMPT_VERSION}")
-    print(f"ceiling {CEILING} of {len(prepared)} — read before this ran; nothing may exceed it")
+    if args.population == "primary":
+        print(f"ceiling {CEILING} of {len(prepared)} — read before this ran; nothing may exceed it")
+    else:
+        # The ceiling was read over the 20 primary questions. Printing it here
+        # would carry a constant across populations, which is the error this
+        # project has a standing rule against.
+        print("no ceiling was read for this subset; it fires no branch and is a check")
+    inert = [row["question_id"] for row in prepared if not row["injected"]["treatment"]]
+    if inert:
+        print(
+            f"\n{len(inert)} of {len(prepared)} question(s) already carry every gold rule, "
+            "so after\nde-duplication the treatment injects NOTHING and all three "
+            "conditions are the\nsame prompt. On those the run measures resampling noise "
+            "across three samples,\nwhich is what makes this subset the registered "
+            "negative control."
+        )
     report_match(prepared)
     generate, judge, model = generators(args)
     estimate(prepared, CONDITIONS, model)
@@ -558,8 +611,8 @@ def run(args: argparse.Namespace) -> int:
         return 0
 
     control = {}
-    if FLOOR_PATH.exists():
-        for scored in load_jsonl(FLOOR_PATH, what="noise floor"):
+    if floor_path.exists():
+        for scored in load_jsonl(floor_path, what="noise floor"):
             if scored["condition"] == "control_a":
                 control[scored["question_id"]] = scored
 
@@ -576,7 +629,7 @@ def run(args: argparse.Namespace) -> int:
                 scored = generate_and_judge(row, name, generate, judge, model)
             rows.append(scored)
             print(f"  {row['question_id']:<34} {name:<10} {scored['label']}")
-    write(RUN_PATH, rows)
+    write(run_path, rows)
 
     uptake = [r for r in rows if r["condition"] == "treatment"]
     used = [r for r in uptake if r["cited_injected"]]
@@ -603,6 +656,12 @@ def main() -> int:
     common.add_argument("--model", default=None, help="defaults to LLM_MODEL in .env")
     common.add_argument("--limit", type=int, default=0, help="run at most N questions")
     common.add_argument("--dry-run", action="store_true", help="build and check, send nothing")
+    common.add_argument(
+        "--population",
+        choices=sorted(POPULATIONS),
+        default="primary",
+        help="primary fires the branches; present is the registered negative control",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("floor", parents=[common], help="control against control — runs first")
     sub.add_parser("run", parents=[common], help="the three conditions, paired within question")

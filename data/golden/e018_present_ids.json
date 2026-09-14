@@ -1,0 +1,25 @@
+{
+  "experiment": "E-018",
+  "arm": "B",
+  "split": "eval",
+  "what": "secondary: a gold rule was already retrieved",
+  "ids": [
+    "hand-deathtouch-trample",
+    "hand-def-first-strike",
+    "hand-def-flash",
+    "hand-def-flying",
+    "hand-def-haste",
+    "hand-def-lifelink",
+    "hand-def-menace",
+    "hand-def-mill",
+    "hand-def-reach",
+    "hand-def-regenerate",
+    "hand-def-scry",
+    "hand-def-vigilance",
+    "hand-first-strike-deathtouch",
+    "hand-lifelink-prevented-damage",
+    "hand-protection-from-red-debt",
+    "hand-regeneration-zero-toughness",
+    "rg-4640"
+  ]
+}

@@ -222,6 +222,84 @@ class TestTheManipulationMustHaveHappened:
             e018.check_injection("q", "treatment", prompt, items)
 
 
+class TestTheSecondarySubsetIsNotTheSameExperiment:
+    """De-duplication, and the paths that keep two runs from overwriting one."""
+
+    def test_each_population_writes_to_its_own_pair_of_files(self) -> None:
+        # E-007 lost ten answers to a shared default path. `runs/` is
+        # gitignored, so a generated answers file is the only copy of the
+        # prose a label describes.
+        primary_floor, primary_run = e018.outputs("primary")
+        present_floor, present_run = e018.outputs("present")
+        assert len({primary_floor, primary_run, present_floor, present_run}) == 4
+        assert primary_run.name == "e018.jsonl"
+        assert present_run.name == "e018_present.jsonl"
+
+    def test_both_registered_populations_are_addressable(self) -> None:
+        assert set(e018.POPULATIONS) == {"primary", "present"}
+
+    def test_a_rule_already_in_the_context_is_not_injected_again(self) -> None:
+        # Without this the treatment becomes a repetition manipulation on
+        # every question whose gold rule retrieval already found, which is a
+        # different experiment wearing this one's name.
+        cr = FakeCR(
+            [
+                FakeRule("613.7", 2, "Timestamps." * 4),
+                FakeRule("613.7a", 3, "An object receives one.", parent="613.7"),
+                FakeRule("702.1", 2, "unrelated" * 4),
+            ]
+        )
+        record = {
+            "question_id": "q",
+            "outcome": "resolved",
+            "evidence": [
+                {
+                    "kind": "rule",
+                    "key": "613.7",
+                    "text": "Timestamps.",
+                    "template": "rule_neighbourhood",
+                    "path": "(:Rule)",
+                    "distance": 1,
+                }
+            ],
+        }
+        built = e018.conditions_for("q", "why?", record, ["613.7"], cr, random.Random(3))
+        injected_keys = [
+            item.key
+            for item in built["treatment"].evidence
+            if item.template == e018.INJECTION_TEMPLATE
+        ]
+        assert "613.7" not in injected_keys
+
+    def test_a_question_carrying_every_gold_rule_receives_no_injection(self) -> None:
+        # The registered negative control depends on this being exact: if
+        # anything is injected, "treatment is a no-op" stops being true and a
+        # lift there no longer means what the entry says it means.
+        cr = FakeCR([FakeRule("704.5f", 3, "A creature with toughness 0 dies." * 2)])
+        record = {
+            "question_id": "q",
+            "outcome": "resolved",
+            "evidence": [
+                {
+                    "kind": "rule",
+                    "key": "704.5f",
+                    "text": "A creature with toughness 0 dies.",
+                    "template": "rule_neighbourhood",
+                    "path": "(:Rule)",
+                    "distance": 1,
+                }
+            ],
+        }
+        built = e018.conditions_for("q", "why?", record, ["704.5f"], cr, random.Random(3))
+        for name in e018.CONDITIONS:
+            injected_here = [
+                item
+                for item in built[name].evidence
+                if item.template == e018.INJECTION_TEMPLATE
+            ]
+            assert injected_here == []
+
+
 class TestTheConstantsTheEntryRegistered:
     """Kept where an edit trips a test rather than changing a published run."""
 

@@ -72,6 +72,11 @@ SPLIT = "eval"
 #: Ids only, so these are safe to version: no rule text, no key text.
 ABSENT_IDS = Path("data/golden/e018_absent_ids.json")
 NO_SEED_IDS = Path("data/golden/e018_no_seed_ids.json")
+#: The secondary subset, frozen the same way. The entry registered it as
+#: analysed separately and it fires no branch; freezing it late would let the
+#: population it names drift with the golden set between the primary run and
+#: this one, which is the only way a "negative control" can stop being one.
+PRESENT_IDS = Path("data/golden/e018_present_ids.json")
 
 #: Ids and booleans only — the author's judgement, versioned.
 VERDICTS = Path("data/golden/e018_ceiling.json")
@@ -166,6 +171,7 @@ def freeze(args: argparse.Namespace) -> int:
     print(f"  {len(absent)} are the primary population\n")
     freeze_file(ABSENT_IDS, absent, what="primary population: gold rule absent, model called")
     freeze_file(NO_SEED_IDS, no_seed, what="excluded from the primary: the model was never called")
+    freeze_file(PRESENT_IDS, present, what="secondary: a gold rule was already retrieved")
     return 0
 
 

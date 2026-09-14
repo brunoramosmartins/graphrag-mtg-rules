@@ -35,7 +35,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from graphrag_mtg.evaluation.metrics import mcnemar, wilson_interval
+from graphrag_mtg.evaluation.metrics import mcnemar
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from e001_analysis import ALPHA, holm, paired_difference
@@ -292,7 +292,7 @@ def verdict(
         return branch
 
     if branch == "3a":
-        print(f"\nBRANCH 3a — INCONCLUSIVE, and it is the default.")
+        print("\nBRANCH 3a — INCONCLUSIVE, and it is the default.")
         print(f"The treatment-control interval [{treatment['low']:+.3f}, "
               f"{treatment['high']:+.3f}] includes {ABSENCE_BOUND:+.3f}.")
         print("NOTHING IS CANCELLED. The observational cut stays unpublished and")

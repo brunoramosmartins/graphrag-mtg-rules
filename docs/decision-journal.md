@@ -90,6 +90,65 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — The negative control passed, and it found that reordering the same evidence changes the answer
+
+The secondary subset ran: 17 questions where retrieval had already brought a
+gold rule, US$ 0.05. After de-duplication, **13 of them already carry every
+gold rule, so the treatment injects nothing on those**.
+
+**The registered check passes.** On those 13, treatment produced **zero lift**
+(+0/−1) and placebo zero lift (+0/−4). The intervention does not manufacture
+correctness where it adds nothing, which is what prediction 3 asked and what
+the primary needed in order to stay interpretable.
+
+**On the four with a real injection, the falsifier earned its keep.** Both
+questions that moved were moved by the **placebo** as well, and on
+`hand-deathtouch-trample` the placebo — random rules, matched for size and
+depth — beat the treatment. On these four the gold rule is not distinguishable
+from a random one. Second independent reading pointing where `rg-271` pointed.
+
+**And then the run found a defect in my own design.** On the 13 no-op questions
+the three conditions carry identical *content*. They do not carry identical
+*prompts*: `conditions_for` shuffles the merged evidence once per condition, so
+each receives a different **ordering** of the same items. Verified on
+`hand-def-flying` — the same five handles, three different orders.
+
+Collapsed discordance across identical content: control vs placebo **4 of 13**,
+placebo vs treatment 3, control vs treatment 1. Mean pairwise **0.205**, against
+the 0.050 this entry published as its noise floor.
+
+**It is the generator, not the judge.** `hand-def-flying`'s control answer
+contains *"a creature with flying can block a creature with or without flying"*
+and scores `correct`; the placebo answer, same five items reordered, **omits
+that sentence** and scores `incorrect`. The judge was right both times.
+Reordering identical evidence made the model drop a clause the key requires.
+
+**So the floor measured the wrong quantity, and I said so in yesterday's
+words.** `floor` re-generated control twice from the *same* prompt object, so
+it measured decoding stochasticity and nothing else — while `run` hands the
+three conditions three different orderings. **"Two discordant pairs against a
+floor of one" is withdrawn**: it compared a contrast against a floor that
+excluded the contrast's dominant variance. A guard passing for a reason other
+than the one claimed is standing rule 9's own subject, and this one was written
+a day after adopting it, by the same hand that wrote the rule.
+
+The verdict is unchanged — more noise cannot turn a null into a rejection, and
+branch 3 was already blocked. What changes is that the primary's null is weaker
+evidence than it was written up as, and the `rg-271` case reading, which never
+depended on the floor, is now the load-bearing part of that result.
+
+Three fixes registered before running anything: the floor is re-run with the
+replicates at **different shuffles**; E-019 shuffles the control's evidence
+**once** and shares that ordering across conditions, inserting injected items
+at seeded positions, so order is held constant and only content varies; and
+**order sensitivity gets its own entry** — if it holds near this rate it is a
+larger effect than anything E-001 measured between arms, which would be a
+finding about the generator that the whole trilogy has walked past.
+
+Not claimed: the 0.205 is measured on definition questions that sit near the
+`correct`/`partial` boundary the judge is weakest at, and it does not transfer
+to the primary's population. What transfers is the structural point.
+
 ## 2026-09-13 — E-018 ran, and reading the two cases that carried it halved the result
 
 The gate ran. **Branch 3 does not fire; Phase 9's objective is unresolved.**

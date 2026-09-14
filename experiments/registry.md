@@ -6869,3 +6869,122 @@ the first case anyone opened, and one case is not a survey.
 - **The noise floor earned its cost.** It is the only reason the sentence "two
   discordant pairs against a floor of one" can be written at all, and at
   US$ 0.04 it was the cheapest part of the entry.
+
+### The secondary subset, run 2026-09-13 — the negative control passes, and it exposes a defect in this entry's own floor
+
+17 questions where retrieval had already brought a gold rule, three conditions,
+US$ 0.05. Registered as *"kept and analysed separately… treatment is a near
+no-op and should show no lift. A lift there is evidence the intervention is
+doing something other than what it claims."* It fires no branch.
+
+After de-duplication — required by the 2026-09-13 amendment and implemented
+here — **13 of the 17 already carry every gold rule, so the treatment injects
+nothing on them.** Four receive a genuine remainder.
+
+#### The registered check passes
+
+On the 13 where the treatment injects nothing:
+
+| contrast | gained | lost |
+|---|---:|---|
+| treatment vs control | **0** | 1 (`hand-def-mill`) |
+| placebo vs control | **0** | 4 |
+
+**No lift, in either condition.** The intervention does not manufacture
+correctness where it adds nothing, which is what prediction 3 asked and what
+the primary needed in order to remain interpretable. Prediction 3 **holds**.
+
+#### The four with a real injection, and the falsifier earning its place
+
+| question | control | placebo | treatment | treatment cited |
+|---|---|---|---|---|
+| `hand-regeneration-zero-toughness` | incorrect | **correct** | **correct** | 704.5f |
+| `hand-deathtouch-trample` | incorrect | **correct** | partial | none |
+| `hand-first-strike-deathtouch` | correct | correct | correct | 510.4 |
+| `hand-lifelink-prevented-damage` | correct | correct | correct | 615.1, 615.1a |
+
+Both questions that moved were moved **by the placebo as well** — and on
+`hand-deathtouch-trample` the placebo, which injects rules drawn at random,
+beat the treatment. On these four the gold rule is not distinguishable from a
+random rule of the same size and depth. That is the second independent reading
+pointing the same way as `rg-271` in the primary.
+
+`hand-regeneration-zero-toughness` is the question whose stale annotation was
+corrected earlier the same day; its missing rule was `704.5f`, the
+state-based-action rule that decides the answer. Treatment cited it and got
+the answer right. **So did the placebo, which never saw it.**
+
+#### The defect this run found, and it is in this entry's own design
+
+On the 13 no-op questions the three conditions carry **identical content**. They
+do not carry identical prompts: `conditions_for` shuffles the merged evidence
+once per condition from a single generator, so each condition receives a
+**different ordering of the same items**. Verified directly on
+`hand-def-flying` — same five handles, three different orders.
+
+The effect is not small:
+
+| same content, different order | collapsed discordance, 13 questions |
+|---|---:|
+| control vs placebo | **4** |
+| placebo vs treatment | 3 |
+| control vs treatment | 1 |
+
+**mean pairwise rate 0.205**, against the noise floor this entry published for
+the primary of **0.050**.
+
+And it is the generator, not the judge. On `hand-def-flying` the control answer
+contains *"a creature with flying can block a creature with or without flying
+[rule:702.9b]"* and is scored `correct`; the placebo answer, on the same five
+items in a different order, **omits that sentence** and is scored `incorrect`.
+The judge was right both times. Reordering identical evidence made the model
+drop a clause the key requires.
+
+#### What that does to the primary, stated plainly
+
+`floor` generated control **twice from the same prompt object**, so it measured
+decoding stochasticity at temperature 0 — and nothing else. But `run` gives
+control, placebo and treatment **three different orderings**, so the primary
+contrast carries a variance source the floor never sampled, and that source is
+demonstrably larger than the one it did sample.
+
+**The sentence "two discordant pairs against a floor of one" is withdrawn.** It
+compared a contrast against a floor that excluded the contrast's dominant
+variance. The floor passed for a reason other than the one claimed, which is
+the defect class standing rule 9 was adopted for, one day after adopting it,
+in a design written by the same hand.
+
+**The verdict does not change.** Branch 3 was blocked and Phase 9's objective
+was recorded as unresolved; more noise cannot turn a null into a rejection.
+What changes is that the primary's null is **weaker evidence than it was
+written up as**, and the case-level reading of `rg-271` — which never depended
+on the floor — is now the load-bearing part of that result.
+
+#### The fix, registered here before it is run
+
+1. **The floor is re-run with the two control replicates at different
+   shuffles**, which is the variance the design actually carries. 20 questions
+   × 2 generations, about US$ 0.04. Until it exists, no figure from the primary
+   is quoted against a floor.
+2. **E-019 does not shuffle per condition.** The shuffle was introduced in
+   amendment 2026-09-13 to keep injected items out of a recency slot, and it
+   succeeded at that while introducing a larger problem. The replacement:
+   shuffle the control's evidence **once**, share that ordering across every
+   condition, and insert injected items at positions drawn from one seed. Order
+   is then held constant and only content varies, which is what a controlled
+   comparison requires.
+3. **Order sensitivity gets its own entry.** *Does reordering identical
+   evidence change the answer, and how often?* It is measurable without any
+   injection, on any existing run, for the price of one extra generation per
+   question — and if it holds at the rate seen here it is a larger effect than
+   anything E-001 measured between arms, which would be a finding about the
+   generator that the whole trilogy has been walking past.
+
+#### What is not claimed
+
+The 13 questions are `hand-def-*` definition items, which E-001 scored 0.91 on
+and which sit near the `correct`/`partial` boundary E-011a measured the judge
+worst at. The 0.205 rate is **measured on those questions and does not transfer**
+to the primary's `interaction_multihop` population. What transfers is the
+structural point: the floor did not measure the variance the contrast carries.
+How large that variance is on the primary is unknown and is what fix 1 buys.
