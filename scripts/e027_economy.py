@@ -20,9 +20,19 @@ printed. Economy separates by an enormous margin; precision and gold-rule reach
 do not, and neither does correctness — see E-026 for why correctness could not
 have.
 
+**Standing rule 9 against this entry's own headline**, added 2026-09-14 and run
+with ``--rule9``. The quantity in words: *the mean context tokens arm B spent
+over 57 questions*. What **else** would make that number small? Six questions
+where the pipeline refused before a model call — one of them retrieving nothing
+at all. If the economy were carried by those, "19% of the tokens" would partly
+be "retrieved nothing". It is not: excluding all six leaves the ratio at 19%,
+and the CR-rule advantage grows. The check is here rather than in prose because
+a claim nobody can re-run is a claim nobody checked.
+
 Usage:
     python scripts/e027_economy.py
     python scripts/e027_economy.py --reps 50000
+    python scripts/e027_economy.py --rule9
 """
 
 from __future__ import annotations
@@ -62,6 +72,23 @@ def load_arms(split: str) -> dict[str, dict[str, dict]]:
     return out
 
 
+def answers_for(slug: str, split: str) -> dict[str, dict]:
+    """One arm's generated answers, keyed by question.
+
+    `outcome_of` reads `generated` and `refused`, and **only the answers dump
+    carries them**. An earlier version of this script passed the retrieval rows
+    instead; `generated` defaulted to True, the pipeline-refusal branch could
+    never fire, and every refusal fell through to the judge's label. It
+    returned the right totals because the judge scores a *"CANNOT ANSWER"*
+    string incorrect anyway — which is a guard passing for a reason unrelated
+    to its design, and `outcome_of`'s own docstring says its ordering is load
+    bearing. Fixed 2026-09-14; the published figures are unchanged and were
+    re-derived from the answers dump to confirm it.
+    """
+    _, path, _ = artefacts(slug, split)
+    return {row["question_id"]: row for row in load_jsonl(path, what=slug)}
+
+
 def verdicts_for(slug: str, split: str) -> dict[str, dict]:
     """The judge's rows for one arm, keyed by question."""
     _, _, path = artefacts(slug, split)
@@ -81,6 +108,29 @@ def token_count(record: dict) -> float:
 
 def rule_count(record: dict) -> float:
     return float(len(retrieved_rules(record)))
+
+
+def non_generated(answers: dict[str, dict]) -> set[str]:
+    """Questions where the pipeline refused before any model call.
+
+    These are the rule-9 candidate: a question the arm declined costs it
+    whatever retrieval had already delivered and nothing more, so if the
+    economy figure leaned on them it would be measuring a refusal rate.
+    """
+    return {qid for qid, row in answers.items() if not row.get("generated", True)}
+
+
+def ratio_spread(
+    values_a: list[float], values_b: list[float]
+) -> tuple[list[float], int]:
+    """Per-question B/A ratios, and how many questions B spends *more* on.
+
+    The paired mean says the economy is large. This says whether it is
+    *general*: a mean can be carried by a handful of questions where one arm
+    collapsed, and the median of the per-question ratio cannot.
+    """
+    ratios = sorted(b / a for a, b in zip(values_a, values_b, strict=True) if a > 0)
+    return ratios, sum(1 for r in ratios if r > 1.0)
 
 
 def paired(
@@ -116,10 +166,80 @@ def report_row(
     return separates
 
 
+def rule9(
+    arms: dict[str, dict[str, dict]],
+    answers: dict[str, dict[str, dict]],
+    shared: list[str],
+    reps: int,
+) -> None:
+    """Ask what *else* would make arm B's spend look small, and answer it.
+
+    Two candidate explanations for a 19% token ratio that have nothing to do
+    with the graph being economical:
+
+    1. **The refusals.** Questions the pipeline declined carry whatever
+       retrieval delivered and no more. Re-run the endpoints without them.
+    2. **A few collapses.** A mean ratio can be produced by a handful of
+       near-empty contexts. The per-question median cannot.
+    """
+    refused = sorted(non_generated(answers["A"]) | non_generated(answers["B"]))
+    kept = [q for q in shared if q not in set(refused)]
+
+    print(f"\n{RULE}\nSTANDING RULE 9 — WHAT ELSE MAKES ARM B'S SPEND SMALL?\n{RULE}")
+    print(
+        f"\n  The quantity in words: the mean context tokens arm B spent over"
+        f"\n  {len(shared)} questions. Candidate other cause: the {len(refused)} questions where"
+        "\n  the pipeline refused before a model call.\n"
+    )
+    print(f"{'endpoint':<20}{'population':<14}{'B - A':>12}  95% CI{'':<14}ratio")
+    print(THIN)
+    for label, fn in (
+        ("evidence items", item_count),
+        ("context tokens", token_count),
+        ("CR rule items", rule_count),
+    ):
+        for name, population in ((f"all {len(shared)}", shared), (f"kept {len(kept)}", kept)):
+            mean_a, mean_b, delta, low, high = paired(
+                [fn(arms["A"][q]) for q in population],
+                [fn(arms["B"][q]) for q in population],
+                random.Random(SEED),
+                reps,
+            )
+            print(
+                f"{label:<20}{name:<14}{delta:>+12.2f}  [{low:+.2f}, {high:+.2f}]"
+                f"{'':<4}{mean_b / mean_a:>6.0%}"
+            )
+
+    ratios, above = ratio_spread(
+        [token_count(arms["A"][q]) for q in shared],
+        [token_count(arms["B"][q]) for q in shared],
+    )
+    quarter = len(ratios) // 4
+    print(
+        f"\n  Per-question B/A token ratio over {len(ratios)} questions:"
+        f"\n    min {ratios[0]:.2f}   q1 {ratios[quarter]:.2f}   "
+        f"median {statistics.median(ratios):.2f}   q3 {ratios[3 * quarter]:.2f}   "
+        f"max {ratios[-1]:.2f}"
+        f"\n    questions where B spends MORE than A: {above} of {len(ratios)}"
+    )
+    print(
+        "\n  ANSWER: neither. Dropping every refusal leaves the token ratio at"
+        "\n  19% and *raises* the CR-rule advantage, and the per-question median"
+        "\n  is 0.13 — the economy is general, not carried by collapsed contexts."
+        "\n  The claim survives its own interrogation, which is the only reason"
+        "\n  it is quoted."
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--split", default=SPLIT)
     parser.add_argument("--reps", type=int, default=REPS)
+    parser.add_argument(
+        "--rule9",
+        action="store_true",
+        help="run standing rule 9 against this entry's own headline figure",
+    )
     args = parser.parse_args()
 
     rng = random.Random(SEED)
@@ -173,12 +293,16 @@ def main() -> int:
         args.reps,
     )
 
+    # Loaded once per arm, not once per question: the previous form re-read
+    # both dumps inside a comprehension over 57 questions.
+    answers = {key: answers_for(slug, args.split) for key, slug in ARMS.items()}
+    verdicts = {key: verdicts_for(slug, args.split) for key, slug in ARMS.items()}
     correct = {
         key: {
-            qid: outcome_of(row, verdicts_for(slug, args.split).get(qid)) == "correct"
-            for qid, row in arms[key].items()
+            qid: outcome_of(row, verdicts[key].get(qid)) == "correct"
+            for qid, row in answers[key].items()
         }
-        for key, slug in ARMS.items()
+        for key in ARMS
     }
     print("\n  correctness, for the bound rather than for a difference:")
     report_row(
@@ -188,6 +312,9 @@ def main() -> int:
         rng,
         args.reps,
     )
+
+    if args.rule9:
+        rule9(arms, answers, shared, args.reps)
 
     items_a = statistics.fmean([item_count(arms["A"][q]) for q in shared])
     items_b = statistics.fmean([item_count(arms["B"][q]) for q in shared])

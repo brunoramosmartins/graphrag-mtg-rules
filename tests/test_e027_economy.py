@@ -119,6 +119,72 @@ class TestTheEndpointExtractors:
         assert eco.rule_count(record) == 2.0
 
 
+class TestStandingRuleNineAgainstTheHeadline:
+    """The check that asks what *else* makes arm B's spend look small."""
+
+    def test_a_pipeline_refusal_is_found_by_the_field_that_records_it(self) -> None:
+        # `generated` is the field, and it lives on the answers dump. Reading
+        # `refused` instead would miss the five `no_seed` cases, which carry
+        # generated=False and are the whole point of the check.
+        answers = {
+            "q1": {"generated": True, "refused": False},
+            "q2": {"generated": False, "refused": True},
+            "q3": {"generated": True, "refused": True},
+        }
+        assert eco.non_generated(answers) == {"q2"}
+
+    def test_a_row_without_the_field_counts_as_generated(self) -> None:
+        # The default matters: a dump predating the field must not turn every
+        # question into a refusal and empty the kept population.
+        assert eco.non_generated({"q1": {}, "q2": {"generated": False}}) == {"q2"}
+
+    def test_the_ratio_spread_says_whether_the_mean_is_carried_by_a_few(self) -> None:
+        # Two arms where B is uniformly cheaper: the median ratio is the
+        # evidence that the economy is general rather than a few collapses.
+        a = [100.0, 200.0, 400.0, 800.0]
+        b = [10.0, 20.0, 40.0, 80.0]
+        ratios, above = eco.ratio_spread(a, b)
+        assert above == 0
+        assert statistics.median(ratios) == pytest.approx(0.1)
+
+    def test_a_mean_carried_by_one_collapse_is_visible_in_the_median(self) -> None:
+        # The mean ratio here is dragged down by q1 alone; the median reports
+        # that the other three questions are not economical at all. This is the
+        # failure mode the check exists to expose.
+        a = [1000.0, 100.0, 100.0, 100.0]
+        b = [0.0, 100.0, 100.0, 100.0]
+        ratios, above = eco.ratio_spread(a, b)
+        assert statistics.fmean(ratios) < 0.8
+        assert statistics.median(ratios) == pytest.approx(1.0)
+        assert above == 0
+
+    def test_questions_where_b_spends_more_are_counted_not_clipped(self) -> None:
+        ratios, above = eco.ratio_spread([10.0, 10.0, 10.0], [5.0, 12.0, 30.0])
+        assert above == 2
+        assert ratios[-1] == pytest.approx(3.0)
+
+    def test_a_zero_denominator_is_dropped_rather_than_dividing(self) -> None:
+        ratios, above = eco.ratio_spread([0.0, 10.0], [5.0, 5.0])
+        assert ratios == [pytest.approx(0.5)]
+        assert above == 0
+
+
+class TestTheOutcomeComesFromTheAnswersDump:
+    def test_answers_and_verdicts_read_different_artefacts(self) -> None:
+        # The bug this pins: `outcome_of` reads `generated` and `refused`, and
+        # only the answers dump carries them. Passing the retrieval rows made
+        # the pipeline-refusal branch unreachable and every refusal fell
+        # through to the judge's label.
+        from e001_inspect import artefacts
+
+        retrieval, answers, verdicts = artefacts("B", "eval")
+        assert eco.answers_for.__doc__ is not None
+        assert answers != retrieval
+        assert verdicts != answers
+        assert "answers" in answers.name
+        assert "verdicts" in verdicts.name
+
+
 class TestTheArmsAreTheTwoTheThesisContrasts:
     def test_only_the_vector_and_graph_arms_are_compared(self) -> None:
         # The hybrid is reported by E-001 and deliberately absent here; adding

@@ -70,13 +70,19 @@ Three measurements say why, and each is registered:
   output, against 24 wrong entities.** Fewer than one failure in three is a
   reasoning error.
 - **On the Magic side the graph arm's seven "refusals" are mostly not refusals
-  at all** *(corrected 2026-09-13, by reading all seven — an earlier version of
-  this bullet pooled them and inherited the wrong mechanism)*. **Six carry
-  `generated=False`: retrieval resolved no entity and the model was never
-  called** — five `no_seed`, one `no_match`. That is entity linking failing,
-  not a model declining. The seventh is a real refusal and a correct one: the
-  model walked the rules and said the context never gave it the creature's
-  toughness.
+  at all**, and this bullet has now named the wrong mechanism twice *(pooled
+  with model refusals until 2026-09-13; blamed on entity linking until
+  2026-09-14, when E-018's own amendment was finally read against the dumps)*.
+  **Six carry `generated=False` and the model was never called** — five
+  `no_seed`, one `no_match`. **`no_seed` is not linking failing.** The
+  retrieval enum defines it as *entities exist, none reaches the rule graph*;
+  the separate `no_entities` code — *linking resolved nothing at all* — fired
+  **zero** times; and the five reached the guard holding 1–6 cards and **4–22
+  rulings** each. What is absent is the **card→rule edge**, the bridge measured
+  and not shipped in the next section. The guard then discarded those rulings
+  and emitted *"retrieval returned no usable evidence"*, which is false on all
+  five. The seventh is a real refusal and a correct one: the model walked the
+  rules and said the context never gave it the creature's toughness.
 - **The retrieval comparison is budget-confounded**, by a 3× rule set before
   the split opened. At matched token budget the vector arm keeps a median of
   40.5 items against the graph's 12.0 — 3.38×. So the headline retrieval
@@ -140,6 +146,18 @@ that spends the entire budget on exactly the right thing, and the graph answers
 **10 of 11** against the baseline's 8. Where it is a multi-card interaction,
 **36%** of the budget still goes to keyword definitions, the governing rule
 arrives twice in twenty-two, and the graph answers **6 of 22** against 9.
+
+**Five of those 22 the graph never answered at all** *(recorded 2026-09-14)*.
+They cleared entity linking, retrieved 1–6 cards and 4–22 rulings, reached no
+CR rule, and the `no_seed` guard refused before a model call — scoring
+`incorrect` with the rulings still in hand. On the 17 it did attempt, the graph
+answers **6 against the baseline's 8**. **They are not five recoverable
+points:** the vector arm answered those same five from cards and rulings alone
+and scored **1 of 5**, which is the only evidence available for what lifting
+the guard would buy. The guard is still the wrong behaviour for a shipped
+system — discarding 22 rulings to report *no usable evidence* is not a
+refusal — and it is separated from the retrieval failure here because the two
+have different repairs and only one of them is cheap.
 
 **It is not the graph.** On the same 22 questions the vector arm reaches the
 gold rule **2 of 22 — the same two questions**, and both are ones where the

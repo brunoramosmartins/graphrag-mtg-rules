@@ -3027,7 +3027,7 @@ bound and does **not** state "no parametric leakage".
   of its own — one where the subgraph lacks the answer and the correct
   behaviour is refusal.
 
-### E-009 — does the model refuse when the evidence is absent? (registered 2026-08-15, not yet run)
+### E-009 — does the model refuse when the evidence is absent? (registered 2026-08-15, **run 2026-09-11**)
 
 - **Registered:** 2026-08-15, before any probe exists and before a line of
   harness is written. This is the experiment E-007 and E-008 both said was
@@ -3296,7 +3296,7 @@ with the evidence in hand that this project has measured, and it sits beside
 the Phase 8 error analysis where `generation` was 1 of 27 — a figure that now
 looks like an underestimate, since most of those 27 never had the rule to use.
 
-### E-010 — what else came with it: the precision side of retrieval (registered 2026-08-15, not yet run)
+### E-010 — what else came with it: the precision side of retrieval (registered 2026-08-15, **part (b) run 2026-09-11 and 2026-09-12, part (a) run 2026-09-12**)
 
 - **Registered:** 2026-08-15, forced by E-006's fourth run and registered
   before E-001 opens the evaluation split.
@@ -3525,7 +3525,7 @@ judgements on ≥ 10 questions) is **not run**. See amendment 2026-09-12.
 **Nothing is gated on any of this.** The entry registered a descriptive figure
 with no threshold and that part stands.
 
-### E-011 — the judge, and the ceiling it is read against (registered 2026-08-15, not yet run)
+### E-011 — the judge, and the ceiling it is read against (registered 2026-08-15, not yet run — **the labels that exist were taken under E-011a below**, and E-011a's 2026-09-14 amendment measures that this entry's gate cannot fire at any n)
 
 - **Registered:** 2026-08-15, before `judge.py` exists and before any judge
   output has been seen.
@@ -4981,7 +4981,7 @@ built on it is quoted anywhere.
 
 ---
 
-## E-013 — the rules the graph cannot reach, and whether an edge it already has gets to them (registered 2026-09-11, not yet run)
+## E-013 — the rules the graph cannot reach, and whether an edge it already has gets to them (registered 2026-09-11, **run 2026-09-11**)
 
 - **Registered:** 2026-09-11, after the Phase 8 error analysis and **before any
   change to the router or any re-run**. The ceiling below is arithmetic over
@@ -8786,6 +8786,13 @@ Fresh data removes the fitting. It does not remove the selection.
 - **`no_seed` is nowhere in the threats.** E-018 measured that retrieval
   resolving no entity concentrates on interaction questions and scores as
   `incorrect` without a model call. Part of δ̂ would have been a refusal rate.
+  *[Corrected 2026-09-14: "resolving no entity" is the wrong gloss and it was
+  wrong in this file too. `no_seed` is `entities exist, none reaches the rule
+  graph`; `no_entities` fired zero times; the five carried 1–6 cards and 4–22
+  rulings. E-018's own amendment above states this correctly — this bullet
+  quoted it from memory rather than from the amendment, which is how the same
+  error reached the README. The threat itself stands: part of δ̂ would have been
+  a refusal rate either way.]*
 - **The effect bar could never fire.** At n = 49 the permutation critical value
   is 0.222, so any result reaching branch 1 already clears 0.15 by 48%. The bar
   was placed off the 1/n grid, which is the right idea applied to a threshold
@@ -9065,9 +9072,54 @@ lower floor.
 - **The correctness figures inherit an unvalidated judge**, E-011's open audit,
   unchanged.
 
+### Standing rule 9, applied to this entry's own headline (added 2026-09-14)
+
+The entry above quoted *"19% of the context tokens"* without ever asking rule
+9's question of it. Asked and answered now, with the check in the instrument
+rather than in prose — `python scripts/e027_economy.py --rule9`.
+
+**The quantity in words:** *the mean context tokens arm B spent over the 57
+evaluation questions.* What **else** would make that number small?
+
+**Candidate 1 — the refusals.** Six questions never reached a model, one of them
+retrieving nothing at all. A question the pipeline declines carries whatever
+retrieval delivered and no more, so if the economy leaned on those, *"19% of the
+tokens"* would partly be *"retrieved nothing"*.
+
+| endpoint | all 57 | the 51 where both arms generated |
+|---|---|---|
+| evidence items | −26.40 [−29.46, −22.89] — **32%** | −26.35 [−29.80, −22.43] — **33%** |
+| context tokens | −3147.91 [−3429.23, −2844.11] — **19%** | −3112.82 [−3418.82, −2783.49] — **19%** |
+| CR rule items | +3.39 [+1.68, +5.37] — 262% | +4.04 [+2.24, +6.14] — **294%** |
+
+**Candidate 2 — a few collapsed contexts.** A mean ratio can be manufactured by
+a handful of near-empty retrievals; the per-question median cannot. Over the 57:
+min 0.00, q1 **0.07**, median **0.13**, q3 0.27, max 1.24. **Arm B spends more
+than arm A on 2 of 57.**
+
+**Neither.** The ratio is unmoved by dropping every refusal, the CR-rule
+advantage *grows*, and the median question costs the graph arm 13% of what it
+costs the baseline. The economy is general. This is recorded because the check
+could have gone the other way and the claim was published before anyone ran it.
+
+### A defect found by wiring the check in, and the figures it does not change
+
+`outcome_of` was being called with the **retrieval** rows. It reads `generated`
+and `refused`, and only the **answers** dump carries them: `generated` defaulted
+to `True`, so the pipeline-refusal branch — the first test in a function whose
+docstring says *"Order is load-bearing"* — could never fire, and all six
+refusals fell through to the judge's label.
+
+It returned the right totals anyway, because the judge scores a *"CANNOT
+ANSWER"* string `incorrect`. **That is rule 9's own failure mode: a guard
+passing for a reason unrelated to its design, invisible because nobody inspects
+a pass.** Fixed 2026-09-14 and re-derived from the answers dump: correctness is
+**0.596 / 0.614, +0.018 [−0.12, +0.16]** — unchanged to every published digit,
+which is why this is recorded as a defect rather than as a correction.
+
 ### Cost
 
-Zero. Arithmetic over E-001's retrieval and verdict dumps.
+Zero. Arithmetic over E-001's retrieval, answer and verdict dumps.
 Instrument: `scripts/e027_economy.py`.
 
 ### The confirmatory successor, named rather than implied
@@ -9186,3 +9238,123 @@ count nobody checked would have been quoted.
 
 Zero. Rendering over E-001's retrieval dumps.
 Instrument: `scripts/provenance_demo.py`.
+
+---
+
+## E-030 — does the `no_seed` guard protect the answer, or throw it away? (registered 2026-09-14, **not yet run**)
+
+- **Pre-registered before any generation.** No condition below has been run, no
+  answer has been produced, and the population is frozen from E-001's recorded
+  retrieval rather than recomputed at run time. Phase 11's opening entry.
+
+- **The decision this informs.** Whether `answerer.py` should keep refusing on
+  `outcome = no_seed` when the context is non-empty, in the shipped system.
+  This is a **product decision**, not a hypothesis test, and the entry is
+  written as one. E-026 measured this evaluation's floor at 0.20 on n = 57; a
+  contrast on five questions is four orders of nowhere near that, and anything
+  claiming otherwise here would be the error this project spent Phase 10
+  documenting.
+
+### What is already established, so the entry does not re-ask it
+
+`Outcome.NO_SEED` means *entities exist, none reaches the rule graph*. On the
+evaluation split it fires on **5 questions, all `interaction_multihop`**, and
+`Outcome.NO_ENTITIES` — *linking resolved nothing at all* — fires **zero**
+times. The five reached the guard carrying:
+
+| question | cards | rulings | CR rules |
+|---|---:|---:|---:|
+| `hand-clone-copies-printed-pt` | 1 | 8 | 0 |
+| `hand-humility-opalescence` | 3 | 9 | 0 |
+| `rg-1182` | 2 | 5 | 0 |
+| `rg-1469` | 6 | 22 | 0 |
+| `rg-3915` | 1 | 4 | 0 |
+
+`answerer.py` refuses on anything that is not `RESOLVED`, emits *"retrieval
+returned no usable evidence"* — **false on all five** — and the harness scores
+the result `incorrect`. The sixth non-generation, `scry-leg-…-vintage`, is
+`no_match` with an empty context and is **out of scope**: refusing on nothing is
+the correct behaviour and this entry does not touch it.
+
+### The prediction, written down so it cannot be revised afterwards
+
+**I predict 1 of 5 correct.** The basis is not optimism: the vector arm answered
+these same five questions from cards and rulings alone — the same material the
+graph arm would be answering from — and scored **1 of 5**. That is the closest
+available evidence and it says the guard is costing about **one** question, not
+five.
+
+**This prediction cannot be scored as a test and is not one.** At n = 5 every
+outcome from 0 to 5 is consistent with any rate worth naming. It is recorded so
+that a result of 3 or 4 cannot later be described as expected, and so that a
+result of 0 cannot be described as a surprise.
+
+### The decision rule, fixed before the first generation
+
+The question that decides is **not** correctness. It is whether the answers the
+guard was suppressing are **grounded** — because a guard that prevents
+hallucination is doing its job however the scores land.
+
+- **Ship the change** if **4 of 5** generated answers are fully grounded: every
+  claim traceable to an evidence item actually in that question's context, read
+  case by case with the final prompt as sent.
+- **Keep the guard** if 2 or more answers cite material not in the context, or
+  assert a rules outcome with no supporting item. The guard would then be
+  suppressing confabulation on exactly the questions where the graph is
+  thinnest, which is a reason to keep it that no score can overturn.
+- **3 of 5 is not a tie-break to be resolved later.** It ships the change
+  *behind the existing citation gate* and the shortfall is published.
+
+Grounding is judged by the author against the rendered prompt, not by the LLM
+judge: the judge's own audit cannot pass at any n (E-011a amendment), and
+routing this decision through it would inherit that.
+
+### Standing rule 8 has an object here, and this is it
+
+Five cases is at or below the rule's "read in full" threshold, so **all five**
+are read with the retrieved evidence and the final prompt as sent, and the
+reading is the deliverable — `docs/error-samples/e030.md`, versioned and
+countersigned the way E-018's was. Phase 10's rule-8 deliverable had no object
+and was recorded as having none; this one has one, and it is the instrument
+rather than a checkbox beside it.
+
+### What is deliberately not measured
+
+- **Not a correctness effect.** Not on the five, not on the stratum, not on the
+  split. Best case, `interaction_multihop` moves from 6/22 to 11/22 against the
+  baseline's 9/22 — +0.09 against a floor of **0.326** at n = 22. It would be
+  inconclusive by construction and registering it would be theatre.
+- **Not a re-opening of the evaluation split.** The 57 stay closed. This
+  generates on 5 questions whose ids were frozen from a run that already
+  happened, and publishes nothing as a new verdict on E-001.
+- **Not arm C.** The same guard exists there; whether it fires identically is
+  a separate question and is not bundled in to make this one look bigger.
+
+### Threats, recorded before the run
+
+- **The population is the outcome.** These five were selected by the very
+  failure being repaired, so any rate computed on them is conditioned on it.
+  The five are a **case series**, and the entry says so wherever they appear.
+- **The comparison arm's 1 of 5 is not a ceiling.** Arm A had 25–51 items on
+  those questions against the graph's 5–28; it is the nearest evidence, not a
+  matched control, and it could understate or overstate what the graph does.
+- **Grounding read by the author is unblinded**, and the author wrote the
+  change. Mitigation: the five prompts are rendered and read **before** the
+  decision rule is re-read, and the grounding verdict for each is written down
+  before the correctness label is looked at.
+- **A repair that helps here may hurt elsewhere.** The guard fires on 5 of 57
+  on this split and the change is verified to alter **exactly those five and
+  nothing else** — diffed against the recorded outcomes before any generation.
+- **`no_match` stays refused** and the entry does not test whether it should.
+
+### Cost, estimated before running
+
+5 questions × 1 arm × 1 generation, plus 5 judge calls if the split's harness is
+reused for bookkeeping. At E-001's observed rate that is **well under US$ 0.10**.
+`--limit` is honoured. If the estimate printed at run time exceeds **US$ 0.50**
+the run stops and the entry is amended rather than paid for.
+
+### Actual result
+
+_Not run. Registered 2026-09-14, before the guard was touched and before any
+answer existed._

@@ -90,6 +90,59 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — The refusal mechanism was corrected once into a second wrong answer, and the registry had the right one the whole time
+
+The 2026-09-13 entry *"An audit for the same defect elsewhere, and it found three
+more"* recorded, as finding 2, that the graph arm's six non-generations are
+**"retrieval resolved no entity (…) that is entity linking failing."** That
+entry stands as written, because entries are not rewritten. It is wrong, and
+this is the correction.
+
+`Outcome` in `retrieval/subgraph.py` defines two separate codes:
+
+```
+NO_ENTITIES = "no_entities"  # linking resolved nothing at all
+NO_SEED     = "no_seed"      # entities exist, none reaches the rule graph
+```
+
+**`no_entities` fired zero times on the evaluation split.** The five `no_seed`
+questions reached the guard carrying **1–6 cards and 4–22 rulings** each, from
+`card_core`, `card_keyword_rules` and `card_rulings`. Entity linking worked on
+all five. What is missing is the **card→rule edge** — the same absent bridge
+E-022 costed at 1 of 39 at one hop and did not ship.
+
+**The registry already said this**, in E-018's amendment written the same day
+as the wrong entry: *"`NO_SEED` means entities exist, none reaches the rule
+graph (…) the refusal text is false as written on all five."* The correction
+existed and never propagated. Both statements were in this repository at once
+for a day, and the wrong one was the one in the README, where a reader would
+act on it — by going to fix a linker that has nothing wrong with it.
+
+**What produced the error is worth more than the error.** The 09-13 entry was
+itself a correction: an earlier version pooled the six with model refusals, and
+reading all seven fixed the pooling. Having found one mechanism wrong, I
+supplied a second from the outcome *name* rather than from the enum's own
+comment two lines below it. **A correction is not self-verifying, and the pass
+that produces one is the pass least likely to check it** — the relief of having
+found the bug substitutes for reading the definition.
+
+**And the repair is smaller than it looks, which is the second half of this
+entry.** The guard scores five `interaction_multihop` questions `incorrect`
+while holding their rulings, so "the graph answers 6 of 22" is 6 of **17
+attempted** plus 5 never attempted. It is tempting to read five recoverable
+points there. Standing rule 9, against my own proposal: *what else would make
+those five look recoverable?* Nothing does — and the evidence against is direct.
+**The vector arm answered those same five from cards and rulings alone and
+scored 1 of 5.** The best available estimate of what lifting the guard buys is
+therefore about one question, not five.
+
+The guard is still wrong for a shipped system: discarding 22 retrieved rulings
+to report *"retrieval returned no usable evidence"* is a false sentence and a
+bad product behaviour, and that is the reason to change it. It is not a
+correctness repair, and E-026's floor of 0.20 at n = 57 would not see it if it
+were. Corrected in `README.md` today; the 09-13 entry and the CLAUDE.md rule-8
+rationale that inherited the same gloss are marked rather than rewritten.
+
 ## 2026-09-14 — Phase 10's manual sample has no object, and inventing one would be worse than skipping it
 
 Standing rule 8 requires a manual sample of every outcome category before any
@@ -1258,6 +1311,14 @@ the rules and said the context never supplied the creature's toughness. The
 `Answer` dataclass already separates `generated` from `refused` and documents
 why; the claim pooled them anyway. Seven instances is ten minutes of reading
 and nobody had read them.
+
+*[Corrected 2026-09-14, and left standing as written. "Retrieval resolved no
+entity" and "that is entity linking failing" are both false. `no_seed` means
+entities resolved and none reached the rule graph; the separate `no_entities`
+code fired zero times; all five carried 1–6 cards and 4–22 rulings. This
+paragraph fixed a pooling error and introduced a mechanism error in the same
+breath — see the 2026-09-14 entry at the top of this file, which is about
+exactly that.]*
 
 **3. The audit's own instrument had the defect.** A hand-written keyword map
 flagged *"what **kind** of movie is The King"* as inconsistent because its
