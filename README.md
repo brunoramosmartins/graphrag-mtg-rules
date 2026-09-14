@@ -500,12 +500,16 @@ Stated here because they bound every number above; the full list is in
   registered retrospectively and says so: the numbers were computed while
   deciding whether the entry was worth writing. No decision rule was fixed in
   advance, and the confirmatory successor is named but not run.
-- **The judge is not validated.** Agreement with a human is 0.727 [0.598,
-  0.827] against a 0.720 threshold, so it is published descriptively with its
-  ceiling beside it. It does read the supplied key rather than its own
-  knowledge — a key-fidelity control over deliberately wrong keys scored 30/30
-  — but `partial` and `incorrect` overlap textually and that is where both the
-  judge and the human annotator are unstable.
+- **The judge is not validated, and cannot be at this accuracy.** Agreement
+  with a human is 0.727 [0.598, 0.827] against a 0.720 threshold. The threshold
+  sits on the *lower bound* and the judge's point estimate on the decisive cell
+  is **0.722** — so no sample size up to 50,000 clears it, and buying more
+  labels only tightens the interval around a failure. The bar is not moved: it
+  is the lower bound of the human's own self-agreement, fixed before any judge
+  label existed. **What the audit does establish is directional: in 55 audited
+  answers the judge never once graded better than the human**, so every
+  correctness figure here is a **floor rather than an estimate**, and the
+  comparison between arms is unaffected by a bias both arms share.
 - **The retrieval comparison is budget-confounded** at 3.38× median item
   count, so token-normalised precision is the headline retrieval figure.
 - **Precision was judged by one annotator, unblinded.** The blinding claim was

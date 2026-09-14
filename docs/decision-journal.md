@@ -90,6 +90,59 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — The judge audit cannot pass at any n, and the 55 labels already answer a better question
+
+Phase 10 carried the judge audit as a blocking prerequisite and I was about to
+build the instrument for roughly 37 more human labels. **Asked first whether
+the gate can fire.** It cannot, and the answer was in labels frozen in
+September.
+
+E-011 gates per label, and the bar is **0.720 on a lower bound**. The judge's
+point estimate on the `correct` cell — the one every published figure depends
+on — is **0.722**, from 13 of 18. A lower bound reaches a bar its point
+estimate exceeds by 0.002 only by driving the interval to near-zero width: at
+n = 1,600 the lower bound is 0.700, at 6,400 it is 0.711, and **nothing up to
+50,000 clears it.** Thirty-seven more labels buy a tighter interval around a
+failure.
+
+**This is E-025's defect in a different entry** — an instrument registered
+against a bar its own measurement cannot reach — and it is the fourth time this
+week. The pattern is now unmistakable and worth naming as a habit rather than a
+series of incidents: **compute whether the gate can fire before buying the
+sample that would fire it.**
+
+**The bar does not move.** It is the lower bound of the human's own
+self-agreement, fixed before any judge label existed. Lowering it now, having
+seen 0.722, is precisely the post-hoc threshold that voided E-024 and
+contributed to withdrawing E-019. Refusing is the point; the alternative is an
+evaluation that can only report a pass.
+
+**A tempting rescue that does not work.** `run_eval.py report` publishes the
+two-way collapse, so the three-way audit measures a distinction no published
+number uses — which reads like an argument for auditing the collapse instead.
+Collapsed agreement is 50/55 = 0.909 [0.804, 0.961] and 0.804 clears the bar.
+**But E-011 gates per label, and the pooling is the trick**: it merges the cell
+the judge is weakest on, 13/18, with one it gets right 37 of 37 times. Per
+cell, `correct` is still 0.722 [0.491, 0.875]. This entry had already written
+that the collapse "is now robust for a measured reason instead of an argued
+one" — and nobody had computed the measure. That sentence was an argument
+wearing a measurement's clothes and I withdrew it.
+
+**What the 55 labels do support is worth more than the gate.** The confusion
+matrix is zero below its diagonal: **in 55 audited answers the judge never once
+graded better than the human.** The one-directionality was already noted in an
+amendment from 2026-09-10; what nobody had drawn from it is the consequence — a
+uniformly strict grader applied to every arm leaves the comparison intact and
+makes each arm's absolute figure **a floor rather than an estimate**. E-001's
+0.60 / 0.61 / 0.65 are lower bounds on correctness. That characterisation needs
+no gate and was available two months ago.
+
+The audit is removed from Phase 10's prerequisites — **measured as unreachable,
+not deferred** — and the legitimate path to a passing audit is E-011b's rubric
+revision: raise the judge's accuracy so the point estimate sits clear of the
+bar, then audit. Auditing an instrument whose accuracy matches its bar to three
+decimals was never going to conclude.
+
 ## 2026-09-14 — The precision gap was the clustering, and what survives is economy
 
 I proposed moving Phase 10 onto evidence precision, citing Phase 8's

@@ -4256,6 +4256,107 @@ that check is replaced before the run, not after.
   established here; diagnostics 2 and 3 of the E-011b amendment are what
   decide it.
 
+#### E-011a amendment 2026-09-14 — the audit cannot pass at any n, and the collapse does not rescue it
+
+Phase 10 carried "judge audit at n >= 30 per label" as a blocking prerequisite
+and was about to buy the labels. **Asked first whether the gate can fire.** It
+cannot, and the answer was in the 55 labels already frozen.
+
+Instrument: `scripts/judge_direction.py`, zero cost, and it **refuses to run
+unless it reproduces this entry's published 40/55** — a re-analysis that cannot
+reproduce the original figure is re-analysing a different population.
+
+##### The bar is on a lower bound, and the point estimate barely clears it
+
+E-011 gates **per label**. On the label that matters for every published
+figure:
+
+| | |
+|---|---:|
+| `correct`-cell agreement | **13/18 = 0.722** [0.491, 0.875] |
+| registered pass mark | **0.720** |
+
+The bar is the *lower bound* of a Wilson interval, and the *point estimate* is
+0.722. A lower bound reaches a bar the point estimate exceeds by 0.002 only by
+driving the interval to near-zero width:
+
+| n at the observed rate | lower bound |
+|---:|---:|
+| 30 | 0.556 |
+| 100 | 0.625 |
+| 400 | 0.677 |
+| 1,600 | 0.700 |
+| 6,400 | 0.711 |
+
+**No sample size up to 50,000 clears it.** The audit is registered against a bar
+its own measurement cannot reach — **E-025's defect in a different entry**: an
+instrument designed to return `fail` or `not measured` at every n available to
+it. The "roughly 90 audited answers" this entry recorded as the cost of
+reaching the floor is correct about the *count* and wrong about what the count
+buys. **Thirty-seven more labels buy a tighter interval around a failure.**
+
+##### And the two-way collapse does not rescue it, though it looks like it does
+
+`run_eval.py report` publishes `correct` against everything else, so the
+three-way gate audits a distinction no published number uses. That reads like
+an argument for auditing the collapse instead. Measured:
+
+| | agreement | interval |
+|---|---:|---|
+| pooled three-way | 40/55 = 0.727 | [0.598, 0.827] |
+| **pooled two-way** | **50/55 = 0.909** | **[0.804, 0.961]** |
+
+0.804 clears 0.720 and **it is not the gate.** E-011 gates per label, and
+pooling is exactly what makes the collapse look strong: it merges the cell the
+judge is weakest on with one it gets right **37 of 37** times.
+
+| cell, two-way | agreement | interval |
+|---|---:|---|
+| human `correct` | 13/18 = 0.722 | **[0.491, 0.875]** |
+| human not `correct` | 37/37 = 1.000 | [0.906, 1.000] |
+
+**The collapse changes the size of the gap, not its sign.** This entry already
+said the collapse "is now robust for a measured reason instead of an argued
+one" — and nobody had computed the measure. That sentence was an argument
+wearing a measurement's clothes, and it is withdrawn here.
+
+##### What the 55 labels do support, and it is worth more than the gate
+
+The confusion matrix, human rows against judge columns:
+
+| | correct | partial | incorrect |
+|---|---:|---:|---:|
+| **correct** | 13 | 4 | 1 |
+| **partial** | 0 | 4 | 10 |
+| **incorrect** | 0 | 0 | 23 |
+
+**Everything below the diagonal is zero.** In 55 audited answers the judge
+**never once graded better than the human**. The one-directionality was noted
+in amendment 2026-09-10c; what was not drawn from it is the consequence:
+
+> **A uniformly strict grader applied to every arm leaves the comparison intact
+> and makes each arm's absolute figure a floor rather than an estimate.**
+
+E-001's 0.60 / 0.61 / 0.65 are **lower bounds on correctness**, not noisy
+estimates of it. That is a usable characterisation of the instrument, it needs
+no gate, and it is available now.
+
+##### Consequence, and what is refused
+
+- **The judge audit is removed from Phase 10's prerequisites.** Not deferred —
+  **measured as unreachable at the registered bar.** E-027's equivalence bound
+  and every correctness figure in the project stay explicitly unvalidated.
+- **The bar is not moved.** 0.720 is the lower bound of the human's own
+  self-agreement and was fixed before any judge label existed. Lowering it now,
+  having seen 0.722, is the post-hoc threshold this project has voided two
+  entries for. The refusal is the point.
+- **The legitimate path to a passing audit is E-011b**, the rubric revision:
+  raise the judge's accuracy so the *point estimate* sits well clear of the
+  bar, then audit. An audit of an instrument whose accuracy matches its bar to
+  three decimals was never going to conclude.
+- **What is published instead** is the directional finding: correctness figures
+  are floors, by a grader that never scored up in 55 audited answers.
+
 ### E-011b — the rubric assumes one verdict; the questions have several (registered 2026-09-10, not yet run)
 
 - **Registered:** 2026-09-10, after reading the 15 disagreements and before

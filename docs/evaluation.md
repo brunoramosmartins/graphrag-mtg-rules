@@ -1927,6 +1927,63 @@ goes.
   less because its traversal returns less. Under a tighter budget the comparison
   would differ, and that is not predicted here.
 
+## 3. The judge grades down and never up, so every correctness figure is a floor
+
+Phase 10 carried "judge audit at n ≥ 30 per label" as a blocking prerequisite
+and was about to buy roughly 37 more human labels. **We asked first whether the
+gate can fire.** It cannot, and the answer was in the 55 labels frozen in
+September.
+
+E-011 gates per label. On the label every published figure depends on:
+
+| | |
+|---|---:|
+| `correct`-cell agreement | **13/18 = 0.722** [0.491, 0.875] |
+| registered pass mark | **0.720** |
+
+The bar sits on the **lower bound**; the **point estimate** is 0.722. A lower
+bound reaches a bar the point estimate exceeds by 0.002 only by driving the
+interval to near-zero width:
+
+| n at the observed rate | 30 | 100 | 400 | 1,600 | 6,400 |
+|---|---:|---:|---:|---:|---:|
+| lower bound | 0.556 | 0.625 | 0.677 | 0.700 | 0.711 |
+
+**No sample size up to 50,000 clears it.** Thirty-seven more labels buy a
+tighter interval around a failure. **The bar is not moved** — it is the lower
+bound of the human's own self-agreement, fixed before any judge label existed,
+and lowering it now having seen 0.722 is the post-hoc threshold this project
+has voided two entries for.
+
+**The two-way collapse does not rescue it, although pooling makes it look as
+though it does.** `run_eval.py report` publishes `correct` against everything
+else, so the three-way audit measures a distinction no published number uses.
+Collapsed: **50/55 = 0.909 [0.804, 0.961]**, and 0.804 clears 0.720 — but E-011
+gates per label, and the pooling merges the cell the judge is weakest on
+(13/18) with one it gets right **37 of 37** times. The collapse changes the size
+of the gap, not its sign.
+
+### What the 55 labels do support
+
+| human \ judge | correct | partial | incorrect |
+|---|---:|---:|---:|
+| **correct** | 13 | 4 | 1 |
+| **partial** | 0 | 4 | 10 |
+| **incorrect** | 0 | 0 | 23 |
+
+**Everything below the diagonal is zero. In 55 audited answers the judge never
+once graded better than the human.**
+
+> A uniformly strict grader applied to every arm leaves the comparison intact
+> and makes each arm's absolute figure **a floor rather than an estimate**.
+
+E-001's 0.60 / 0.61 / 0.65 are **lower bounds on correctness**. That
+characterisation needs no gate, it is available now, and it is what this
+document publishes in place of a validation it cannot obtain.
+
+Reproduce: `python scripts/judge_direction.py`, which refuses to run unless it
+first reproduces E-011a's published 40/55.
+
 ## Three proposals died on checking, and the pattern is the result
 
 Phase 10 proposed three claims in one day and measured each before publishing
