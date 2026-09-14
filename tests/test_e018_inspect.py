@@ -12,6 +12,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import e018_inspect as insp
@@ -59,3 +61,46 @@ class TestEveryCaseThatMovedIsSelected:
             )
         )
         assert selected == ["alpha", "zebra"]
+
+
+class TestTheCliSuppliesWhatPrepareReads:
+    """`prepare` reads four attributes off the namespace it is given.
+
+    The inspector built its own namespace and supplied three of them, so every
+    invocation raised `AttributeError: 'Namespace' object has no attribute
+    'population'` — after the imports, before any output. The tool was
+    unrunnable from the day it was written and nothing said so, because no test
+    reached the parser.
+    """
+
+    def test_every_attribute_prepare_reads_is_on_the_namespace(self) -> None:
+        args = insp.build_parser().parse_args(["--qid", "rg-51"])
+        for attribute in ("population", "limit", "golden", "caches"):
+            assert hasattr(args, attribute), attribute
+
+    def test_the_population_defaults_to_the_one_the_run_used(self) -> None:
+        args = insp.build_parser().parse_args(["--qid", "rg-51"])
+        assert args.population == "primary"
+
+    def test_the_population_is_restricted_to_the_frozen_ones(self) -> None:
+        with pytest.raises(SystemExit):
+            insp.build_parser().parse_args(["--qid", "rg-51", "--population", "invented"])
+
+
+class TestTheRunFileFollowsThePopulation:
+    """Reading one population's run against the other's rebuild is not a caveat.
+
+    The digest check would refuse it, which is correct but arrives as a wall of
+    hash mismatches. Deriving the path means the two cannot be crossed by
+    forgetting a flag.
+    """
+
+    def test_each_population_resolves_to_its_own_run_file(self) -> None:
+        primary = insp.outputs("primary")[1]
+        present = insp.outputs("present")[1]
+        assert primary != present
+
+    def test_an_explicit_run_path_still_wins(self) -> None:
+        args = insp.build_parser().parse_args(["--qid", "rg-51", "--run", "runs/other.jsonl"])
+        assert args.run is not None
+        assert args.run.name == "other.jsonl"

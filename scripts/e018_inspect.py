@@ -35,7 +35,7 @@ from graphrag_mtg.generation.answerer import SYSTEM, prompt_digest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from e001_inspect import load_jsonl
 from e018_analysis import by_condition
-from run_e018 import CONDITIONS, RUN_PATH, prepare
+from run_e018 import CONDITIONS, POPULATIONS, outputs, prepare
 from run_eval import CACHE_DIR, GOLDEN_DIR
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -109,11 +109,24 @@ def show(
     return unverified
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI, separated so the wiring to `prepare` can be tested.
+
+    `prepare` reads `population`, `limit`, `golden` and `caches` off the
+    namespace it is handed. This parser is the only thing that guarantees the
+    first of those exists; when it did not, every invocation died on an
+    `AttributeError` after the imports and before a single prompt was rendered.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--run", type=Path, default=RUN_PATH)
+    parser.add_argument("--run", type=Path, default=None)
     parser.add_argument("--golden", type=Path, default=GOLDEN_DIR)
     parser.add_argument("--caches", type=Path, nargs="+", default=None)
+    parser.add_argument(
+        "--population",
+        choices=sorted(POPULATIONS),
+        default="primary",
+        help="which frozen population to rebuild; must match the run being read",
+    )
     parser.add_argument("--qid", default=None)
     parser.add_argument(
         "--flips", action="store_true", help="every question where a condition moved"
@@ -122,13 +135,25 @@ def main() -> int:
     parser.add_argument(
         "--full", action="store_true", help="print the system prompt too, once per condition"
     )
-    parser.add_argument("--limit", type=int, default=0)
-    args = parser.parse_args()
+    parser.add_argument(
+        "--limit", type=int, default=0, help="show at most N of the selected questions"
+    )
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
 
     if args.caches is None:
         from audit_correctness import CACHE_DIR as E007_CACHE_DIR
 
         args.caches = [CACHE_DIR, E007_CACHE_DIR]
+
+    # The run file belongs to a population; reading one against the other's
+    # rebuild would fail the digest check, which is the right outcome but a
+    # confusing one. Derive it instead of defaulting to the primary path.
+    if args.run is None:
+        args.run = outputs(args.population)[1]
 
     rows = load_jsonl(args.run, what="E-018 run")
     labels = by_condition(rows)
@@ -147,7 +172,15 @@ def main() -> int:
     # drawn there, so rebuilding one question in isolation would draw from a
     # different point in the sequence and produce a prompt that was never sent
     # — which the hash check would catch, but only after printing nothing.
-    prepared, _ = prepare(args)
+    #
+    # `--limit` here means "show at most N", never "rebuild the first N": the
+    # run's `--limit` truncates the frozen population, and reusing it would
+    # silently drop the question being asked for out of the rebuild.
+    prepared, _ = prepare(
+        argparse.Namespace(
+            population=args.population, limit=0, golden=args.golden, caches=args.caches
+        )
+    )
     by_qid = {row["question_id"]: row for row in prepared}
     missing = [qid for qid in wanted if qid not in by_qid]
     if missing:
