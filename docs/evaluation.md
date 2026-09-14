@@ -1769,9 +1769,12 @@ where the annotation says `608.2n` — counts here as a miss.
   the claim, and E-001's refusal to publish comparisons at these sizes applies
   here unchanged.
 - **It does not clear the generator.** E-018's manual sample
-  ([error-samples/e018.md](error-samples/e018.md)) puts **provisionally four**
-  of 16 derivable questions in "reasoned wrong with the evidence in hand", and
-  that classification carries an open countersign.
+  ([error-samples/e018.md](error-samples/e018.md)) puts **four of 16** derivable
+  questions in "reasoned wrong with the evidence in hand". Read case by case
+  against the prompt as sent and countersigned by the author on 2026-09-14,
+  with zero departures from the proposed split. The denominator is a ceiling
+  computed with the gold rule injected — **oracle-conditioned, not a system
+  score** — and at that size the figure is a lead for E-023, not a rate.
 - **One retrieval defect remains open and is not part of the claim**: 7 card
   items over 6 questions reach the graph arm as a bare name, and power and
   toughness are never serialized for any card. Zero occurrences in the vector

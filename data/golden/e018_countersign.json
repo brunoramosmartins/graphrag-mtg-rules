@@ -1,0 +1,67 @@
+{
+  "experiment": "E-018",
+  "question": "Read against the treatment prompt as sent: why did this answer fail? If the injected rule were removed, would it change?",
+  "groups": {
+    "A": "the injected rule was cited and misapplied \u2014 the inference is wrong",
+    "B": "multi-step simulation; the CR rule is not the obstacle",
+    "C": "reached the key's verdict and was scored not `correct`",
+    "D": "reasoned from a different rule; the injected rule stayed inert"
+  },
+  "source": "docs/error-samples/e018.md",
+  "rows": [
+    {
+      "question_id": "rg-1591",
+      "proposed": "A",
+      "group": "A",
+      "note": ""
+    },
+    {
+      "question_id": "rg-198",
+      "proposed": "B",
+      "group": "B",
+      "note": ""
+    },
+    {
+      "question_id": "rg-2249",
+      "proposed": "A",
+      "group": "A",
+      "note": ""
+    },
+    {
+      "question_id": "rg-2711",
+      "proposed": "C",
+      "group": "C",
+      "note": ""
+    },
+    {
+      "question_id": "rg-3",
+      "proposed": "B",
+      "group": "B",
+      "note": ""
+    },
+    {
+      "question_id": "rg-396",
+      "proposed": "C",
+      "group": "C",
+      "note": ""
+    },
+    {
+      "question_id": "rg-51",
+      "proposed": "D",
+      "group": "D",
+      "note": ""
+    },
+    {
+      "question_id": "rg-650",
+      "proposed": "C",
+      "group": "C",
+      "note": ""
+    },
+    {
+      "question_id": "rg-778",
+      "proposed": "A",
+      "group": "A",
+      "note": ""
+    }
+  ]
+}

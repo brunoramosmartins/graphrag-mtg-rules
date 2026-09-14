@@ -90,6 +90,36 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — The A/B/C/D split is countersigned, and standing rule 8 is satisfied for the first time end to end
+
+The author read the nine renderings through `scripts/e018_inspect.py`, against
+the treatment prompt as sent, and marked each one. **Zero departures from the
+split Claude proposed.** *Provisionally four* becomes **four of 16**, and
+figures derived from it may leave `docs/error-samples/e018.md`.
+
+**What the countersign establishes:** that a person has read each case with the
+prompt in front of them and accepts the causal grouping. That is what standing
+rule 8 asks and it had not happened on any comparative evaluation in this
+project before today.
+
+**What it does not establish, recorded in the file rather than left to be
+found:** the marking tool printed the proposed letter beside each case, so the
+reading was not blind to the classification it was checking. Agreement on 9 of
+9 is weaker evidence than a reading that moved something. Hiding the prior was
+the alternative and it was rejected, because a disagreement that cannot be seen
+as a disagreement is worse than an anchored agreement — but the cost is real
+and belongs next to the number, not in a footnote.
+
+**A second reading came free.** `data/golden/e018_countersign.json` derives its
+population from the ceiling and the run rather than copying the nine ids out of
+the published file, and it reproduced exactly those nine. The published
+population and the derived one agree.
+
+**Still open and moving to Phase 10, not dropped:** the judge audit at n ≥ 30
+per label, with `rg-2711` queued as a case — a right verdict scored `incorrect`
+against a rubric whose tie-break 3 does not allow it. The countersign keeps it
+in group C on what it is rather than on why, and does not adjudicate it.
+
 ## 2026-09-14 — The rule-8 instrument had never run, and two numbers it produced were wrong
 
 Three corrections, all found while opening the countersign of
