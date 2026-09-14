@@ -90,6 +90,48 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — A field populated 100% of the time in all three arms, and only one arm's varies
+
+Phase 10 needed to say what the graph does that the vector baseline cannot,
+after correctness came back indistinguishable and gold-rule reach came back
+identical. The answer was in a field nobody had looked past the coverage of.
+
+Every evidence item in every arm carries a `path`, populated on **100% of items
+in all three arms**. Standing rule 9 asks what *else* would make a quantity
+return the value it just returned:
+
+| arm | items | with a path | distinct paths |
+|---|---:|---:|---:|
+| A — vector | 2,215 | 100% | **1** |
+| B — graph | 710 | 100% | **275** |
+
+**The vector arm writes one constant string on all 2,215 items.** Coverage of
+100% and a distinct-value count of 1 are the same field measured twice, and
+only the second says anything. A guard that passes for two different reasons is
+as broken as one that cannot fail — this is that, in a documentation field
+rather than a test.
+
+**Registered as E-029 and explicitly not as an experiment.** No hypothesis, no
+decision rule, no p-value. *"The answer cites the edge it walked"* is not a
+quantity with a sampling distribution, and manufacturing a statistic for
+something structural — after E-026 measured that this evaluation cannot see
+correctness differences below 0.20 — would be dressing a capability as a
+result. It has an instrument and a home in the registry, labelled for what it
+is.
+
+**A defect in my own instrument, found and kept.** The first version reduced a
+path to its shape by keeping `()[]-><*:` and reported **six** shapes. Card
+names contain hyphens — *Snow-Covered Forest* — so the hyphen leaked into the
+shape and split one shape in two. Stripping node contents first gives **four**.
+The wrong number was in one run's output; it is recorded in the entry rather
+than silently corrected, and the test that would have caught it now exists.
+
+**What is deliberately not claimed:** that provenance makes answers more
+correct (it does not), that a vector baseline cannot carry provenance (this one
+does not, because a nearest-neighbour lookup has no edge to record), or that
+more paths is better than fewer. What matters is that one arm's field varies
+with the item and the other's does not.
+
 ## 2026-09-14 — The judge audit cannot pass at any n, and the 55 labels already answer a better question
 
 Phase 10 carried the judge audit as a blocking prerequisite and I was about to

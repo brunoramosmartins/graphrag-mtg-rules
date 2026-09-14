@@ -9084,3 +9084,105 @@ run.** Confirming a ten-sigma effect is not where this project's remaining
 effort has the most value, and the alternative — publishing this as the
 exploratory measurement it is, with the bound attached — is recorded here as
 the honest option rather than the lesser one.
+
+---
+
+## E-029 — can you ask an arm *why* an item is in the context? (**capability demonstration, not a test** — 2026-09-14)
+
+- **Not registered as an experiment, and that is deliberate.** There is no
+  hypothesis, no decision rule and no p-value here, and adding one would be
+  dishonest: *"the answer cites the edge it walked"* is not a quantity with a
+  sampling distribution. E-026 measured that this evaluation cannot see
+  correctness differences below 0.20; the response is not to manufacture a
+  statistic for something structural. It is recorded in the registry so the
+  claim has a home and an instrument, and it is labelled for what it is.
+
+- **Where this comes from.** Phase 10 needed to say what the graph arm does
+  that the vector arm cannot, after correctness was measured indistinguishable
+  and gold-rule reach was measured identical.
+
+### The quantity that looked equal
+
+Every evidence item in every arm carries a `path` field, and it is populated on
+**100% of items in all three arms**.
+
+Standing rule 9, applied to that figure: *of the items that carry a path, how
+many? All of them.* **What else would make that come back 100%?**
+
+| arm | items | with a path | distinct paths | distinct shapes |
+|---|---:|---:|---:|---:|
+| A — vector | 2,215 | 100% | **1** | **1** |
+| B — graph | 710 | 100% | **275** | **4** |
+| C — hybrid | 892 | 100% | 276 | 5 |
+
+**The vector arm writes one constant string**, `"hybrid retrieval over the
+shared corpus"`, on all 2,215 items. It records that the index returned the
+item, which is true of every item an index returns and therefore says nothing
+about any particular one. A coverage figure of 100% and a distinct-value count
+of 1 are the same field measured twice, and only the second is informative.
+
+### What the graph arm records instead
+
+Traversal depth across the split: **125 at depth 0, 292 at 1, 155 at 2, 138 at
+3.** Four shapes:
+
+| count | example |
+|---:|---|
+| 111 | `(:Card {Humility})` |
+| 338 | `(:Card {Humility})-[:HAS_RULING]->(:Ruling)` |
+| 256 | `(:Rule {702.2})-[:HAS_SUBRULE*]->(:Rule)` |
+| 5 | `(:Card {Regeneration})-[:HAS_KEYWORD]->(:Keyword)<-[:HAS_KEYWORD]-(:Card {…})` |
+
+### One question, side by side
+
+`rg-1591`, the same question in both arms:
+
+```
+A vector — 46 item(s)
+  [card     ] ae7604bb-4818-45a3-960c-cf3d83f15964   d=1
+      via vector_search: hybrid retrieval over the shared corpus
+  [ruling   ] 88bd72fa07181805b1192b482d181a04       d=1
+      via vector_search: hybrid retrieval over the shared corpus
+  ... the same line, 46 times
+
+B graph — 14 item(s)
+  [card     ] Bring to Light                         d=0
+      via card_core: (:Card {Bring to Light})
+  [ruling   ] 54f6f0467e9409471a30874d6b8f9fac       d=1
+      via card_rulings: (:Card {Bring to Light})-[:HAS_RULING]->(:Ruling)
+```
+
+Two differences a reader auditing a rules answer actually uses: the graph arm's
+keys are **names** rather than opaque ids, and its `via` line is a **claim about
+this item** — *this ruling is attached to this card* — that can be checked
+against the corpus. The vector arm's is the same sentence forty-six times.
+
+### What is and is not claimed
+
+- **Claimed:** the graph arm records per-item provenance that can be verified
+  against the corpus; the vector arm records a constant. That is structural and
+  visible in the dumps.
+- **Not claimed:** that this makes answers more correct. Correctness is
+  indistinguishable and E-026 measured why. Provenance is a property of the
+  *evidence*, not of the answer.
+- **Not claimed:** that a vector baseline *cannot* carry provenance. This one
+  does not, because there is nothing in a nearest-neighbour lookup to record
+  beyond the lookup. A different baseline might log scores or sources; it still
+  would not log an edge, because it did not walk one.
+- **Not a measurement of quality.** More distinct paths is not better than
+  fewer. What matters is that one arm's field varies with the item and the
+  other's does not.
+
+### A defect this found in its own instrument
+
+The first version reduced a path to its shape by keeping `()[]-><*:`, and
+reported **six** shapes. Card names contain hyphens — *Snow-Covered Forest* —
+so the hyphen leaked into the shape and split one shape into two. Node contents
+are now stripped before the reduction and the count is **four**. Recorded
+because the wrong number was in the output for one run, and because a shape
+count nobody checked would have been quoted.
+
+### Cost
+
+Zero. Rendering over E-001's retrieval dumps.
+Instrument: `scripts/provenance_demo.py`.

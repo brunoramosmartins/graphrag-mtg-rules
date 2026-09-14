@@ -221,6 +221,28 @@ three-point win, and it is the more transferable of the two. Full working in
 [`scripts/e027_economy.py`](scripts/e027_economy.py), both zero-cost arithmetic
 over runs that already exist.
 
+### And the thing no correctness figure captures
+
+Every evidence item in every arm carries a provenance field, populated **100%
+of the time in all three arms**. That number is not the measurement:
+
+| arm | items | with a path | **distinct paths** |
+|---|---:|---:|---:|
+| A — vector | 2,215 | 100% | **1** |
+| B — graph | 710 | 100% | **275** |
+
+The vector arm writes one constant string on every item — *"hybrid retrieval
+over the shared corpus"* — which is true of everything an index returns. The
+graph arm writes `(:Card {Bring to Light})-[:HAS_RULING]->(:Ruling)`: a claim
+about *this* item that a reader can check against the corpus.
+
+```
+python scripts/provenance_demo.py --qid rg-1591
+```
+
+This is a capability, not a result: it makes no answer more correct, and it is
+what a person auditing a rules answer actually uses.
+
 ### Three claims, proposed and killed in one day
 
 | proposal | killed by |

@@ -1984,6 +1984,52 @@ document publishes in place of a validation it cannot obtain.
 Reproduce: `python scripts/judge_direction.py`, which refuses to run unless it
 first reproduces E-011a's published 40/55.
 
+## 4. What the graph arm does that no correctness figure captures
+
+Correctness is indistinguishable and gold-rule reach is identical. What remains
+is **whether you can ask an arm why an item is in the context.**
+
+Every evidence item in every arm carries a `path` field, populated on **100% of
+items in all three arms**. Of the items that carry a path, how many? All of
+them. What *else* would make that come back 100%?
+
+| arm | items | with a path | **distinct paths** | **distinct shapes** |
+|---|---:|---:|---:|---:|
+| A — vector | 2,215 | 100% | **1** | **1** |
+| B — graph | 710 | 100% | **275** | **4** |
+| C — hybrid | 892 | 100% | 276 | 5 |
+
+**The vector arm writes one constant string on all 2,215 items** — `"hybrid
+retrieval over the shared corpus"` — which is true of everything an index
+returns and says nothing about any particular item. A coverage of 100% and a
+distinct-value count of 1 are the same field measured twice, and only the
+second is informative.
+
+The graph arm records depth (125 at 0, 292 at 1, 155 at 2, 138 at 3) and four
+traversal shapes. The same question in both arms:
+
+```
+A vector - 46 item(s)
+  [card   ] ae7604bb-4818-45a3-960c-cf3d83f15964   d=1
+      via vector_search: hybrid retrieval over the shared corpus
+  ... the same line, 46 times
+
+B graph - 14 item(s)
+  [card   ] Bring to Light                         d=0
+      via card_core: (:Card {Bring to Light})
+  [ruling ] 54f6f0467e9409471a30874d6b8f9fac       d=1
+      via card_rulings: (:Card {Bring to Light})-[:HAS_RULING]->(:Ruling)
+```
+
+**Not claimed:** that this makes answers more correct — it does not, and E-026
+measured why that cannot be shown here. **Not claimed:** that a vector baseline
+cannot carry provenance; this one does not, because a nearest-neighbour lookup
+has no edge to record. **Not a quality metric:** more paths is not better than
+fewer. What matters is that one arm's field varies with the item and the
+other's does not.
+
+Reproduce: `python scripts/provenance_demo.py --qid rg-1591`.
+
 ## Three proposals died on checking, and the pattern is the result
 
 Phase 10 proposed three claims in one day and measured each before publishing
