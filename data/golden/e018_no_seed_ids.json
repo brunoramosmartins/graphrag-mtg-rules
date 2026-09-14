@@ -1,0 +1,13 @@
+{
+  "experiment": "E-018",
+  "arm": "B",
+  "split": "eval",
+  "what": "excluded from the primary: the model was never called",
+  "ids": [
+    "hand-clone-copies-printed-pt",
+    "hand-humility-opalescence",
+    "rg-1182",
+    "rg-1469",
+    "rg-3915"
+  ]
+}

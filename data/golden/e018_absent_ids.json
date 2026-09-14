@@ -1,0 +1,28 @@
+{
+  "experiment": "E-018",
+  "arm": "B",
+  "split": "eval",
+  "what": "primary population: gold rule absent, model called",
+  "ids": [
+    "hand-blood-moon-nonbasic",
+    "hand-replacement-order-counters",
+    "rg-102",
+    "rg-1029",
+    "rg-1591",
+    "rg-198",
+    "rg-20",
+    "rg-2249",
+    "rg-271",
+    "rg-2711",
+    "rg-3",
+    "rg-3155",
+    "rg-3228",
+    "rg-396",
+    "rg-4853",
+    "rg-51",
+    "rg-615",
+    "rg-6370",
+    "rg-650",
+    "rg-778"
+  ]
+}

@@ -1636,3 +1636,167 @@ figures carry no annotator-reliability bound.
   A sweep on **answer correctness** would be the informative one and costs
   15 generations plus 15 judge calls per cell, against a judge not yet
   audited above its floor. Named as future work with its cost.
+
+
+---
+
+# Results — Phase 9: where this GraphRAG works, and where nothing here does (2026-09-13 → 14)
+
+Phase 9 opened to repair retrieval so the governing CR rule would reach the
+context. **It closed without shipping a repair, because the repair was measured
+to be unavailable before any was built.** What it produced instead is the
+statement below: a bounded description of the stratum this graph serves and the
+stratum it cannot, with the ceiling of each alternative on the table.
+
+This section changes **no figure in E-001**. Its verdict stands with the date it
+has, over the system that produced it.
+
+## The claim
+
+**This GraphRAG outperforms the vector baseline exactly where its topology
+reaches, and is outperformed outside it.** The reach is not a tuning parameter;
+it is a property of the edges the corpus supports.
+
+## What retrieval delivers, decomposed
+
+Arm B, evaluation split, `interaction_multihop` — the stratum this project was
+built for, 22 questions:
+
+| what retrieval has to find | delivered |
+|---|---:|
+| the cards the question names | **39 / 40** |
+| the rulings of those cards | **182 / 191** |
+| **the governing CR rule** | **2 / 22** |
+
+Everything reachable from a card arrives at 95% or better. The rule the answer
+key says governs arrives on **9%**.
+
+And the budget goes where the edges go. Half of arm B's 42,417 evaluation
+context tokens — **50.1%** — expand keywords into chapter 700, the only chapter
+E-013 measured as reachable from a card:
+
+| traversal | items | tokens | share |
+|---|---:|---:|---:|
+| `card_rulings` | 230 | 17,007 | 40.1% |
+| `card_keyword_rules` | 205 | 11,894 | 28.0% |
+| `keyword_definition` | 172 | 9,353 | 22.1% |
+| `card_core` | 84 | 3,696 | 8.7% |
+| `card_legality` | 14 | 332 | 0.8% |
+| `card_interaction` | 5 | 135 | 0.3% |
+
+Reproduce with `python scripts/e001_inspect.py --arm B --context`.
+
+## Where that lands, per stratum
+
+| stratum | n | keyword share of budget | gold rule reached | correct, arm B | correct, arm A |
+|---|---:|---:|---:|---:|---:|
+| `definition_1hop` | 11 | **100%** | 11/11 | **10/11** | 8/11 |
+| `keyword_rule_2hop` | 2 | 98% | 2/2 | 1/2 | 2/2 |
+| `negative_temporal` | 7 | 57% | 2/7 | **4/7** | 3/7 |
+| `legality_1hop` | 15 | 46% | — | 14/15 | 14/15 |
+| `interaction_multihop` | 22 | 36% | **2/22** | **6/22** | **9/22** |
+
+Where the question *is* a keyword definition, the graph spends its whole budget
+on exactly the right thing and answers 10 of 11 — ahead of the vector arm.
+Where the question is a multi-card interaction, it spends over a third of the
+budget on keyword definitions, reaches the governing rule twice in twenty-two,
+and is **behind** the arm with no graph at all.
+
+**These per-stratum numbers are descriptive and are not a verdict.** E-001
+declined to publish per-stratum comparisons on strata this small and this
+section inherits that refusal: `keyword_rule_2hop` holds two questions and runs
+*against* the claim. The pattern is what a Phase 10 hypothesis should be sized
+to test, not something these 57 questions establish.
+
+## Four repairs, each measured and each unavailable
+
+Phase 9 did not choose the bridge by elimination-by-argument. Every alternative
+was measured, and three of the four closed before any code was written.
+
+| candidate repair | measured | outcome |
+|---|---|---|
+| **the bridge out of chapter 700** (E-022) | of 39 missing gold rules, expanding `REFERENCES` **and** parent/child in both directions from the rules retrieval already delivers | **1 reachable at one hop (3%)**, 2 at two hops (5%), and the two-hop closure adds a median of **138 rules per question**. The edges do not exist. |
+| **gold ruling coverage** (E-021) | rulings Scryfall holds for the resolved cards, against what arrived | **182 of 191.** Nothing to inject on 21 of 22 questions. Withdrawn before its annotation was written. |
+| **wrong-sense entity linking** | glossary entries with two or more numbered senses, and how often they are linked | **4 questions of 57, 3.5% of context**, one of them severe. Not systemic. |
+| **budget policy** (E-013, E-007) | `dropped` and `capped` | empty on every question measured. The budget never fires on this corpus. |
+
+And the intervention that would have justified the whole programme returned
+nothing: **E-018 injected the governing rule directly and came back
+`unresolved`** — 2 discordant pairs where 7:0 was needed, and one of the two
+gains cited nothing that was injected.
+
+## Is it the graph, or is the rule just hard to find?
+
+It is not the graph. On the same 22 questions the **vector** arm reaches the
+gold rule **2 of 22** and the hybrid **3 of 22**. The governing rule for a
+multi-card interaction is not recoverable from the question's surface text or
+from the card's neighbourhood **by any method built here**.
+
+That is the load-bearing sentence of this section, and it is what makes the
+finding a property of the problem rather than of one implementation.
+
+**And the vector arm's two are the graph arm's two.** Not two of the same
+count — the same two questions, `hand-deathtouch-trample` and
+`hand-first-strike-deathtouch`. Split by where the target annotation came from,
+of the 22: 6 are `hand-*` where the author wrote key and annotation, **13 are
+transcribed from RulesGuru's curated `citedRules`**, and 3 are RulesGuru
+questions whose `citedRules` was empty and which the author filled in. On the
+13 curated:
+
+| arm | gold rule reached, curated subset |
+|---|---:|
+| A — vector | **0 / 13** |
+| B — graph | **0 / 13** |
+| C — hybrid | 1 / 13 (`rg-1469`) |
+
+Both of the questions the vector and graph arms reach are `hand-*`. **Where the
+target was cited by a judge rather than by this project's author, neither
+single-strategy arm reaches it at all.**
+
+Reproduce with `retrieved_rules` over `e001_*_retrieval_eval.jsonl`. One
+measurement caveat, stated because it is not ruled out: `retrieved_rules`
+requires an **exact** key match, so a rule reached through its parent — `608.2`
+where the annotation says `608.2n` — counts here as a miss.
+
+## What this does not say
+
+- **It does not say GraphRAG loses.** It says *this* graph, over *this* corpus,
+  reaches keyword-defined rules and not structural ones, and that its
+  correctness tracks that reach.
+- **It does not revise E-001.** The head-to-head verdict is `inconclusive` and
+  stays so, with its date and its system.
+- **It is not a per-stratum verdict.** The strata are small, one runs against
+  the claim, and E-001's refusal to publish comparisons at these sizes applies
+  here unchanged.
+- **It does not clear the generator.** E-018's manual sample
+  ([error-samples/e018.md](error-samples/e018.md)) puts **four of 16** derivable
+  questions in "reasoned wrong with the evidence in hand". Read case by case
+  against the prompt as sent and countersigned by the author on 2026-09-14,
+  with zero departures from the proposed split. The denominator is a ceiling
+  computed with the gold rule injected — **oracle-conditioned, not a system
+  score** — and at that size the figure is a lead for E-023, not a rate.
+- **One retrieval defect remains open and is not part of the claim**: 7 card
+  items over 6 questions reach the graph arm as a bare name, and power and
+  toughness are never serialized for any card. Zero occurrences in the vector
+  arm. Small, specific, cheap to close, and it does not move the 2/22.
+- **The target these figures are scored against has external provenance, and
+  nine questions are the exception.** `gold_cr_rules` reproduces RulesGuru's
+  judge-curated `citedRules` on **24 of 24** golden-set questions carrying one
+  at chapter level and **23 of 24** exactly, which is what the project's
+  curate-don't-author decision was for. The exceptions are the six `hand-*`
+  questions, where the author wrote key and annotation, and three RulesGuru
+  questions whose `citedRules` was empty. **None of those nine has been read by
+  a second annotator**, and nine is too few to measure determinacy on — see
+  E-025, withdrawn 2026-09-14 before its first reading.
+
+## Why the phase is reported this way
+
+A phase that ends without a repair, having measured that the repair was not
+available, is a cheaper outcome than the same phase ending after the repair was
+attempted. Every closure above cost counting; the only API spend in Phase 9 was
+**US$ 0.19** across E-018 and E-020.
+
+The mechanism that produced that is worth naming, because it is the transferable
+part: **ceilings computed from the run's own inputs before code, and a gate
+experiment that had to return positive before the engineering opened.** The
+ceilings closed three fronts; the gate declined to open the fourth.
