@@ -7313,7 +7313,7 @@ reader does not cite E-020 as having justified it.
 
 ---
 
-## E-021 — do gold *rulings* do what gold rules did not? (registered 2026-09-13, not yet run)
+## E-021 — do gold *rulings* do what gold rules did not? (registered 2026-09-13, **withdrawn 2026-09-13 before stage 1**)
 
 - **Registered:** 2026-09-13. **Blocked on an annotation that does not exist**,
   and that is the honest headline of this entry rather than a footnote.
@@ -7419,6 +7419,85 @@ measures the annotator.
 Stage 1: curation, no API spend. Stage 2: roughly 66 generations and 66 judge
 calls, under **US$ 0.10**, plus the ceiling reading.
 
-### Actual result
+### Withdrawn 2026-09-13, before stage 1 — the ceiling says there is nothing to inject
 
-_Not yet run. Stage 1 not started._
+Computed from the run's own inputs before any curation and before any code,
+which is the order E-013 paid to learn. **The entry's premise is false and it
+does not run.**
+
+#### Rulings are already complete
+
+For the 22 `interaction_multihop` questions, counting every ruling Scryfall
+holds for the cards retrieval resolved:
+
+| | |
+|---|---:|
+| rulings available for those cards | **191** |
+| rulings retrieval delivered | **182** |
+| missing | **9** |
+
+The nine are all on one question, `rg-2711`, which hit the per-kind cap of 25.
+**On 21 of 22 questions retrieval brought every ruling of every card it
+resolved.** A treatment that injects gold rulings would inject nothing on 21 of
+22 — E-018's no-op subset, extended to almost the whole population.
+
+#### And the cards are resolved too
+
+Of the card names appearing verbatim in those 22 questions, **39 of 40 were
+resolved**; the one miss is `Death's Shadow` in `rg-102`, which is already on
+the record as that question's ceiling failure — *"the context holds Temur Battle
+Rage and not Death's Shadow, whose power and toughness are the crux."*
+
+So where a ruling is absent, it is absent because the **card** is absent, and
+that happened once.
+
+#### What this eliminates, and what is left
+
+On the stratum this project exists for, retrieval's performance decomposes:
+
+| what it has to find | delivered |
+|---|---|
+| the cards the question names | **39 / 40** |
+| the rulings of those cards | **182 / 191** |
+| wrong-sense keyword expansion | 1 question of 57 (3.5% of context) |
+| **the governing CR rule** | **2 / 22** |
+
+Everything reachable from a card arrives, at 95% and above. The governing rule
+arrives on **9%**. Three candidate explanations for the hard stratum's 6/22
+correctness have now been measured and eliminated — ruling coverage, entity
+linking, wrong-sense linking — and **the bridge out of chapter 700 is the only
+one left standing.** E-013 named it, abandoned the routing fix in favour of it,
+and is now the only front with evidence behind it.
+
+#### The observation that motivated this entry survives, and means the opposite
+
+Rulings are 40.1% of arm B's context and four of the six correct
+`interaction_multihop` answers arrived with the gold rule absent. That is still
+true. What changes is the reading: **ruling coverage is at its ceiling and
+correctness is still 6 of 22.** There is no headroom there to buy. The
+observation names where the existing correctness comes from, not where more of
+it would.
+
+#### Limits of this ceiling, stated rather than implied
+
+- **"Rulings available" is counted from the resolved cards' oracle ids.** A
+  question needing a ruling printed on a card it never names is invisible to
+  this count, and nothing here rules that out.
+- **The name check is verbatim and restricted to multiword names of twelve
+  characters or more**, so short and single-word card names — `Humility`,
+  `Opalescence` — were not tested by it. Those questions did resolve their
+  cards, so the direction holds, but 39/40 is over a filtered set.
+- **22 questions.** The decomposition is a description of this stratum on this
+  split, not an estimate of a rate.
+
+#### What happens to the entry
+
+**Stage 1 is not started and stage 2 is cancelled.** No `gold_rulings`
+annotation is written: an annotation whose injection would be a no-op on 21 of
+22 questions is curation spent to measure nothing. The entry stays in the
+registry, withdrawn with its reason, because a reader who has the 40.1%
+observation needs to find this beside it rather than re-derive it.
+
+**Cost of finding out: zero API spend and one afternoon of counting.** The
+entry was opened ahead of Front C precisely because it was cheap enough to
+close itself, and it did.

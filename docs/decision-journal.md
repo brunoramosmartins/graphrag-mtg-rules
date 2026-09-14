@@ -90,6 +90,53 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — E-021 closes itself before stage 1, and three explanations for the hard stratum are now eliminated
+
+I opened E-021 ahead of Front C because it was cheap and could redirect what
+Front C aims at. It was cheap enough to close itself, for zero API spend.
+
+**Its premise is false.** For the 22 `interaction_multihop` questions, Scryfall
+holds **191 rulings** for the cards retrieval resolved and retrieval delivered
+**182**. The nine missing are all on `rg-2711`, which hit the per-kind cap of
+25. On **21 of 22 questions retrieval already brings every ruling of every card
+it resolved** — a gold-ruling injection would inject nothing, which is E-018's
+no-op subset extended to almost the whole population.
+
+**And the cards are resolved too.** Of the card names appearing verbatim in
+those questions, **39 of 40** were resolved; the one miss is `Death's Shadow`
+in `rg-102`, already on the record as that question's ceiling failure. Where a
+ruling is absent it is absent because the *card* is absent, and that happened
+once.
+
+**So the decomposition of the hard stratum is now complete enough to act on:**
+
+| what retrieval has to find | delivered |
+|---|---|
+| the cards the question names | 39 / 40 |
+| the rulings of those cards | 182 / 191 |
+| wrong-sense keyword expansion | 1 question of 57 |
+| **the governing CR rule** | **2 / 22** |
+
+Everything reachable from a card arrives at 95% or better. The governing rule
+arrives on 9%. **Three candidate explanations for 6/22 correctness have been
+measured and eliminated in two days — ruling coverage, entity linking,
+wrong-sense linking — and the bridge out of chapter 700 is the only one left
+standing.** E-013 named it, abandoned the routing fix in its favour, and is now
+the only front with evidence behind it.
+
+**The observation that motivated the entry survives and means the opposite of
+what I read into it.** Rulings are 40.1% of the budget and four of the six
+correct answers arrived without the gold rule — still true. But ruling coverage
+is at its ceiling and correctness is still 6 of 22. There is no headroom there.
+The observation names where the existing correctness comes from, not where more
+of it would come from, and I had read it as the second.
+
+Limits recorded in the entry: rulings are counted from the resolved cards'
+oracle ids, so a ruling printed on a card the question never names is invisible
+here; the name check is verbatim and restricted to multiword names of twelve
+characters or more; and 22 questions is a description of this stratum on this
+split, not a rate.
+
 ## 2026-09-13 — The order alarm I raised did not survive the entry written to test it
 
 Two days ago — same day — I read E-018's secondary subset, found **4 of 13**
