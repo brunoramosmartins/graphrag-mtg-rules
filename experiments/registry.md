@@ -7501,3 +7501,108 @@ observation needs to find this beside it rather than re-derive it.
 **Cost of finding out: zero API spend and one afternoon of counting.** The
 entry was opened ahead of Front C precisely because it was cheap enough to
 close itself, and it did.
+
+---
+
+## E-022 — the bridge out of chapter 700 (registered 2026-09-13, **abandoned at its ceiling the same day, unrun**)
+
+- **Registered:** 2026-09-13, as Phase 9's main front and the successor to
+  E-013, which named this problem and parked it.
+- **Abandoned:** 2026-09-13, before any code, by the ceiling below. E-013's
+  lesson was that *a ceiling is a claim about the experiment and must be
+  computed over the experiment's own inputs*. This is the third entry this week
+  to be decided by one, and the first to be decided **against**.
+
+- **The question.** Retrieval resolves the cards a question names and brings
+  their rulings, and it does both at 95% or better (E-021's withdrawal). What
+  it does not bring is the CR rule the answer key says governs: on
+  `interaction_multihop` it arrives on **2 of 22**. E-013 measured why —
+  `Keyword-[:DEFINED_BY]->Rule` reaches only chapter 700, `HAS_SUBRULE` to
+  depth two still reaches only 700, and the first edge that leaves the chapter
+  is `REFERENCES`. The front was to walk that edge.
+
+### The ceiling, computed from the graph the run would traverse
+
+Seeded on **the rules retrieval already delivers** for each of the 22
+`interaction_multihop` questions, expanding over `REFERENCES` **and**
+parent/child in both directions — a strictly more generous traversal than any
+template would run:
+
+| | missing gold rules reached | context the closure adds, per question |
+|---|---:|---|
+| 39 missing gold rules in total | | |
+| 1 hop | **1 of 39 — 3%** | median **2** rules, max 18 |
+| 2 hops | **2 of 39 — 5%** | median **138** rules, max 349 |
+
+**The edges are not there.** At one hop the bridge reaches one rule of
+thirty-nine; at two it reaches two, and pays a median of 138 extra rules per
+question to do it — against a shipped budget of 6,000 tokens and a context that
+is already 24,711 tokens on this stratum.
+
+The roadmap's own risk register wrote the consequence before the measurement
+existed: *"A ponte vira projeto de extração próprio — se o alcance possível com
+arestas existentes for baixo, a frente é abandonada como o E-013 foi, com o
+número na mesa."* The number is 3%. **The front is abandoned.**
+
+Building the bridge would mean **creating edges that do not exist**, which is
+an extraction programme with its own annotation, its own gate and its own
+evaluation — a phase, not a front.
+
+### Three checks that were run before abandoning, because a ceiling can be wrong about the wrong thing
+
+1. **Is it a graph limitation, or is the rule simply hard to find?** The vector
+   arm reaches the gold rule on **2 of 22** of the same questions and the
+   hybrid on **3 of 22**. Text retrieval does not find it either. The governing
+   rule for a multi-hop interaction question is not recoverable from the
+   question's surface text or from the card's neighbourhood **by any method
+   this project has built**, graph or vector.
+
+2. **Does reaching the rule track correctness on this stratum?** It does not.
+   Arm A reaches 2 of 22 and answers **9 of 22**; arm B reaches 2 of 22 and
+   answers **6 of 22**. Identical reach, different correctness — and the arm
+   with no graph at all is ahead. (E-001 declined to publish per-stratum
+   comparisons on strata this small and this entry does not either; the point
+   is that reach and correctness are not moving together, which is what a
+   retrieval front would need.)
+
+3. **Did the gate say the rule causes the answer?** No. E-018 returned
+   **unresolved** — branch 3 blocked, nothing adopted. The front was always
+   conditional on that and the condition never arrived.
+
+### What this closes, and it is the phase and not the front
+
+Phase 9's objective is *"retrieval that reaches the governing rule"*. All three
+of its registered fronts are now closed by measurement rather than by
+engineering:
+
+| front | status | why |
+|---|---|---|
+| **C — the bridge** | abandoned | this entry: 3% at one hop, 5% at two |
+| **B — budget policy** | closed | `dropped` empty on all 26 E-013 questions and all E-007 questions; the budget never fires on this corpus |
+| **A — typed expansion** | not a correctness front | E-017 measured context *size*, and E-012 measured the size null up to 256 items; nothing connects it to this stratum's 6/22 |
+
+**Phase 9 has no front left, and its objective is not achievable with the
+material this project has.** That is recorded here as a result, not as a
+setback: the phase cost one afternoon of counting and no API spend beyond
+E-018's US$ 0.12, and it eliminated its own premise before building anything.
+
+### Where the evidence points instead, recorded but not adopted here
+
+Four measurements from 2026-09-13, none of which was looking for this:
+
+- E-018's residual: on **9 of 17** questions a reader judged answerable from
+  the injected rules, the model had them and the answer was still not right.
+- On **five** of those the model **cited** the injected gold rule and was still
+  scored `incorrect`.
+- On `interaction_multihop`, retrieval delivers cards at 39/40 and rulings at
+  182/191, and correctness is 6/22.
+- The arm with no graph answers that stratum better than the arm with one.
+
+The binding constraint on the hard stratum looks like **generation, not
+retrieval**. That is a Phase 9 objective revision and it belongs in the
+roadmap and the journal, decided by the author, **not asserted in an
+experiment entry that measured something else.** No front opens on it here.
+
+### Actual result
+
+_Not run. Abandoned at the ceiling, 2026-09-13._

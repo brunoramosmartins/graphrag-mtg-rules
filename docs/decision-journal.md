@@ -90,6 +90,54 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-13 — Phase 9's last front is abandoned at its ceiling, and the phase has no front left
+
+E-022 was registered as Front C, the bridge out of chapter 700, and abandoned
+the same day before any code. The ceiling, computed over the graph the run
+would have traversed and seeded on the rules retrieval already delivers:
+
+Of **39 missing gold rules** across the 22 `interaction_multihop` questions,
+expanding over `REFERENCES` **and** parent/child in both directions — more
+generous than any template would run — reaches **1 at one hop (3%)** and **2 at
+two hops (5%)**, and the two-hop closure adds a median of **138 rules per
+question**. The edges are not there. Building the bridge means creating edges
+that do not exist, which is an extraction programme with its own annotation and
+its own gate: a phase, not a front.
+
+The roadmap wrote this consequence before the measurement existed — *"se o
+alcance possível com arestas existentes for baixo, a frente é abandonada como o
+E-013 foi, com o número na mesa."* The number is 3%.
+
+**Three checks first, because a ceiling can be right about the wrong thing.**
+The vector arm reaches the gold rule on **2 of 22** of the same questions and
+the hybrid on 3 — so it is not a graph limitation, it is that the governing rule
+for a multi-hop interaction question is not recoverable by any method this
+project has built. Reach does not track correctness: arm A reaches 2/22 and
+answers **9/22**, arm B reaches 2/22 and answers **6/22**. And the gate never
+came: E-018 returned unresolved.
+
+**So all three of Phase 9's fronts are closed by measurement rather than by
+engineering.** C abandoned at 3%. B closed because `dropped` is empty on every
+question measured. A was never a correctness front — E-017 measured context
+size and E-012 measured the size null up to 256 items.
+
+**Phase 9's objective is not achievable with the material this project has.**
+That is a result. The phase cost one afternoon of counting and no API spend
+beyond E-018's US$ 0.12, and it eliminated its own premise before building
+anything — which is what the gate and the ceilings were put there to do. A
+phase that ends without shipping a repair, having proven the repair was not
+available, is a cheaper outcome than the same phase ending after the repair was
+attempted.
+
+**Where the evidence points, and I am not adopting it here.** E-018's residual:
+on 9 of 17 questions a reader judged answerable with the injected rules, the
+model had them and was still wrong — and on five it **cited** the gold rule and
+was still wrong. Retrieval delivers cards 39/40 and rulings 182/191 on this
+stratum. The arm with no graph answers it better than the arm with one. The
+binding constraint looks like **generation, not retrieval**. That is a Phase 9
+objective revision, it belongs to the author, and it is not asserted inside an
+entry that measured something else.
+
 ## 2026-09-13 — E-021 closes itself before stage 1, and three explanations for the hard stratum are now eliminated
 
 I opened E-021 ahead of Front C because it was cheap and could redirect what
