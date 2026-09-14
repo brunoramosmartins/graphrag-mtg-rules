@@ -236,7 +236,7 @@ class TestWhereTheBudgetActuallyWent:
     def test_the_keyword_templates_are_the_two_that_expand_a_keyword(self) -> None:
         # Adding a third traversal to the graph without adding it here would
         # silently shrink the share and read as a repair.
-        assert insp.KEYWORD_TEMPLATES == {"card_keyword_rules", "keyword_definition"}
+        assert {"card_keyword_rules", "keyword_definition"} == insp.KEYWORD_TEMPLATES
 
     def test_the_share_is_computed_over_tokens_not_items(self, capsys) -> None:
         # One 900-token ruling and nine 20-token subrules are not "90% rules".

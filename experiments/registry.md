@@ -6068,7 +6068,7 @@ not been measured.
 
 ---
 
-## E-018 — does the governing rule *cause* the answer, or do easy questions get it? (registered 2026-09-13, not yet run)
+## E-018 — does the governing rule *cause* the answer, or do easy questions get it? (registered 2026-09-13, run 2026-09-13, **unresolved**)
 
 - **Registered:** 2026-09-13, after the Magic-side audit and **before any
   injected context is built**.
@@ -7078,3 +7078,252 @@ worst at. The 0.205 rate is **measured on those questions and does not transfer*
 to the primary's `interaction_multihop` population. What transfers is the
 structural point: the floor did not measure the variance the contrast carries.
 How large that variance is on the primary is unknown and is what fix 1 buys.
+
+---
+
+## E-020 — does reordering identical evidence change the answer? (registered 2026-09-13, not yet run)
+
+- **Registered:** 2026-09-13, after E-018's secondary subset and **before any
+  code exists**. `E-019` is reserved for Phase 10's three-arm comparison on a
+  fresh split and is deliberately skipped here.
+
+- **Where this comes from.** E-018's secondary subset ran 13 questions on which
+  the treatment injected nothing, so all three conditions carried **identical
+  content**. They did not carry identical prompts: the runner shuffled the
+  merged evidence once per condition, so each received a different **ordering**.
+  Collapsed discordance across those orderings was **4 of 13** (control against
+  placebo), **3** and **1** for the other pairs — mean pairwise **0.205** —
+  against the **0.050** that entry published as its noise floor, which had been
+  measured by generating twice **from the same prompt**.
+
+  It is the generator, not the judge. On `hand-def-flying` the control answer
+  contains *"a creature with flying can block a creature with or without
+  flying"* and scores `correct`; the same five items reordered produced an
+  answer that **omits that sentence** and scores `incorrect`. The judge was
+  right both times.
+
+- **The decision this informs, and it is larger than one entry.** E-001
+  measured a between-arm difference of **0.01** and published `inconclusive`.
+  If reordering identical evidence moves the judged outcome at anything near
+  0.20, then **every paired figure this project has published sits below a
+  variance source nobody controlled**, and E-019 cannot be run until it is
+  controlled. That is the claim this entry exists to confirm or kill, and it
+  must be settled before Phase 10 spends a fresh split.
+
+### Design
+
+- **Population.** The **20 development-split questions**, arm B, from the
+  existing retrieval dump. No new retrieval, no new annotation, and **no
+  reading of the evaluation split** — the dev split is where iteration is
+  allowed, and this entry needs no gold key of any kind.
+- **Orderable by construction, checked:** all 20 carry more than one evidence
+  item, so every question can be reordered. A one-item context would be a
+  question this design cannot move and it would silently dilute the rate.
+- **Four generations per question**, from one recorded seed:
+
+  | sample | ordering |
+  |---|---|
+  | `A1` | ordering **A** |
+  | `A2` | ordering **A**, generated again |
+  | `B` | ordering **B** |
+  | `C` | ordering **C** |
+
+  `A1` against `A2` is the **same-prompt floor**: byte-identical input, so any
+  disagreement is decoding stochasticity at temperature 0. `A1` against `B` and
+  `A1` against `C` carry decoding stochasticity **plus** order. The difference
+  between them is the order effect, and it is measured **within question**.
+- **Orderings are permutations of the identical item set** — nothing is added,
+  removed or rewritten. Verified per question before any call: the three
+  prompts must contain the same multiset of handles and differ in sequence.
+- **Outcome.** Judge-scored `correct` against everything else under the frozen
+  rubric `p6-c1`, the collapse E-001 used.
+- **Primary contrast.** Per question, two indicators: *the same-order pair
+  disagreed* and *at least one different-order pair disagreed*. Exact McNemar
+  paired within question, alpha = 0.05, one contrast, **no correction needed
+  and none applied**.
+- **Effect-size bar, and it is placed off the grid on purpose.** Order
+  discordance must exceed same-prompt discordance by **0.175**. At n = 20 every
+  rate is a multiple of 0.05; E-018 put two bars *on* multiples of 0.05 and
+  both landed exactly on their boundary, which decided nothing. A bar between
+  attainable values cannot be landed on.
+
+### Ceiling, computed before the run and from the run's own inputs
+
+20 of 20 dev questions carry more than one evidence item, so the maximum
+number of questions this design can move is **20**. The floor it is measured
+against is whatever `A1` vs `A2` returns, which is not knowable in advance and
+is therefore **not** treated as a constant from E-018 — that entry's 0.050 was
+measured on a different split and does not transfer.
+
+### Decision rule, fixed before the run
+
+1. **Order discordance exceeds same-prompt discordance at its test and by
+   ≥ 0.175.** Evidence order is a variance source this project has never
+   controlled. Consequence: **E-019 holds one ordering fixed across conditions**;
+   every published paired figure gains a recorded caveat naming this entry; and
+   *retrieval order as a design parameter* becomes a Phase 9 front in its own
+   right, because an ordering that is chosen rather than incidental is free.
+2. **They are statistically indistinguishable, or the gap is under 0.175.**
+   E-018's secondary reading was the `hand-def-*` stratum being fragile near
+   the `correct`/`partial` boundary, not order. Consequence: the 2026-09-13
+   reading is **retracted in the journal where it was recorded**, and E-019
+   proceeds without an ordering control.
+3. **Inconclusive** — neither the test nor the interval separates them.
+   Consequence: nothing is cancelled, nothing is adopted, and the entry states
+   that 20 paired questions cannot separate the two. **This is the default**,
+   and it is written before the others because E-018 is the entry that taught
+   this project to write it first.
+
+### Predictions, recorded before the run
+
+1. **Same-prompt discordance lands between 0.00 and 0.10** — E-018 measured
+   0.05 on 20 eval questions and this is a different split.
+2. **At least one different-order pair disagrees on 0.15 to 0.35 of
+   questions.** Below the 0.205 seen on `hand-def-*`, because those are short
+   recitations where dropping one clause is easy and the dev split is mixed.
+3. **The questions that move are the ones with the most evidence items.** If
+   the movers are instead the shortest contexts, the mechanism is not order and
+   the entry says so.
+4. **Where an answer changes, it will change by omission rather than by
+   contradiction** — a clause dropped, as on `hand-def-flying` — and the
+   omitted clause will usually be cited to an item that moved late in the
+   context. That is the mechanism this entry can name and it is checked by
+   reading, not by a statistic.
+
+### Threats to validity, recorded before the run
+
+- **Three orderings sample the permutation space of a 5-to-40 item list almost
+  not at all.** The rate measured is a lower bound on order sensitivity, not an
+  estimate of it, and the entry reports it as such.
+- **The judge is not validated** and sits worst at the `correct`/`partial`
+  boundary (E-011a: 4/14 agreement on `partial`). The three-label distribution
+  is reported per sample beside the collapse, and a movement confined to that
+  boundary is named rather than pooled.
+- **The dev split is 20 questions and differently composed from the
+  evaluation split.** No rate from here is transferred; what transfers is
+  whether the effect exists.
+- **`A1` vs `A2` is the floor for *this* run only.** E-018's 0.050 was measured
+  elsewhere and is cited as motivation, never as a comparator.
+- **Temperature 0 is not determinism** and never was; that is what the floor
+  measures, and it is why the floor exists rather than being assumed zero.
+
+### Cost
+
+80 generations and 80 judge calls on the pinned `gpt-4o-mini`, about
+**US$ 0.08**, with `--limit` and a printed estimate before any spend.
+
+### Actual result
+
+_Not yet run._
+
+---
+
+## E-021 — do gold *rulings* do what gold rules did not? (registered 2026-09-13, not yet run)
+
+- **Registered:** 2026-09-13. **Blocked on an annotation that does not exist**,
+  and that is the honest headline of this entry rather than a footnote.
+
+- **Where this comes from.** Three measurements from the same day, none of
+  which was looking for this:
+  - Arm B's evaluation context is **40.1% `card_rulings`** — the largest single
+    line item, larger than keyword definitions at 28.0% and keyword glossary at
+    22.1%.
+  - On `interaction_multihop`, the stratum this project exists for, the gold
+    **rule** arrives on 2 of 22 — and **four of the six correct answers arrived
+    with it absent**.
+  - The 2026-09-13 Magic-side audit recorded that roughly 60% of this arm's
+    correct answers **cite no CR rule at all**.
+  - E-018 injected **rules only**, returned unresolved, and declared in branch
+    3's narrowing that it *"does not establish that reaching the governing
+    evidence is worthless — rulings are the citation behind roughly 60% of this
+    arm's correct answers and are not manipulated here."* This is the entry
+    that manipulates them.
+
+- **The decision this informs.** Whether Phase 9's Front C should bridge toward
+  **rules** at all. If correctness on the hard stratum is carried by rulings,
+  then a bridge out of chapter 700 is an expensive way to deliver evidence the
+  answers do not use, and the cheaper repair is ruling coverage.
+
+### The blocker, stated first because it is the cost
+
+The golden set carries `gold_cr_rules` and **no gold-ruling field**. Its
+fields are `answer`, `gold_cr_rules`, `gold_entities`, `gold_path`, `hops`,
+`stratum`, `vector_should` and provenance. There is nothing to inject.
+
+**So this entry has two stages and the first is curation, not code:**
+
+1. **`gold_rulings` annotated** on the `interaction_multihop` stratum — 22
+   questions — by the author, from the key, **before any retriever output is
+   consulted for those questions**, in the same posture that made
+   `gold_cr_rules` usable: written against the key, not against what the system
+   found. Ruling ids only; ruling text is never committed. Annotation guide
+   entry first, then the annotation.
+2. **The injection**, mirroring E-018 exactly: control / placebo / treatment,
+   paired within question, arm B, de-duplicated against what retrieval already
+   brought, placebo matched on **ruling count and tokens**, one ordering shared
+   across conditions (pending E-020, which decides whether that matters).
+
+**Stage 2 does not start until stage 1 is complete and versioned.** An entry
+that injects an annotation written while looking at the run is an entry that
+measures the annotator.
+
+### Design, for stage 2
+
+- **Population.** The `interaction_multihop` questions carrying `gold_rulings`,
+  frozen by id before the run. Expected 22 minus whatever the annotation cannot
+  key. **A third reading of the evaluation split**, declared here; if that is
+  judged too expensive when stage 1 lands, the entry moves to a dev-split
+  population and says so.
+- **Conditions, metric, correction** — as E-018, amended: exact McNemar paired
+  within question, Holm over treatment-vs-control and placebo-vs-control, the
+  construct bar on treatment-vs-placebo, and branch 3 split into *inconclusive*
+  and *evidence of absence*. The amendments E-018 paid for are inherited rather
+  than rediscovered.
+- **The ceiling is read before the run**, by the same instrument
+  (`e018_ceiling.py`, extended): *with what retrieval already brought plus
+  these rulings, is the key's verdict derivable?* E-018's ceiling of 17 of 20
+  does **not** transfer — different population, different injected material.
+- **Gold-rule citation uptake has a counterpart here** and is recorded by
+  default: the share of treatment answers citing an injected ruling. E-018
+  showed that without it a flip that used nothing injected reads as an effect.
+
+### Decision rule, fixed before the run
+
+1. **Treatment beats control at its Holm step and clears the construct bar.**
+   Rulings carry the hard stratum. Consequence: **Front C's target changes from
+   CR rules to ruling coverage**, and the bridge out of chapter 700 is
+   deprioritised rather than abandoned.
+2. **Placebo matches treatment.** Volume or shape, not rulings. Consequence:
+   the 40.1% observation is retracted as an explanation.
+3. **Neither, and the interval includes the bar** — inconclusive, the default,
+   nothing cancelled.
+4. **Neither, and the interval excludes it** — rulings do not carry it either.
+   Consequence: the hard stratum's correctness is explained by neither gold
+   rules nor gold rulings, and **Phase 9 has been looking in the wrong place
+   twice**, which is the branch that costs the most and is written first.
+
+### Threats to validity, recorded before the run
+
+- **The annotation is new and is the instrument.** `gold_cr_rules` was written
+  before any retriever existed; `gold_rulings` will be written after the author
+  has read E-018's cases, which is a real contamination risk in one direction.
+  Mitigation: annotate from the key alone, record the date, and keep the
+  retrieved rulings out of view during annotation. It is a mitigation, not a
+  blind, and the entry says so.
+- **Rulings are Scryfall content.** Ids are versioned; text never is.
+- **Third reading of the evaluation split**, declared, and the trigger to move
+  to dev is written above rather than decided later.
+- **This entry inherits E-018's oracle framing.** No figure in it is a system
+  score.
+- **It also inherits E-018's power problem**: 22 questions, and the same
+  arithmetic that needed 7:0 discordant pairs applies. The entry is registered
+  as **far better able to confirm than to rule out**, in advance.
+
+### Cost
+
+Stage 1: curation, no API spend. Stage 2: roughly 66 generations and 66 judge
+calls, under **US$ 0.10**, plus the ceiling reading.
+
+### Actual result
+
+_Not yet run. Stage 1 not started._
