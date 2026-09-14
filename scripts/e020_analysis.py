@@ -10,9 +10,9 @@ else:
 They are compared **within question** by exact McNemar, because the same
 question contributes both and an unpaired comparison would throw that away.
 
-The registered bar is **0.175**, placed off the 1/n grid on purpose: at n ≈ 20
-every rate is a multiple of 0.05, and E-018 put two bars on multiples of 0.05
-and landed exactly on both, which decided nothing.
+The registered bar is **0.175**, placed off the 1/n grid on purpose: at n near
+20 every rate is a multiple of 0.05, and E-018 put two bars on multiples of
+0.05 and landed exactly on both, which decided nothing.
 
 Usage:
     python scripts/e020_analysis.py
