@@ -1,6 +1,6 @@
 {
   "experiment": "E-018",
-  "question": "Is this key's verdict derivable from this question's gold CR rules alone?",
+  "question": "With what retrieval already brought, plus the gold CR rules below, is this key's verdict derivable?",
   "gate": 7,
   "verdicts": [
     {

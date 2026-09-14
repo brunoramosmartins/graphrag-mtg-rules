@@ -90,6 +90,53 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — The rule-8 instrument had never run, and two numbers it produced were wrong
+
+Three corrections, all found while opening the countersign of
+`docs/error-samples/e018.md`, and none of them found by a test.
+
+**`scripts/e018_inspect.py` had never executed.** It raised `AttributeError`
+on every invocation, immediately after the imports: `prepare` reads
+`population`, `limit`, `golden` and `caches` off the namespace it is handed,
+and the inspector's parser defined three of the four. The script is the
+reproduction instruction printed inside the error-sample file and the named
+instrument of standing rule 8, and it was written, reviewed and committed
+without producing output once. The existing tests covered the selection
+function and never reached the parser. `build_parser` is now separated so the
+wiring is testable; `--run` follows `--population` instead of defaulting to the
+primary path; and `--limit` no longer doubles as a population truncation, which
+would have dropped the requested question out of the rebuild.
+
+**The committed ceiling file recorded the wrong question.**
+`data/golden/e018_ceiling.json` carried *"derivable from this question's gold
+CR rules **alone**"* — the formulation the 2026-09-13 amendment corrected,
+because the treatment is control **plus** the gold rules. The worksheet the
+author actually read carries the corrected wording; the worksheet lives in
+gitignored `data/interim/` and the JSON is what survives. The artefact that
+outlives the reading said the reading answered a different question. Corrected
+to the constant the code holds; the verdicts are untouched.
+
+**The 2-of-22 figure was restated wrongly and the error entered the phase
+note.** I supplied "0 of 20 curated questions" to the author already
+aggregated, and it was wrong twice: the curated denominator is **13**, not 20 —
+the 22 decompose as 6 `hand-*`, 13 transcribed from `citedRules`, 3
+author-filled, which is the split E-025's withdrawal had already established
+two days earlier — and it is not "no arm", because the hybrid arm reaches
+`rg-1469`. Recomputed: **A 0/13, B 0/13, C 1/13**. The two that the vector and
+graph arms both reach are both `hand-*`.
+
+The underlying finding is unchanged and slightly sharper: the arm with no graph
+and the arm with the graph reach the governing rule on the same two questions,
+and on the curated subset neither reaches any. The exact-key-match caveat on
+`retrieved_rules` still stands and is recorded with it.
+
+**What this changes going into Phase 10.** Standing rule 9 asks that a claim
+built on an aggregate name the quantity in words first. I applied it to the
+author's text and not to my own; the figure was handed over as a conclusion
+rather than as a counted quantity with its denominator named. The Phase 10
+entries state the denominator in words at the point the number is produced, not
+at the point it is published.
+
 ## 2026-09-14 — E-025 is withdrawn before its first reading, and the worry that produced it is answered the other way
 
 Asked whether the marking task was sound before spending an hour on it, I went

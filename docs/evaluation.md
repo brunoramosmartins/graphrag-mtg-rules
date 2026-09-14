@@ -1735,6 +1735,29 @@ from the card's neighbourhood **by any method built here**.
 That is the load-bearing sentence of this section, and it is what makes the
 finding a property of the problem rather than of one implementation.
 
+**And the vector arm's two are the graph arm's two.** Not two of the same
+count — the same two questions, `hand-deathtouch-trample` and
+`hand-first-strike-deathtouch`. Split by where the target annotation came from,
+of the 22: 6 are `hand-*` where the author wrote key and annotation, **13 are
+transcribed from RulesGuru's curated `citedRules`**, and 3 are RulesGuru
+questions whose `citedRules` was empty and which the author filled in. On the
+13 curated:
+
+| arm | gold rule reached, curated subset |
+|---|---:|
+| A — vector | **0 / 13** |
+| B — graph | **0 / 13** |
+| C — hybrid | 1 / 13 (`rg-1469`) |
+
+Both of the questions the vector and graph arms reach are `hand-*`. **Where the
+target was cited by a judge rather than by this project's author, neither
+single-strategy arm reaches it at all.**
+
+Reproduce with `retrieved_rules` over `e001_*_retrieval_eval.jsonl`. One
+measurement caveat, stated because it is not ruled out: `retrieved_rules`
+requires an **exact** key match, so a rule reached through its parent — `608.2`
+where the annotation says `608.2n` — counts here as a miss.
+
 ## What this does not say
 
 - **It does not say GraphRAG loses.** It says *this* graph, over *this* corpus,

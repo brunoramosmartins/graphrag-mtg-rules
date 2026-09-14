@@ -22,6 +22,7 @@ Read first, then mark:
 
 Usage:
     python scripts/e018_countersign.py worksheet
+    python scripts/e018_countersign.py next
     python scripts/e018_countersign.py mark
     python scripts/e018_countersign.py mark 1 A rg-51 D
     python scripts/e018_countersign.py mark rg-396 B --note "the count is the obstacle"
@@ -191,6 +192,50 @@ def worksheet(args: argparse.Namespace) -> int:
     return 0
 
 
+def next_case(args: argparse.Namespace) -> int:
+    """The next unmarked case, with the command that renders it.
+
+    `--show` runs that command here instead of printing it, so the reading and
+    the marking are one loop. It shells out to `e018_inspect.py` rather than
+    importing it: the inspector rebuilds all twenty questions at the recorded
+    seed and verifies each digest, and calling into the middle of that to save
+    a subprocess is how a rendering that was never sent gets printed.
+    """
+    payload = load_sheet()
+    rows = payload["rows"]
+    blank = [(i, row) for i, row in enumerate(rows, start=1) if not row.get("group")]
+    if not blank:
+        print("All marked. Run `python scripts/e018_countersign.py score`.")
+        return 0
+
+    index, row = blank[0]
+    qid = row["question_id"]
+    done = len(rows) - len(blank)
+    print(f"{THIN}\nCASE {index} of {len(rows)}   {qid}   ({done} marked, {len(blank)} to go)")
+    print(f"published proposal: {row['proposed']}  —  {GROUPS[row['proposed']]}\n{THIN}")
+
+    command = [
+        sys.executable,
+        str(Path(__file__).with_name("e018_inspect.py")),
+        "--qid",
+        qid,
+        "--condition",
+        "treatment",
+        "--full",
+    ]
+    if args.show:
+        import subprocess
+
+        sys.stdout.flush()
+        subprocess.run(command, check=True)  # noqa: S603
+        print(f"\n{THIN}")
+    else:
+        print("  python scripts/e018_inspect.py --qid " f"{qid} --condition treatment --full")
+
+    print(f"\nThen:  python scripts/e018_countersign.py mark {qid} <{'/'.join(GROUPS)}>")
+    return 0
+
+
 def resolve(target: str, rows: list[dict]) -> int:
     """A worksheet number or a question id, to a row index.
 
@@ -356,13 +401,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("worksheet", help="derive the cases, print them, seed the sheet")
+    upcoming = sub.add_parser("next", help="the next unmarked case and how to read it")
+    upcoming.add_argument(
+        "--show", action="store_true", help="render it here instead of printing the command"
+    )
     marker = sub.add_parser("mark", help="record groups; with no arguments, what is left")
     marker.add_argument("pairs", nargs="*", help="number-or-id then A / B / C / D")
     marker.add_argument("--note", default=None, help="a reason, for one pair")
     scorer = sub.add_parser("score", help="the countersigned split and the checkbox text")
     scorer.add_argument("--date", default="2026-09-14", help="the date read")
     args = parser.parse_args()
-    return {"worksheet": worksheet, "mark": mark, "score": score}[args.command](args)
+    commands = {"worksheet": worksheet, "next": next_case, "mark": mark, "score": score}
+    return commands[args.command](args)
 
 
 if __name__ == "__main__":
