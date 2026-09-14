@@ -139,7 +139,7 @@ class TestTheContrastListIsNotASelection:
 
 class TestThePooledDiscordanceIsWhatWasMeasured:
     def test_it_is_seventeen_of_fifty_seven(self) -> None:
-        assert det.POOLED_DISCORDANCE == pytest.approx(17 / 57)
+        assert abs(det.POOLED_DISCORDANCE - 17 / 57) < 1e-12
 
     def test_it_is_an_ordinary_rate_not_an_extreme_one(self) -> None:
         # One of the three alternative readings E-026 had to rule out: a floor

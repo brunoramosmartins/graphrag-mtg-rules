@@ -8863,3 +8863,123 @@ of the graph. The only separation is `keyword_rule_2hop` at n = 2 and
 Zero. Arithmetic over runs that already existed, and it was available on
 2026-09-12 when E-001 reported.
 
+
+---
+
+## E-027 — what does each arm spend to reach the same answer? (**registered retrospectively** 2026-09-14, run 2026-09-14, **economy separates; precision and reach do not**)
+
+- **Registered retrospectively, and marked so because it is.** The numbers below
+  were computed while deciding whether this entry was worth registering at all.
+  There was no pre-registered decision rule and this is **not** a confirmatory
+  test. Writing it as though the rule had been fixed in advance would be the
+  fabrication rule 4 forbids. The confirmatory successor is named at the end.
+
+- **Where this comes from.** E-026 measured that no correctness comparison on
+  this corpus can see an effect below 0.20, so Phase 10 moved from the question
+  as the unit to the evidence item. The proposal was *"precision separates the
+  arms — Phase 8 published A 0.420 [0.339, 0.505] against B 0.223
+  [0.181, 0.271], non-overlapping."* **Checking it first is what produced this
+  entry, and the proposal did not survive.**
+
+- **The decision this informs.** What Phase 10 publishes as its claim, after
+  the correctness verdict was measured unavailable.
+
+### The methodological point, which is the entry
+
+Evidence items are **clustered inside questions**. An interval computed over
+131 and 327 pooled items treats items from one question as independent draws
+and comes back too narrow.
+
+| rule precision, A against B | |
+|---|---|
+| pooled over items, as published in Phase 8 | A **0.420** [0.339, 0.505], B **0.223** [0.181, 0.271] — non-overlapping |
+| paired within question, bootstrapped over questions | **−0.001 [−0.044, +0.039]** |
+
+**The entire gap was the clustering.** Every figure below is paired within
+question and resampled over questions, 10,000 draws at seed 20260914, and the
+item-level intervals are deliberately not quoted on their own.
+
+### Actual result
+
+57 evaluation questions, paired within question:
+
+| endpoint | A vector | B graph | B − A | 95% CI | |
+|---|---:|---:|---:|---|---|
+| evidence items | 38.86 | 12.46 | **−26.40** | [−29.46, −22.89] | **separates** |
+| context tokens | 3892.07 | 744.16 | **−3147.91** | [−3427.86, −2842.56] | **separates** |
+| CR rule items | 2.09 | 5.47 | **+3.39** | [+1.65, +5.37] | **separates** |
+
+On the 42 questions carrying `gold_cr_rules`:
+
+| endpoint | A | B | B − A | 95% CI | |
+|---|---:|---:|---:|---|---|
+| gold rules retrieved | 0.43 | 0.48 | +0.05 | [−0.07, +0.19] | crosses zero |
+| rule precision | 0.07 | 0.08 | +0.00 | [−0.02, +0.02] | crosses zero |
+
+Correctness, reported for its **bound** rather than for a difference:
+
+| endpoint | A | B | B − A | 95% CI |
+|---|---:|---:|---:|---|
+| correct | 0.60 | 0.61 | +0.02 | **[−0.12, +0.16]** |
+
+### What separates, what does not, and the claim
+
+**Separates, by an enormous margin:** the graph arm reaches its answers on
+**19% of the context tokens** and **32% of the evidence items**, while
+surfacing **more** CR rules — 5.47 against 2.09.
+
+**Does not separate:** rule precision, gold-rule reach, correctness. The first
+two are measured null with tight intervals. The third is not a null: E-026
+measured that this evaluation's floor is 0.20 and the observed +0.02 sits far
+inside it.
+
+**The claim, stated so that its bound travels with it:**
+
+> On these 57 questions the graph arm answers **within [−0.12, +0.16] of the
+> vector baseline's correctness** while spending **19% of the context tokens**.
+
+*"Within ±0.16"* is not *"the same"*, and the entry says so wherever the figure
+is quoted. A reader who wants equality has to wait for an evaluation with a
+lower floor.
+
+### Threats, recorded
+
+- **Retrospective.** No pre-registered rule, no correction, no falsifier named
+  in advance. This is an exploratory measurement of existing runs and it is
+  labelled as one everywhere it appears.
+- **Is the token gap a configuration artefact?** Both arms ran under the same
+  6,000-token budget cap and `dropped` was empty on every question, so neither
+  arm was truncated. The graph uses less because its traversal returns less,
+  which is a property of the retrieval policy. It is not a property of the
+  *corpus*: a different traversal would spend differently.
+- **Fewer tokens is only a virtue at equal quality**, and equal quality here
+  means "within ±0.16", which is wide. The economy claim is strong; the
+  equivalence it rests on is weak, and that asymmetry is the honest shape of
+  this result.
+- **`dropped` being empty means neither arm was budget-limited**, so this
+  measures what each arm *wanted*, not what it was allowed. Under a tighter
+  budget the comparison would be different and is not predicted here.
+- **Arm C is absent** deliberately, to avoid widening the family for a question
+  nobody asked.
+- **The correctness figures inherit an unvalidated judge**, E-011's open audit,
+  unchanged.
+
+### Cost
+
+Zero. Arithmetic over E-001's retrieval and verdict dumps.
+Instrument: `scripts/e027_economy.py`.
+
+### The confirmatory successor, named rather than implied
+
+This entry cannot confirm itself. **E-028** would pre-register the economy
+contrast on a fresh split with a decision rule, a falsifier and a power
+calculation fixed in advance — and unlike every correctness design this project
+has attempted, that calculation closes easily: the token difference is −3,148
+with a CI half-width of 293, roughly **ten standard errors**, so a fraction of
+the current sample would suffice.
+
+**Whether it is worth running is a separate question from whether it can be
+run.** Confirming a ten-sigma effect is not where this project's remaining
+effort has the most value, and the alternative — publishing this as the
+exploratory measurement it is, with the bound attached — is recorded here as
+the honest option rather than the lesser one.

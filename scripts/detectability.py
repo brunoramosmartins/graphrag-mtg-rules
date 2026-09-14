@@ -53,7 +53,7 @@ TARGET_POWER = 0.80
 
 #: Pooled discordance for B against A on E-001's evaluation split: 17 questions
 #: of 57 where exactly one arm was `correct`. Var(d) for a paired difference of
-#: proportions is p_b + p_c − (p_b − p_c)², and the subtracted term is at most
+#: proportions is p_b + p_c - (p_b - p_c) squared, and the subtracted term is at most
 #: 0.0004 across every contrast here, so the discordance rate *is* the variance
 #: to three decimals. Using the pooled rate rather than a per-contrast one is
 #: deliberate: a floor computed from each contrast's own discordance moves with

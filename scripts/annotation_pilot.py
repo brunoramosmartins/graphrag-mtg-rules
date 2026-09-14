@@ -406,7 +406,7 @@ def report(args: argparse.Namespace) -> int:
         note = f"   {row['note']}" if row.get("note") else ""
         print(f"  {row['question_id']:<12}{row['seconds'] / 60:>7.1f} min{note}")
     print(
-        f"\n  median {median:.1f} min   range {minutes[0]:.1f}–{minutes[-1]:.1f}"
+        f"\n  median {median:.1f} min   range {minutes[0]:.1f}-{minutes[-1]:.1f}"
         f"   total {sum(minutes) / 60:.1f}h"
     )
     print(

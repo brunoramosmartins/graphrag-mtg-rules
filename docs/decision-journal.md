@@ -90,6 +90,55 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — The precision gap was the clustering, and what survives is economy
+
+I proposed moving Phase 10 onto evidence precision, citing Phase 8's
+non-overlapping intervals: A 0.420 [0.339, 0.505] against B 0.223
+[0.181, 0.271]. **Checked it before writing the entry this time. It does not
+survive.**
+
+Those intervals are computed over 131 and 327 pooled evidence items, and
+**evidence items are clustered inside questions**. Paired within question and
+bootstrapped over questions, the same contrast returns **−0.001
+[−0.044, +0.039]**. The entire gap was the clustering. Had I registered E-027
+on the proposal, it would have rested on the same class of error I withdrew
+E-019 for eight hours earlier — a number computed at the wrong unit and never
+inspected at the level of one case.
+
+**What does survive is larger than what I proposed**, and it is economy rather
+than precision. Paired, n = 57, 10,000 resamples:
+
+| endpoint | A | B | B − A | 95% CI | |
+|---|---:|---:|---:|---|---|
+| evidence items | 38.86 | 12.46 | −26.40 | [−29.46, −22.89] | separates |
+| context tokens | 3892 | 744 | −3148 | [−3428, −2843] | separates |
+| CR rule items | 2.09 | 5.47 | +3.39 | [+1.65, +5.37] | separates |
+| rule precision | 0.07 | 0.08 | +0.00 | [−0.02, +0.02] | crosses zero |
+| gold-rule reach | 0.43 | 0.48 | +0.05 | [−0.07, +0.19] | crosses zero |
+| correctness | 0.60 | 0.61 | +0.02 | [−0.12, +0.16] | crosses zero |
+
+**The graph answers on 19% of the context tokens and 32% of the items, while
+surfacing more CR rules.** The token difference is roughly ten standard errors.
+
+**The claim carries its bound or it is not the claim.** *"The same answers"*
+means *"within [−0.12, +0.16] correctness"*, which is wide, and E-026 measured
+why it cannot be narrower here. The economy is strong; the equivalence it rests
+on is weak. **That asymmetry is the honest shape of the result** and it goes
+wherever the figure goes.
+
+**E-027 is registered retrospectively and marked so**, because the numbers were
+computed while deciding whether the entry was worth writing. There was no
+pre-registered rule and it is not a confirmatory test. E-028 is named as the
+successor that would pre-register it — with the note that confirming a
+ten-sigma effect may not be where the remaining effort earns most, which is a
+judgement recorded now rather than discovered later.
+
+**Three proposals of mine have now died on checking**, in one day: the
+correctness interaction, the gold-rule-reach pivot, and evidence precision.
+Each died to a measurement I could have taken before proposing. The pattern is
+the lesson, and it is the same one E-018 wrote: **the check that matters is the
+one run before the claim, not after it.**
+
 ## 2026-09-14 — The floor of this evaluation is 0.20, and it explains every inconclusive the project has published
 
 E-019 was registered this morning, red-teamed the same afternoon, and is
