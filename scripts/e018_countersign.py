@@ -227,7 +227,7 @@ def next_case(args: argparse.Namespace) -> int:
         import subprocess
 
         sys.stdout.flush()
-        subprocess.run(command, check=True)  # noqa: S603
+        subprocess.run(command, check=True)
         print(f"\n{THIN}")
     else:
         print("  python scripts/e018_inspect.py --qid " f"{qid} --condition treatment --full")

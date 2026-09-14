@@ -105,8 +105,8 @@ def builder(revision: str | None):
 
         return run_e018
     try:
-        source = subprocess.run(  # noqa: S603
-            ["git", "show", f"{revision}:{BUILDER_PATH}"],  # noqa: S607
+        source = subprocess.run(
+            ["git", "show", f"{revision}:{BUILDER_PATH}"],
             capture_output=True,
             check=True,
         ).stdout

@@ -100,7 +100,7 @@ class TestTheGroupsMatchThePublishedFile:
         assert set(cs.GENERATION_GROUPS) == {"A", "D"}
 
     def test_the_proposal_reproduces_the_published_counts(self) -> None:
-        counts = {letter: 0 for letter in cs.GROUPS}
+        counts = dict.fromkeys(cs.GROUPS, 0)
         for letter in cs.PROPOSED.values():
             counts[letter] += 1
         assert counts == {"A": 3, "B": 2, "C": 3, "D": 1}
