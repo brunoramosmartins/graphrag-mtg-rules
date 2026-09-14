@@ -6947,6 +6947,45 @@ hand:
 Of the 10, one declined over missing card data and **nine answered and were
 judged wrong**; three of those nine had quoted the governing rule.
 
+**Superseded as a characterisation by the manual sample**
+([docs/error-samples/e018.md](../docs/error-samples/e018.md), read 2026-09-13).
+"Nine answered and were judged wrong" is a correct count and a misleading
+description. Read in full, the nine are four things:
+
+| group | n | what failed |
+|---|---:|---|
+| cited the injected rule and misapplied it | 3 | reasoning, rule in hand |
+| multi-step simulation — loop counts, maxima over orderings | 3 | arithmetic; the injected trigger-ordering rule is cited by none of them |
+| right verdict, `partial` for an omitted justification | 2 | the `correct`/`partial` boundary, where E-011a measured the judge at 4/14 |
+| reasoned from a rule that was not injected | 1 | reasoning, intervention inert |
+
+**So "the generator fails with the evidence in hand" is 4 of the 17 derivable
+questions, not 9 or 10.** Three of the nine are questions no retrieval and no
+rule injection can touch, and two are the measurement rather than the system.
+Every figure in this entry that reads as a generation claim carries that split.
+
+The sample also records that **its own classification was made by Claude and
+not by the author**, and carries an open countersign box; the ceiling verdicts
+it is computed over are the author's.
+
+**Amendment 2026-09-14 — the ceiling is 16 of 20, not 17.** Chasing one case in
+the sample reopened `rg-3155` against the rendered context, and the model was
+right to decline: `Expedition Envoy` and `Silent Artisan` arrive with **empty
+text** because `card_core` emits `card_text` only, and **power and toughness are
+never serialized for any card**, so the toughness that question's verdict turns
+on was not in the prompt. The author flipped the verdict to `false`.
+
+**Ceiling: 16 of 20 — 0.800 [0.584, 0.919]**, against the gate of 7 registered
+before the reading, which it clears either way. Every figure in this entry
+computed over "17 derivable" is superseded by 16; the residual of 10 becomes
+**9, all of which answered**, since `rg-3155` was the one that declined.
+
+The defect is not confined to that question. Across the evaluation split, **7
+card evidence items over 6 questions arrive as a bare name in the graph arm,
+and 0 do in the vector arm**, which indexes the whole card document. It is
+small, specific and cheap to close, and it does not reopen Phase 9's retrieval
+objective — the governing rule still arrives on 2 of 22.
+
 This is the Magic-side counterpart of what E-016 measured on MetaQA: the price
 of having the evidence and not using it. It was registered as prediction 4 and
 it is the finding this run actually produced.
@@ -7640,3 +7679,110 @@ experiment entry that measured something else.** No front opens on it here.
 ### Actual result
 
 _Not run. Abandoned at the ceiling, 2026-09-13._
+
+---
+
+## E-023 — when the evidence is sufficient and the answer is wrong, is it the model or the prompt? (registered 2026-09-13, **not run**)
+
+- **Registered:** 2026-09-13, after E-022 closed Phase 9's last retrieval front
+  and after the manual sample narrowed what this entry is allowed to claim.
+  **Registered and deliberately not run**: it exists so the lead is written
+  down with its size, not so it becomes a phase.
+
+- **Where this comes from.** E-018's residual, **after** the sample was read
+  ([docs/error-samples/e018.md](../docs/error-samples/e018.md)):
+
+  | | |
+  |---|---:|
+  | questions the author judged derivable | **17** |
+  | treatment answered correctly | 7 |
+  | answered and wrong, **reasoning with the rule in hand** | **4** |
+  | answered and wrong, multi-step simulation | 3 |
+  | right verdict, `partial` for an omitted justification | 2 |
+  | declined over a missing card attribute | 1 |
+
+  The population this entry is about is **four questions**. That is written at
+  the top rather than at the bottom.
+
+  Three cases, read in full: `rg-1591` quotes the sorcery-timing rule and
+  reaches the opposite verdict; `rg-2249` inverts the stack order of a copied
+  trigger; `rg-778` quotes the mulligan rule and concludes the opposite of it.
+  `rg-51` reasons from a rule that was never injected.
+
+- **The decision this informs.** Whether Phase 9's revised objective is worth
+  opening at all. It is the successor to **E-014**, registered 2026-09-13 to
+  swap the generator on MetaQA and suspended unspent the same day when the cell
+  motivating it was withdrawn — the same design, with a Magic-side reason and a
+  much smaller one.
+
+### Design, if it is ever run
+
+- **Population.** The **development split**, not the evaluation split. E-018
+  spent the evaluation split's second reading and the sample's four questions
+  live there; re-using them would tune on the cases that motivated the entry.
+  The dev split must first be shown to contain questions of this shape at all,
+  which is a precondition and not an assumption.
+- **Two arms, paired over identical contexts**, built once and shared so no arm
+  can win by having been handed a different retrieval:
+
+  | arm | change |
+  |---|---|
+  | **M** | a stronger generator, prompt unchanged at `p5-a3` |
+  | **P** | `gpt-4o-mini` unchanged, prompt revised to order the reasoning explicitly |
+
+  Both against the same control. Prompt iteration is permitted on dev and
+  nowhere else, which is the standing posture.
+- **One ordering shared across arms**, injected material at seeded positions —
+  inherited from E-018's amendment and kept on design grounds, since E-020
+  returned inconclusive and justified nothing.
+- **The noise floor is measured in this run**, control against control at the
+  **same** prompt *and* at a different ordering. E-018's floor measured one of
+  those and was compared against a contrast carrying both; that is the entry's
+  most expensive mistake and it is not repeated.
+- **Ceiling read before the run**, by the same instrument, on the dev
+  population. E-018's 17 of 20 does not transfer.
+
+### Decision rule, fixed before the run
+
+1. **Arm P closes most of the gap.** It is the prompt. Consequence: the fix is
+   cheap, stays inside the project's own artefacts, and `p5-a3` is superseded
+   with the change recorded — and every figure taken under `p5-a3` keeps its
+   prompt version, which is why the field exists.
+2. **Arm M closes it and arm P does not.** It is the model. Consequence: the
+   finding is reported and **the objective is not adopted** — "use a better
+   model" is not a result this project can publish as engineering, and it is
+   the answer the portfolio is least interested in.
+3. **Neither closes it.** The four are reasoning failures no available lever
+   moves, and the honest statement is that the ceiling on this corpus is where
+   it is. **This is the default.**
+4. **The dev split has too few questions of this shape to measure.**
+   Consequence: the entry closes unrun and says so — which on today's evidence
+   is the likeliest outcome and the reason it is registered rather than run.
+
+### Threats to validity, recorded before the run
+
+- **n = 4 on the population that motivated it**, and an unknown and probably
+  smaller number on dev. This entry is registered as **unable to rule anything
+  out** and barely able to confirm.
+- **The sample's A/B/C/D split was made by Claude**, not the author, and
+  carries an open countersign box. If the author's reading redistributes those
+  nine, this entry's population changes with it.
+- **`rg-3155` disputes the ceiling** that 17 comes from. Unresolved.
+- **The judge is not validated**, and two of the nine are its completeness
+  criterion rather than the system's answers. A prompt arm that writes longer
+  justifications could move `partial` to `correct` without improving a single
+  verdict, and the three-label distribution is reported per arm for that
+  reason.
+- **A stronger model changes cost and latency**, which the project has never
+  measured and which a portfolio comparison would have to.
+
+### Cost
+
+Unrun. If opened: roughly 3 generations per dev question across control and two
+arms, plus the floor and the judge, well under US$ 0.20 — the cost was never
+the reason not to run it.
+
+### Actual result
+
+_Not run, deliberately. Registered so that the lead is on the record with its
+size attached: four questions._

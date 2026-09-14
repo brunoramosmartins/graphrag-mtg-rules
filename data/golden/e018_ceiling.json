@@ -77,9 +77,9 @@
     },
     {
       "question_id": "rg-3155",
-      "derivable": true,
+      "derivable": false,
       "stale": false,
-      "note": ""
+      "note": "Reopened 2026-09-13 against the rendered context: Expedition Envoy and Silent Artisan arrive with empty text and card_core never emits power or toughness, so the toughness the verdict turns on was not in the prompt. The model declined correctly. See docs/error-samples/e018.md."
     },
     {
       "question_id": "rg-3228",
