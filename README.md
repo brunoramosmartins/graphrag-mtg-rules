@@ -171,6 +171,67 @@ was missing from it. Full working, with the limitations that bound each number,
 in [`docs/evaluation.md`](docs/evaluation.md) and
 [`docs/error-samples/e018.md`](docs/error-samples/e018.md).
 
+## What it costs to get there, and the floor under every number above
+
+The table at the top says the three arms are indistinguishable. **It does not
+say they are the same system**, and the difference is not in the answers — it
+is in what each one spends to produce them.
+
+Paired within question over the same 57, bootstrapped over questions:
+
+| | vector (A) | graph (B) | B − A | 95% CI |
+|---|---:|---:|---:|---|
+| context tokens | 3,892 | **744** | **−3,148** | [−3,428, −2,843] |
+| evidence items | 38.9 | **12.5** | **−26.4** | [−29.5, −22.9] |
+| CR rule items | 2.09 | **5.47** | **+3.39** | [+1.65, +5.37] |
+| correctness | 0.60 | 0.61 | +0.02 | **[−0.12, +0.16]** |
+
+> **The graph answers within [−0.12, +0.16] of the baseline's correctness on
+> 19% of the context tokens**, while surfacing more of the rulebook.
+
+**"Within ±0.16" is not "the same", and the gap between those two is the point
+of the next section.** The economy is a ten-standard-error effect; the
+equivalence it rests on is the widest figure in this repository.
+
+### The floor: why "indistinguishable" is a property of the ruler
+
+Before curating anything for a second verdict, we measured what this evaluation
+can see at all. **Of the nine paired correctness comparisons this project has
+run, zero produced an effect their own samples could have distinguished from
+zero at 80% power.**
+
+| n | smallest detectable effect | as an interaction |
+|---:|---:|---:|
+| 20 | 0.342 | 0.484 |
+| **57** | **0.203** | 0.287 |
+| 120 | 0.140 | 0.198 |
+
+The largest correctness effect ever measured here is +0.182. **An interaction
+costs about four times the questions of the simple effect it is built from** —
+one line of arithmetic that, had anyone computed it in September, would have
+prevented three registered experiments from being written.
+
+This does not say the effects are zero. It says **every `inconclusive` this
+project published was the only answer its instrument could return.**
+
+Publishing a measured floor for one's own evaluation is rarer than a
+three-point win, and it is the more transferable of the two. Full working in
+[`docs/evaluation.md`](docs/evaluation.md); instruments in
+[`scripts/detectability.py`](scripts/detectability.py) and
+[`scripts/e027_economy.py`](scripts/e027_economy.py), both zero-cost arithmetic
+over runs that already exist.
+
+### Three claims, proposed and killed in one day
+
+| proposal | killed by |
+|---|---|
+| stratum × arm **interaction** on correctness | power at its own declared bar is 0.26; 80% needs 440 questions — more than the 296 that had just disqualified its alternative |
+| **gold-rule reach** as the comparison | reach is 11/11 in *all three* arms on `definition_1hop`; the large effect is between strata, not between arms |
+| evidence **precision** | the non-overlapping interval was pooled over items clustered inside questions; paired, it is −0.001 [−0.044, +0.039] |
+
+Each died to a measurement available before the proposal was made. That is the
+part worth copying.
+
 ## Why Magic
 
 The Comprehensive Rules are a genuine dense-regulatory-text proxy —
@@ -184,14 +245,15 @@ was chosen because it lets us *measure the truth*. Full rationale in
 
 ## Status
 
-**Phase 9 — Scope, not repair.** The pipeline runs end to end: the graph,
+**Phase 10 — The floor, and what sits above it.** The pipeline runs end to end: the graph,
 retrieval, grounded generation, a three-arm evaluation with confidence
 intervals, OpenTelemetry spans on every stage, a live demo, and CI that
 exercises all three arms with no API key. The evaluation split was opened once
 and the result is above. Phase 9 then asked what it would take to close the
-retrieval gap, measured four candidate repairs, and shipped none of them —
-the section above is what it returned instead. Roadmap: Phases 0→9
-(vector→graph→agentic trilogy).
+retrieval gap, measured four candidate repairs, and shipped none of them.
+Phase 10 opened to take a second correctness verdict, measured that no such
+verdict was available to it, and published the floor instead. Roadmap:
+Phases 0→10 (vector→graph→agentic trilogy).
 
 **What this project is actually a demonstration of.** The graph did not beat
 the baseline, and the interesting part is that this is knowable. The
@@ -425,11 +487,19 @@ The development split runs freely and costs nothing to re-measure:
 Stated here because they bound every number above; the full list is in
 [`docs/evaluation.md`](docs/evaluation.md).
 
-- **n = 57.** Exact McNemar needs 6 discordant pairs one way to reach
-  *p* < 0.05 and Holm's strictest step needs 8:0. The largest discordance
-  observed anywhere is 5. This split could not have produced a confirmation at
-  these effect sizes — which was computed and written down in August, not
-  discovered afterwards.
+- **n = 57, and the floor that follows from it is 0.203.** Exact McNemar needs
+  6 discordant pairs one way to reach *p* < 0.05 and Holm's strictest step
+  needs 7:0. The largest discordance observed anywhere is 5. This split could
+  not have produced a confirmation at these effect sizes — computed and written
+  down in August, not discovered afterwards — and **no correctness figure
+  anywhere in this repository should be read without that floor beside it.**
+  The floor was itself measured twice: the exact permutation value is higher
+  still (0.220 at n = 57, 0.430 at n = 20), so the normal approximation quoted
+  here is the optimistic one.
+- **The economy figures are exploratory, not pre-registered.** E-027 was
+  registered retrospectively and says so: the numbers were computed while
+  deciding whether the entry was worth writing. No decision rule was fixed in
+  advance, and the confirmatory successor is named but not run.
 - **The judge is not validated.** Agreement with a human is 0.727 [0.598,
   0.827] against a 0.720 threshold, so it is published descriptively with its
   ceiling beside it. It does read the supplied key rather than its own

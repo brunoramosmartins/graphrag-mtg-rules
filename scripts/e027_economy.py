@@ -9,7 +9,7 @@ not decoration. Evidence items are clustered inside questions; an interval
 computed over 131 and 327 pooled items treats them as independent and comes
 back too narrow. Phase 8 published item-level precision as A 0.420
 [0.339, 0.505] against B 0.223 [0.181, 0.271] — non-overlapping — and the same
-comparison paired within question returns **−0.001 [−0.044, +0.039]**. The gap
+comparison paired within question returns **-0.001 [-0.044, +0.039]**. The gap
 was the clustering.
 
 So this reports both, side by side, and refuses to quote the item-level

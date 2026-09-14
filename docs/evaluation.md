@@ -1800,3 +1800,147 @@ The mechanism that produced that is worth naming, because it is the transferable
 part: **ceilings computed from the run's own inputs before code, and a gate
 experiment that had to return positive before the engineering opened.** The
 ceilings closed three fronts; the gate declined to open the fourth.
+
+
+# Results — Phase 10: the floor of this evaluation, and what sits above it (2026-09-14)
+
+Phase 10 opened to take a second correctness verdict on a fresh split. **It
+measured, before curating a single question, that no such verdict was available
+to it** — and then found the claim that is.
+
+Two results, both computed over runs that already existed, both at zero cost.
+
+## 1. The floor: 0.20 at n = 57, and nothing this project measured ever cleared it
+
+E-026 asked one question, in words before it was a number:
+
+> *Of the paired correctness comparisons this project has run on the Magic
+> side, how many produced an effect large enough that a comparison of that size
+> could have distinguished it from zero at 80% power?*
+
+**Zero of nine.**
+
+| contrast | *d* | n | floor | n needed |
+|---|---:|---:|---:|---:|
+| E-001 overall, B vs A | +0.018 | 57 | 0.203 | — |
+| E-001 `legality_1hop` | +0.133 | 15 | 0.395 | 132 |
+| E-001 `definition_1hop` | +0.182 | 11 | 0.461 | 71 |
+| E-001 `negative_temporal` | +0.143 | 7 | 0.578 | 115 |
+| E-001 `interaction_multihop` | −0.136 | 22 | 0.326 | 126 |
+| E-001 `keyword_rule_2hop` | −0.500 | 2 | 1.082 | 10 |
+| E-018 treatment vs control | +0.100 | 20 | 0.342 | 235 |
+| E-018 placebo vs control | −0.050 | 20 | 0.342 | 937 |
+| E-020 order vs floor | +0.053 | 19 | 0.351 | 846 |
+
+The smallest effect this evaluation can see, at E-001's pooled discordance of
+17/57:
+
+| n | simple contrast | interaction |
+|---:|---:|---:|
+| 20 | 0.342 | 0.484 |
+| **57** | **0.203** | 0.287 |
+| 120 | 0.140 | 0.198 |
+| 400 | 0.077 | 0.108 |
+
+**An interaction costs about four times the questions of the simple effect it
+is built from.** That line was available on 2026-09-12 and would have prevented
+three registered entries — E-025, and both designs of E-019 — from being
+written. Nobody had measured it.
+
+### What this does and does not say
+
+**It does not say the effects are zero.** It says this evaluation could not have
+told the difference, so **every `inconclusive` it returned was the only answer
+available to it.** E-001 was not badly designed; it was measured with a ruler
+whose smallest mark is larger than the thing measured.
+
+**It does not condemn the entries.** An entry that registers its decision rule
+and returns `inconclusive` has done its job. What is measured here is whether
+the instrument was ever capable of returning anything else.
+
+**It does say that curating more questions is not a plan.** The largest
+correctness effect this project has measured is **+0.182**, itself estimated at
+n = 11 with SE 0.17. Detecting it needs **71** questions for a simple contrast
+and roughly **280** for an interaction. The annotated golden set holds 77 rows
+and all 77 are spent.
+
+### Computed twice, and the estimators disagree
+
+| n | normal approximation | exact permutation |
+|---:|---:|---:|
+| 20 | 0.342 | **0.430** |
+| 57 | 0.203 | **0.220** |
+
+The approximation **understates** the floor below n ≈ 50, where *d* is discrete
+and the permutation null pools the variance. The tables above use the
+approximation and this correction is published beside them rather than folded
+in. Reproduce with `python scripts/detectability.py --simulate`.
+
+## 2. What sits above the floor: economy, not precision
+
+The first proposal for Phase 10's claim was that **evidence precision**
+separates the arms, citing this document's own Phase 8 figures: A **0.420**
+[0.339, 0.505] against B **0.223** [0.181, 0.271], non-overlapping.
+
+**Those intervals are computed over 131 and 327 pooled evidence items, and
+evidence items are clustered inside questions.** Paired within question and
+bootstrapped over questions, the same contrast returns **−0.001
+[−0.044, +0.039]**. The entire gap was the clustering.
+
+E-027 reports every endpoint paired within question, 10,000 resamples over
+questions, seed 20260914:
+
+| endpoint | A vector | B graph | B − A | 95% CI | |
+|---|---:|---:|---:|---|---|
+| evidence items | 38.86 | 12.46 | **−26.40** | [−29.46, −22.89] | **separates** |
+| context tokens | 3892 | 744 | **−3148** | [−3428, −2843] | **separates** |
+| CR rule items | 2.09 | 5.47 | **+3.39** | [+1.65, +5.37] | **separates** |
+| rule precision | 0.07 | 0.08 | +0.00 | [−0.02, +0.02] | crosses zero |
+| gold-rule reach | 0.43 | 0.48 | +0.05 | [−0.07, +0.19] | crosses zero |
+| correctness | 0.60 | 0.61 | +0.02 | **[−0.12, +0.16]** | crosses zero |
+
+### The claim, with the bound it travels with
+
+> On these 57 questions the graph arm answers **within [−0.12, +0.16] of the
+> vector baseline's correctness** while spending **19% of the context tokens**
+> and **32% of the evidence items**, and surfacing **more** CR rules — 5.47
+> against 2.09.
+
+**"Within ±0.16" is not "the same".** The economy is a ten-standard-error
+effect; the equivalence it rests on is the widest thing in this document. That
+asymmetry is the honest shape of the result and it goes wherever the figure
+goes.
+
+### What is not claimed
+
+- **Not that the arms are equally correct.** That would need an evaluation with
+  a lower floor than 0.20.
+- **Not that the graph retrieves better.** Rule precision and gold-rule reach
+  are measured null with tight intervals.
+- **Not a pre-registered finding.** E-027 is **registered retrospectively** and
+  marked so in the registry: the numbers were computed while deciding whether
+  the entry was worth writing. There was no decision rule fixed in advance and
+  this is an exploratory measurement of existing runs. E-028 is named as the
+  confirmatory successor.
+- **Not a budget artefact.** Both arms ran under the same 6,000-token cap with
+  `dropped` empty on every question, so neither was truncated. The graph spends
+  less because its traversal returns less. Under a tighter budget the comparison
+  would differ, and that is not predicted here.
+
+## Three proposals died on checking, and the pattern is the result
+
+Phase 10 proposed three claims in one day and measured each before publishing
+it. All three failed:
+
+| proposal | killed by |
+|---|---|
+| the stratum × arm **interaction** on correctness | power at its own declared bar is 0.26; 80% needs 440 questions, against the 296 that got its alternative rejected |
+| **gold-rule reach** as the estimand | reach is 11/11 in all three arms on `definition_1hop` and 2/22 in both A and B on `interaction_multihop` — the large effect is between strata, not between arms |
+| evidence **precision** | the published non-overlapping interval was pooled over clustered items; paired, it is −0.001 |
+
+Each died to a measurement that could have been taken before the proposal was
+made. **That is the transferable part of this phase**, and it is the same
+lesson E-018 wrote in different words: the check that matters is the one run
+before the claim, not after it.
+
+Reproduce: `python scripts/detectability.py`, `python scripts/e027_economy.py`.
