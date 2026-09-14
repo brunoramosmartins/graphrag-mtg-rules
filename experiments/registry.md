@@ -6904,14 +6904,48 @@ That reading was available only by rendering. The aggregate said +0.100.
 The ceiling read before the run said **17 of 20** questions are answerable from
 what retrieval brought plus the gold rules. Treatment reached **8**.
 
-**Residual: 9 questions where a reader judged the evidence sufficient, the
-model had it, and the answer was still not right.**
+**Residual: ~~9~~ → 10 questions where a reader judged the evidence
+sufficient, the model had it, and the answer was still not right.**
 
-And the citation record makes part of that concrete. **Five questions cite an
-injected gold rule and are still scored `incorrect`** — `rg-102` (510.4,
-702.19b), `rg-1591` (307.5), `rg-2249` (707.10), `rg-3155` (120.6), `rg-778`
-(103.6, 103.6a). The rule arrived, the model quoted it, and the answer did not
-follow. On another five the model cited nothing injected at all.
+*Corrected 2026-09-13, after reading the cases.* "17 minus 8" subtracts a count
+over one population from a count over another: of treatment's 8 correct
+answers, **one — `rg-271` — is on a question the ceiling judged NOT derivable.**
+The residual over the derivable subset is 17 − 7 = **10**. The same conflation
+also makes `rg-271` weaker as evidence than it was written up as: the flip that
+carries half the primary contrast, already known to cite nothing injected, sits
+on a question a reader said the evidence does not support.
+
+And the citation record makes part of it concrete — **also corrected, and the
+first version of this paragraph was wrong twice:**
+
+> ~~Five questions cite an injected gold rule and are still scored `incorrect`
+> — `rg-102`, `rg-1591`, `rg-2249`, `rg-3155`, `rg-778`.~~
+
+- **`rg-102` does not belong.** Its ceiling verdict is `no` — the context holds
+  `Temur Battle Rage` and not `Death's Shadow`, whose power and toughness are
+  the crux. Being wrong there is a retrieval failure and was already recorded
+  as one.
+- **`rg-3155` does not belong either, and it is the more interesting removal.**
+  The model reasoned correctly from the injected `120.6`, found that the
+  context never gives Silent Artisan's **toughness**, and **declined**:
+  *"CANNOT ANSWER. The toughness of Silent Artisan is missing from the
+  context."* That is retrieval, and the model did exactly what the prompt asks.
+  It also **disagrees with the ceiling verdict** for that question, which the
+  author marked derivable — one of the two readings is wrong and the case is
+  flagged for a re-read rather than adjudicated here.
+
+**The corrected category is three**, and being three it was read in full under
+standing rule 8. All three are reasoning failures with the governing rule in
+hand:
+
+| question | cited | what went wrong |
+|---|---|---|
+| `rg-1591` | 307.5 | quotes the timing rule correctly and reaches the **opposite** verdict — concludes Ann can use Bring to Light, missing that Teferi stops the *exiled card* being cast |
+| `rg-2249` | 707.10 | gets the **stack order backwards**: says the original trigger resolves before the copy, and misses that the second resolution adds mana rather than life |
+| `rg-778` | 103.6, 103.6a | quotes the mulligan rule and concludes the opposite of what it says |
+
+Of the 10, one declined over missing card data and **nine answered and were
+judged wrong**; three of those nine had quoted the governing rule.
 
 This is the Magic-side counterpart of what E-016 measured on MetaQA: the price
 of having the evidence and not using it. It was registered as prediction 4 and
