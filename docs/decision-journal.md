@@ -90,6 +90,54 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — E-024 returns nothing, because I turned one of its predictions into a gate
+
+The entry registered branch 3 as *"even the key-given arm fails"* and **never
+said what failing was as a number**. Separately, prediction 1 said the
+key-given arm would land above 0.80. `run_e024.py` scored branch 3 as
+`control < 0.80`.
+
+**A prediction became a decision boundary, in code, after the entry was
+written** — inside the entry meant to close Phase 9, by the same hand that has
+spent two days writing amendments against exactly this.
+
+It is not cosmetic. The control came in at **16/22 = 0.727, interval [0.518,
+0.868]**, which **contains 0.80**. The control did not clearly fail; it landed
+on the predicted value with an interval that cannot exclude it. A boundary at
+0.70 — no better registered — would have fired the other branch and published
+the other number.
+
+And it cannot be repaired now. Any threshold chosen today is chosen having seen
+0.727, which is post-hoc selection with a later timestamp on it. So **E-024 is
+inconclusive by instrument defect**, and `question_only` stays unreported — not
+because branch 3 is valid but because its gate is in dispute, and quoting a
+treatment arm after its gate became arguable is the worst option on the table.
+The rows are in `runs/e024.jsonl`.
+
+**What the run did produce is a better question than the one it asked.** With
+the answer key in hand, the model named the annotator's chapter on 16 of 22,
+and the six misses are topically adjacent chapters that do not carry the
+answer — `120` read as `613`, `700` as `613`, `707` as `111`/`613`/`601`. The
+annotation guide asks for *"the most specific rule that carries the answer"*,
+and "most specific" and "carries" are both judgements.
+
+**If a careful reader holding the answer would not reproduce their own
+annotation, `gold_cr_rules` is a choice among defensible options rather than a
+fact about the question** — and the 2/22 gold-rule reach that Phase 9's whole
+objective rested on has been scored against one reader's pick. That does not
+invalidate it; retrieval genuinely did not bring those rules. It means the
+target's determinacy has never been checked, which is a limitation to close or
+to publish.
+
+Registered as **E-025**, with **numeric boundaries fixed before any
+re-annotation** — ≥ 0.85 determinate, ≤ 0.70 a choice, between is inconclusive
+and is the default — placed off the 1/22 grid, because E-018 put two thresholds
+on attainable values and landed on both and E-024 had none at all. Its most
+important line is the asymmetry: the author re-annotating their own work is
+contaminated *toward* agreement, so **a low figure is strong evidence and a
+high one is weak**, and that is written down now rather than found in the
+write-up. Zero API cost; an hour of the only resource the project cannot buy.
+
 ## 2026-09-14 — The target was defined from the answer, and Phase 9 never tested whether it was reachable from the question
 
 Asked what could actually be done about the gap Phase 9 measured, I went to

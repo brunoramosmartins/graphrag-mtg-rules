@@ -7789,7 +7789,7 @@ size attached: four questions._
 
 ---
 
-## E-024 — can the governing rule be named from the question alone? (registered 2026-09-14, not yet run)
+## E-024 — can the governing rule be named from the question alone? (registered 2026-09-14, run 2026-09-14, **inconclusive — instrument defect**)
 
 - **Registered:** 2026-09-14, after Phase 9 closed every retrieval front and
   before Phase 10 spends any curation. **It runs before that curation**,
@@ -7904,6 +7904,197 @@ before "a bridge exists" means anything.
 
 22 questions × 2 conditions × 3 samples = 132 calls, no judge. Under
 **US$ 0.05**.
+
+### Actual result
+
+Run 2026-09-14. 22 questions, 2 conditions, 3 samples each, 132 calls,
+US$ 0.006. Zero unparseable replies.
+
+**Verdict: inconclusive, and the reason is a defect in this entry's own
+instrument rather than in what it measured.** `question_only` is **not
+reported**.
+
+#### What the run returned
+
+| condition | majority-of-3 | rate | Wilson 95% | per-sample |
+|---|---:|---:|---|---:|
+| `question_and_key` (control) | 16/22 | **0.727** | [0.518, 0.868] | 0.712 |
+| `question_only` | — | **not reported** | — | — |
+
+Majority baseline, fixed before the run: chapter `613` every time, 6/22 = 0.273.
+
+#### The defect, and it is mine
+
+The decision rule registered branch 3 as *"Even the key-given arm fails. The
+task is ill-posed as operationalised"* and **never defined "fails" as a
+number**. Prediction 1 separately said *"Key-given lands above 0.80."*
+
+`scripts/run_e024.py` scored branch 3 as `control < 0.80`. **A prediction was
+turned into a decision boundary, in code, after the entry was written.** That
+is the move this project exists to police, committed inside the entry that was
+meant to close Phase 9.
+
+It is not cosmetic. **The control's interval, [0.518, 0.868], contains 0.80.**
+The control did not clearly fail; it landed on the predicted value with an
+interval that cannot exclude it. The branch fired on a boundary that was not
+registered, and a differently — equally arbitrarily — chosen boundary at 0.70
+would have fired branch 2 and published the other number.
+
+**It cannot be repaired by registering a boundary now.** Any threshold chosen
+at this point is chosen having seen 0.727, which is not pre-registration with a
+later timestamp; it is post-hoc selection wearing one.
+
+So `question_only` stays unreported — not because branch 3 is valid, but
+because the boundary that would license reporting it is in dispute, and
+quoting a treatment arm after its gate became arguable is the worst of the
+options available. The rows are in `runs/e024.jsonl` for anyone reopening this.
+
+#### What is reportable without passing through the boundary
+
+The control's own behaviour is a fact about the task, not about the bar.
+
+**With the answer key in hand, a model names the annotator's chapter on 16 of
+22.** The six it misses are not the granularity failure the branch-3 text
+guessed at. They are **topically adjacent chapters that do not carry the
+answer**:
+
+| question | gold chapter | control named |
+|---|---|---|
+| `rg-3155` | 120 — damage | 614, 613, 613 |
+| `rg-4853` | 700 — general | 613 ×3 |
+| `rg-396` | 707 — copying | 111, 613, 601 |
+| `rg-3915` | 603 — triggered abilities | 700 ×3 |
+| `rg-650` | 614 — replacement | 121, 613, 613 |
+| `rg-2711` | 610 / 614 / 700 | 614, 110, 110 |
+
+`docs/annotation-guide.md` asks for *"the most specific rule that carries the
+answer"*. **Even holding the answer, a model disagrees with the annotator about
+which chapter that is on more than a quarter of the questions.** Several
+chapters govern any given interaction; the gold annotation picked the one a
+reader judged decisive.
+
+If that holds up, **a question-to-chapter router has no well-defined target to
+hit** — which answers the question that motivated this entry more directly than
+the design intended, and by a route the design did not plan. It is a
+**hypothesis produced by this run, not a result of it**, and it is registered
+as **E-025** rather than asserted here.
+
+#### Predictions, scored where the defect allows
+
+1. **"Key-given lands above 0.80."** **Not met at the point estimate — 0.727 —
+   and not excluded by its interval.** Reported exactly that way; this is the
+   prediction that should never have become a gate.
+2. **"Question-only lands between the majority baseline and 0.50."**
+   **Unscored.** The arm is not reported.
+3. **"Where question-only succeeds it will be where the question names the
+   mechanism."** **Unscored**, for the same reason.
+
+#### What this changes
+
+- **The scope statement in `docs/evaluation.md` is neither confirmed nor
+  reopened.** It was written on the retrieval measurements, which stand
+  untouched; this entry was to test the assumption underneath them and it
+  failed to.
+- **Phase 10 proceeds as revised.** E-024 was run before its curation precisely
+  so a result could redirect it. It cannot, so nothing is redirected.
+- **The registry gains a worked example of the failure mode it hunts**, which is
+  the only thing this entry delivered cleanly: a threshold that entered through
+  an implementation rather than through a registration, and was invisible until
+  the number landed beside it.
+
+---
+
+## E-025 — is the governing chapter determined, or is it the annotator's choice? (registered 2026-09-14, not yet run)
+
+- **Registered:** 2026-09-14, from a hypothesis E-024 produced and could not
+  test. Its boundaries are **numeric and fixed below**, which is the one thing
+  E-024 did not do and the reason it returned nothing.
+
+- **Where this comes from.** E-024's control arm held the **answer key** and
+  still named the annotator's chapter on only **16 of 22**, missing on six with
+  topically adjacent chapters that do not carry the answer — `120` read as
+  `613`, `700` read as `613`, `707` read as `111`/`613`/`601`.
+
+  `docs/annotation-guide.md` step 4 asks for *"the most specific rule that
+  carries the answer"*. "Most specific" and "carries" are both judgements.
+  **If a careful reader holding the answer would not reproduce their own
+  annotation, then `gold_cr_rules` is a choice among defensible options rather
+  than a fact about the question** — and every retrieval figure in this project
+  that scores against it has been scoring against one reader's pick.
+
+- **The decision this informs, and it is larger than a router.** Three things
+  rest on `gold_cr_rules` being determinate: the 2/22 gold-rule reach that
+  Phase 9's objective was built on, E-013's and E-022's ceilings, and the
+  `interaction_multihop` half of the scope statement in `docs/evaluation.md`.
+  **None of them is invalidated by a soft target** — retrieval genuinely did
+  not bring those rules — but all of them are *measured against a target whose
+  determinacy has never been checked*, and that is a limitation the project
+  should either close or publish.
+
+### Design
+
+- **Population.** The same 22 `interaction_multihop` evaluation questions.
+  Declared: this is the split's fourth reading, it draws no arm comparison and
+  scores no system.
+- **Task, and it is curation rather than code.** The author re-annotates the
+  governing **chapter** for each of the 22 from the key, **blind to the
+  existing `gold_cr_rules`** — the ids are rendered with the question and the
+  key and without the annotation, by a mode added to `e018_inspect.py` or a
+  small sibling. Recorded in `data/golden/e025_rechapter.json`: ids and three
+  digits, no key text, no CR text.
+- **Primary measure.** Agreement between the re-annotation and the original
+  gold chapters, per question: a question agrees when the re-annotated chapter
+  is among the original's. Reported as a proportion with a Wilson interval.
+- **Second comparator, already collected and free.** E-024's `question_and_key`
+  rows, majority of three, are a model doing the same task with the same
+  information. Reported beside the author's figure, **not pooled with it**.
+
+### Boundaries, numeric, fixed before any re-annotation
+
+Placed off the 1/22 grid on purpose — E-018 put two thresholds on attainable
+values and landed exactly on both, and E-024 had no threshold at all:
+
+| agreement | reading | consequence |
+|---|---|---|
+| **≥ 0.85** (19 or more of 22) | the target is determinate | `gold_cr_rules` stands as a measurement target; the retrieval figures keep their current force; a router has something well defined to aim at |
+| **≤ 0.70** (15 or fewer) | the target is a choice | every figure scored against `gold_cr_rules` gains a published caveat naming this entry, E-024's motivating question is withdrawn as ill-posed, and the scope statement's `interaction_multihop` half is restated in terms of what retrieval brought rather than what it missed |
+| between | inconclusive, and it is the default | nothing is adopted, nothing is withdrawn, and the entry says 22 questions cannot separate the two |
+
+### Predictions, recorded before the run
+
+1. **Author agreement lands between 0.70 and 0.90**, i.e. most likely
+   inconclusive. Re-annotating one's own work is the weakest form of this test
+   and I expect it to be closer to determinate than the model's 0.727.
+2. **The disagreements concentrate on the same questions the model missed** —
+   `rg-4853` (`700`, a catch-all chapter), `rg-396` (`707` against `111`), and
+   `rg-2711` (three gold chapters, which is itself a sign the annotator found
+   no single one decisive).
+3. **Questions whose gold annotation carries three or more chapters disagree
+   more often than those carrying one.** If that holds, the number of gold
+   chapters is a readable proxy for target softness and costs nothing to
+   compute on any future golden set.
+
+### Threats to validity, recorded before the run
+
+- **The author wrote the original annotations and will remember some of them.**
+  This is contamination in the direction of agreement, and it makes the test
+  **asymmetric**: a *low* agreement is strong evidence the target is soft, and
+  a *high* agreement is weak evidence that it is not. Registered here so the
+  asymmetry is not discovered in the write-up. A second independent annotator
+  would fix it and the project does not have one.
+- **Chapter is coarser than `gold_cr_rules`**, which are lettered leaves. A
+  target can be determinate at chapter level and soft at leaf level, and this
+  entry measures only the first. The leaf question is harder and is not opened.
+- **`rg-2711` carries three gold chapters and `rg-102` three.** Scoring
+  "agrees when the new chapter is among the old" is generous to agreement by
+  construction, which pushes the result toward the branch this entry would
+  rather not reach — and is kept for that reason.
+- **Fourth reading of the evaluation split**, declared.
+
+### Cost
+
+**No API spend.** The author reads 22 keys; E-024's rows supply the second
+comparator. The cost is an hour of the only resource this project cannot buy.
 
 ### Actual result
 

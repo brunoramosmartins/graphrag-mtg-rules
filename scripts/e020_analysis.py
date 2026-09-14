@@ -23,8 +23,8 @@ from __future__ import annotations
 
 import argparse
 import sys
-from statistics import median
 from pathlib import Path
+from statistics import median
 
 from graphrag_mtg.evaluation.metrics import mcnemar, wilson_interval
 

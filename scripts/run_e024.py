@@ -292,12 +292,29 @@ def score(args: argparse.Namespace) -> int:
     control_wins, control_n = results[CONDITIONS[1]]
     only_wins, only_n = results[CONDITIONS[0]]
     print(f"\n{RULE}\nVERDICT — the branches as registered")
+    # ** THE DEFECT THAT VOIDED THIS ENTRY, kept rather than deleted. **
+    #
+    # E-024 registered branch 3 as "even the key-given arm fails" and never
+    # defined failing as a number. Prediction 1, separately, said the control
+    # would land above 0.80. This line turned that prediction into a decision
+    # boundary, in code, after the entry was written — which is the move the
+    # registry exists to police.
+    #
+    # It decided the run: the control came in at 0.727, interval [0.518,
+    # 0.868], which CONTAINS 0.80. A boundary at 0.70 — no better registered —
+    # fires the other branch and publishes the other number. See E-024's
+    # Actual result; the entry is inconclusive by instrument defect and
+    # `question_only` is not reported.
+    #
+    # Left in place so the script still reproduces the run it produced. Do not
+    # "fix" the number: any threshold chosen now is chosen having seen 0.727.
+    # The successor entry, E-025, carries numeric boundaries fixed in advance.
     if control_wins / control_n < 0.80:
-        print("\nBRANCH 3 — the control failed.")
-        print(f"The key-given arm reached {control_wins}/{control_n}, under the 0.80 the")
-        print("entry predicted for a task the annotator did by hand. The task is")
-        print("ill-posed as operationalised - most likely the chapter is the wrong")
-        print("granularity - and the question-only number IS NOT REPORTED.")
+        print("\nBRANCH 3 — fired, on a boundary this entry never registered.")
+        print(f"The key-given arm reached {control_wins}/{control_n}. The 0.80 above is")
+        print("prediction 1 promoted to a gate in this file, not a registered threshold,")
+        print("and the control's interval contains it. E-024 is INCONCLUSIVE by")
+        print("instrument defect and question_only IS NOT REPORTED — see the entry.")
         return 0
     if only_wins / only_n > rate:
         print("\nBRANCH 1 — question-only clears the majority baseline.")
