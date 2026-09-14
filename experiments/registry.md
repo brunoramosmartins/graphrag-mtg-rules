@@ -8002,6 +8002,87 @@ as **E-025** rather than asserted here.
   an implementation rather than through a registration, and was invisible until
   the number landed beside it.
 
+### Amendment 2026-09-14 — the gate was the wrong instrument, and fixing the number would not have saved the entry
+
+Written after the result, and everything in it is therefore **exploratory and
+cannot be this entry's verdict**. It exists because "the threshold was not
+registered" is only half the diagnosis, and the other half decides whether a
+successor is worth designing.
+
+#### The design needed a comparison and I built a gate
+
+The entry's own words: *"The control is the design… without it a null on
+`question_only` cannot be told apart from a task that is impossible as
+posed."* That sentence describes a **contrast between two arms**, and a
+contrast is settled by a paired test, not by an absolute bar on one of them.
+
+Instead the entry gated on the control's absolute level and never said how the
+two arms would be compared. So the primary quantity was never operationalised,
+and the quantity that *was* operationalised needed a number the entry did not
+register. **One defect produced the other**: had the contrast been primary, no
+absolute threshold would have been required at all.
+
+#### The contrast, computed post-hoc and labelled as such
+
+| | |
+|---|---:|
+| `question_only`, majority of 3 | 11/22 |
+| `question_and_key`, majority of 3 | 16/22 |
+| discordant pairs | **5:0** |
+| exact McNemar | ***p* = 0.0625** |
+| paired difference | **+0.227** |
+
+The key helped on `hand-replacement-order-counters`, `rg-102`, `rg-20`,
+`rg-271`, `rg-3`. **It hurt on none.**
+
+#### And this is why fixing the boundary would not have saved the entry
+
+Five discordant pairs one way, zero the other. **Exact McNemar needs six for
+raw *p* < 0.05 and this run has five.** The direction is unambiguous and the
+test misses by one pair — which is, to the pair, the arithmetic that left
+E-001 `inconclusive` in Phase 6.
+
+So the entry fails twice and the failures are independent:
+
+1. the gate fired on a threshold that was never registered, and
+2. **the contrast that should have been primary is underpowered on this
+   population.**
+
+Repairing (1) does not repair (2). A successor needs **more questions**, not a
+better number — and `interaction_multihop` holds 22 in the evaluation split,
+which is all there is.
+
+#### What a successor would have to look like
+
+- **No absolute gate.** Both arms reported with intervals; the **paired
+  contrast is the primary**, exact McNemar, and the control's absolute level is
+  reported as context rather than as a branch trigger.
+- **Powered for the effect this run suggests.** At roughly a 0.23 discordance
+  rate all in one direction, clearing 7:0 needs on the order of **31
+  questions** of this stratum. The evaluation split cannot supply them.
+- **Therefore it is a Phase 10 artefact**, because Phase 10's fresh pool is
+  where more `interaction_multihop` questions come from. Designing it before
+  that pool exists is designing for a population that does not.
+- **Its design is informed by having seen this run**, and it says so. That is a
+  weaker footing than pre-registration and it is the honest one.
+
+#### The sequence, and E-025 comes first
+
+**E-025 gates the successor**, not the other way round. If the governing
+chapter is a choice rather than a determination — E-025's ≤ 0.70 branch — then
+"can a model name it from the question" is **ill-posed**, and no amount of
+power fixes a question about hitting a target that is not one. E-025 costs no
+API spend and an hour of reading.
+
+    E-025  →  is the target determinate?
+              ≤ 0.70  the successor is withdrawn, unbuilt
+              ≥ 0.85  the successor is designed into Phase 10, powered
+              between inconclusive, and nothing is built on it
+
+Nothing else in the project waits on this. The scope statement in
+`docs/evaluation.md` rests on the retrieval measurements, which are counts and
+do not pass through either entry.
+
 ---
 
 ## E-025 — is the governing chapter determined, or is it the annotator's choice? (registered 2026-09-14, not yet run)
