@@ -90,6 +90,49 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — Phase 9 closes on option (ii): a scope statement instead of a repair
+
+The phase opened to make retrieval reach the governing rule. **It closes
+without a repair, because every candidate repair was measured to be unavailable
+before one was built.** Total API spend: **US$ 0.19.**
+
+**One entry criterion was not met and it is the one that closed the phase.**
+"Target-rule recall on the non-selected population rises by what each front
+registered in advance as sufficient" — no front entered, so there is no rise to
+measure. It is not an overlooked deliverable; it is a deliverable without an
+object, and the 2026-09-13 objective revision is the consequence.
+
+**What closed each front, all by arithmetic on the run's own inputs:** the
+bridge out of chapter 700 reaches 1 of 39 missing rules at one hop; gold
+rulings were already there on 182 of 191; wrong-sense linking is 4 questions of
+57; the budget never fires. The intervention that would have justified the
+programme — injecting the governing rule directly — came back `unresolved`.
+
+**What the phase delivered instead**, and it is the thing worth having: a
+measured map of where this GraphRAG works and where nothing built here works.
+The governing rule arrives on 2 of 22 in **both** arms, on the **same two
+questions**, and on **0 of the 13** whose target came from a judge-curated
+citation. That makes the gap a property of the problem rather than of one
+implementation, which a repair attempt would never have established.
+
+**E-023 is registered and deliberately not run.** Option (i) — chase the
+generator — was the other defensible reading and was declined: it answers a
+real question the measurement raised and it walks the project away from the
+graph. The entry stands with its size attached, four questions, so the lead is
+on the record rather than in someone's memory.
+
+**Carried into Phase 10, named rather than forgotten:** the judge audit at
+n ≥ 30 per label with `rg-2711` queued; the bare-card-name retrieval defect
+(7 items, 6 questions, zero in the vector arm); and E-023 itself.
+
+**The habit this phase should be remembered for** is not any of its numbers.
+Five defects were found in the measuring apparatus — a noise floor sampling
+less variance than its contrast, a median returning the maximum, a prediction
+promoted to a gate inside its own script, an inspector that had never executed,
+and 27 of 60 recorded prompts that no longer rebuilt — and every one was
+written into the registry rather than quietly corrected. A phase that reports
+only its results is not reporting its instruments.
+
 ## 2026-09-14 — The A/B/C/D split is countersigned, and standing rule 8 is satisfied for the first time end to end
 
 The author read the nine renderings through `scripts/e018_inspect.py`, against
