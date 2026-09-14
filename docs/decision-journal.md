@@ -90,6 +90,37 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — Phase 10's manual sample has no object, and inventing one would be worse than skipping it
+
+Standing rule 8 requires a manual sample of every outcome category before any
+number from a **comparative evaluation** is published. Phase 10 carried that
+deliverable, with the added correction the E-018 countersign earned: the prior
+hidden until the mark is recorded.
+
+**It has no object.** E-019, the only comparative evaluation this phase
+registered, was withdrawn before curation. E-026, E-027 and E-029 are
+arithmetic and rendering over runs that already existed — they add no answers
+and no judgements. E-018's sample is read and countersigned.
+
+E-027 is the only candidate and it **has no outcome categories**: it is a
+paired difference in token counts, not a set of classified answers. There is no
+`correct` / `partial` / `refused` / `unparseable` to sample one of each from.
+Building a sample over it would mean **inventing the object the rule requires
+in order to satisfy the rule**, which is worse than recording that the
+deliverable does not apply — it would put a checkbox where a reader expects
+evidence.
+
+Recorded the same way Phase 9's paired recall was: **a deliverable without an
+object, not an overlooked one.** The hidden-prior requirement stands registered
+for the next comparative evaluation this project runs, and it is the first
+thing that evaluation does.
+
+**Why this matters beyond the checkbox.** A rule that is satisfied by
+constructing its own subject stops being a constraint. Rule 8 exists because
+aggregates hid a context that did not answer its question; applying it to a
+token count would teach the project that the rule is paperwork. The refusal is
+the maintenance.
+
 ## 2026-09-14 — A field populated 100% of the time in all three arms, and only one arm's varies
 
 Phase 10 needed to say what the graph does that the vector baseline cannot,

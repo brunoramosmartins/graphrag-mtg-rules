@@ -69,8 +69,13 @@ class TestTheIntervalBehaves:
     def test_a_large_consistent_difference_excludes_zero(self) -> None:
         a = [float(i) for i in range(30)]
         b = [x + 10.0 for x in a]
-        _, _, _, low, high = eco.paired(a, b, rng(), 2000)
+        _, _, delta, low, high = eco.paired(a, b, rng(), 2000)
         assert low > 0
+        # And the interval brackets the difference it is an interval for: an
+        # interval that excludes zero while missing the effect would satisfy
+        # the assertion above for the wrong reason.
+        assert low <= delta <= high
+        assert delta == pytest.approx(10.0)
 
     def test_a_noisy_small_difference_does_not_exclude_zero(self) -> None:
         source = random.Random(7)
