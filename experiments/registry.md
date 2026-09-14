@@ -8177,6 +8177,38 @@ values and landed exactly on both, and E-024 had no threshold at all:
 **No API spend.** The author reads 22 keys; E-024's rows supply the second
 comparator. The cost is an hour of the only resource this project cannot buy.
 
+### Amendment 2026-09-14 — the blind leaked, and the population splits in two
+
+Found by rendering the worksheet and checking it against the annotation, before
+any question was read. **No verdict has been recorded.**
+
+**Six of the 22 keys name the gold rule or its chapter**, and all six are the
+author's own `hand-*` keys: `hand-humility-opalescence` (613.4b, 613.7),
+`hand-deathtouch-trample` (702.2c, 702.19e), `hand-clone-copies-printed-pt`
+(613.2, 706.2), `hand-blood-moon-nonbasic` (305.7),
+`hand-replacement-order-counters` (616.1), `hand-first-strike-deathtouch`
+(702.7). The 16 RulesGuru keys are silent on the rule.
+
+For those six, re-annotating is **transcription, not judgement** — the key
+hands the reader the number. Agreement there is guaranteed and measures
+nothing, and pooling them would inflate the figure by a quarter of the
+population in the determinate direction.
+
+**Registered, before any reading:**
+
+- **Primary: the 16 questions whose key does not name the rule.** The
+  boundaries are unchanged as rates — determinate at >= 0.85, a choice at
+  <= 0.70 — and on 16 that is **14 or more** and **11 or fewer**, neither of
+  which is an attainable value the result can land exactly on.
+- **Positive control: the six whose key names it.** Expected near-perfect. **If
+  the control is not near-perfect the primary is not read**, because a reading
+  that cannot reproduce an annotation the key hands it is not a reading. This
+  is the check E-024 lacked, in the entry written because E-024 lacked it.
+
+The worksheet still renders all 22 and does not tell the reader which group a
+question is in. The split is applied at scoring; knowing it in advance would be
+a hint about how hard the judgement is supposed to be.
+
 ### Actual result
 
 _Not yet run._
