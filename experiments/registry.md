@@ -8331,3 +8331,535 @@ being iterated as a list, and the printed evidence was truncated with
 identical against a table that had just shown rules differing. One calculation
 alone would have passed, and this entry would have been withdrawn for the wrong
 reason with a fabricated split in it.
+
+---
+
+## E-019 — does the graph's advantage depend on the stratum? (registered 2026-09-14, **withdrawn 2026-09-14 before any curation**)
+
+- **Registered:** 2026-09-14, at the opening of Phase 10 and **before a single
+  new question is curated**. Nothing here is fitted to data that does not yet
+  exist. Every planning value below comes from E-001's evaluation split and is
+  named as such.
+
+- **Where this comes from.** E-001 compared three arms over 57 questions and
+  returned `inconclusive` on all four strata it tested, adjusted *p* = 1.0000
+  throughout. That was the correct answer to the question it asked: it measured
+  an **average over strata whose effects run in opposite directions**.
+
+  The per-stratum table, which E-001 published as descriptive and explicitly
+  declined to treat as a verdict:
+
+  | stratum | n | A correct | B correct | B wins | A wins | mean *d* |
+  |---|---:|---:|---:|---:|---:|---:|
+  | `legality_1hop` | 15 | 12 | **14** | 3 | 1 | **+0.133** |
+  | `definition_1hop` | 11 | 8 | **10** | 3 | 1 | **+0.182** |
+  | `keyword_rule_2hop` | 2 | **2** | 1 | 0 | 1 | **−0.500** |
+  | `negative_temporal` | 7 | 3 | **4** | 1 | 0 | **+0.143** |
+  | `interaction_multihop` | 22 | **9** | 6 | 2 | 5 | **−0.136** |
+  | **all** | **57** | 34 | 35 | 9 | 8 | +0.018 |
+
+  The overall +0.018 is the average of +0.182 and −0.136. **An average of
+  effects that cancel is not a small effect; it is a wrong estimand.**
+
+- **The decision this informs.** Whether the scope statement Phase 9 published
+  — *"this GraphRAG outperforms the vector baseline exactly where its topology
+  reaches, and is outperformed outside it"* — is a **testable claim that
+  survives fresh data**, or a pattern read off 57 questions after the fact.
+  Phase 9 published it as descriptive precisely because this entry had not run.
+
+### Design
+
+- **Estimand.** The **interaction**: the difference between groups of the
+  paired per-question difference *d* = (B correct) − (A correct), with
+  *d* in {−1, 0, +1}. Not each arm's accuracy, and not the pooled difference
+  E-001 measured.
+
+- **Grouping, taken from a taxonomy that predates this entry.**
+  `docs/annotation-guide.md` step 1 splits strata by **question shape**,
+  written in Phase 1 and untouched since. That split, not the outcomes,
+  defines the groups:
+
+  | group | strata | why |
+  |---|---|---|
+  | **lookup** | `legality_1hop`, `definition_1hop`, `keyword_rule_2hop` | the answer is a bounded traversal from an entity the question names |
+  | **composition** | `interaction_multihop`, `negative_temporal` | *"composes two or more effects whose result no single rule states"* |
+
+  Using a grouping derived from the same 57 outcomes it would then be tested on
+  is the post-selection defect that voided E-012a. This grouping is a property
+  of the **question**, declared before any of these runs existed, and it is
+  tested on **questions that do not yet exist**.
+
+- **Arms.** Three, as decided 2026-09-13. **The primary contrast is B against
+  A.** The hybrid is a **reported arm, not a third hypothesis**, and does not
+  enter the multiple-comparison family.
+
+- **Outcome.** Judge-scored correctness, collapsed two ways — `correct` against
+  everything else — the same collapse E-001 registered. Not an ordinal
+  endpoint; see the threats below.
+
+- **Pairing.** Same question, same token budget, and **one ordering shared
+  across arms**, which is E-020's finding applied rather than cited.
+
+### Power, computed before any curation
+
+Planning values are E-001's observed discordant rates, themselves estimated on
+11 to 22 questions per stratum. They are the best available and they are not
+precise; this entry treats them as planning values, never as constants.
+
+Var(*d*) = *p_b* + *p_c* − (*p_b* − *p_c*)², and the SE of the interaction is
+sqrt(Var1/n + Var2/n) for n per group.
+
+**Design A — the taxonomy grouping above.** lookup *d* = +3/28 = +0.107,
+composition *d* = −2/29 = −0.069, so **δ = 0.176**:
+
+| n per group | total questions | power |
+|---:|---:|---:|
+| 40 | 80 | 0.31 |
+| 60 | 120 | 0.43 |
+| 100 | 200 | 0.64 |
+| **148** | **296** | **0.80** |
+
+**Design A is rejected as the primary, before running, for the reason E-025 was
+withdrawn.** It needs **296 new questions** for 80% power by the approximation,
+and nearer **320** under the permutation test actually registered — see the
+second-calculation note below. The annotated golden
+set holds **77 rows** — 12 authored, 15 definitions, 50 RulesGuru ids — and
+**all 77 are spent** (20 development + 57 evaluation). Design A is an
+experiment that returns `inconclusive` at every n this project can reach, and
+that is knowable now rather than afterwards.
+
+**Design B — the two strata that carry the claim**, `definition_1hop`
+(*d* = +0.182) against `interaction_multihop` (*d* = −0.136), so **δ = 0.318**:
+
+| n per stratum | total questions | power |
+|---:|---:|---:|
+| 20 | 40 | 0.43 |
+| 30 | 60 | 0.59 |
+| 40 | 80 | 0.72 |
+| **49** | **98** | **0.80** |
+| 60 | 120 | 0.87 |
+
+**Design B is the registered primary, at n = 49 per stratum.** It buys its
+power by contrasting the extremes rather than the averages, and it pays for
+that in generality: it tests the claim where the claim is sharpest, not across
+the whole taxonomy. That trade is declared here rather than discovered in the
+write-up.
+
+**Both tables were computed twice, and the two calculations disagree at small
+n.** The figures above are the normal approximation; the registered test is a
+permutation test, and simulating it directly gives:
+
+| design | n per group | normal approximation | permutation |
+|---|---:|---:|---:|
+| B | 30 | 0.59 | **0.49** |
+| B | **49** | 0.80 | **0.78** |
+| B | 60 | 0.87 | 0.84 |
+| A | 60 | 0.43 | **0.30** |
+| A | 148 | 0.80 | 0.81 |
+
+The approximation **overstates power by up to 13 points below n ≈ 50**, where
+*d* is discrete and the permutation null pools the variance. At the registered
+n = 49 the two agree within simulation error, which is the only place the
+number is load-bearing — but a reader planning a smaller variant of this design
+should use the right-hand column. Recorded because the first calculation alone
+would have passed, and this project has already published one number that a
+second calculation would have caught.
+
+**Simulation parameters, so that re-running it is a check and not a new
+result:** the permutation column is 300 to 600 simulated studies, each with 600
+to 2,000 permutations, seed 20260914. **The Monte Carlo standard error is
+roughly 0.02 to 0.03**, so two runs of this table differing by 0.02 is the
+estimator and not a finding. Independent runs at higher precision returned 0.49
+at n = 30, 0.78 at n = 50 and 0.82 at n = 60 for Design B.
+
+**And that higher-precision run makes Design A slightly worse than the table
+above.** Under the registered permutation test, 150 per group — 300 questions —
+returns **0.78**, not 0.80; the true 80% point is nearer **320 questions**.
+This does not change the rejection. It hardens it, and it is recorded rather
+than rounded away.
+
+### The curation this requires, stated as the cost it is
+
+**98 questions, none of which exist.** Not "98 more" — the golden set has zero
+unspent rows. Reusing any of the 57 would test the hypothesis on the data that
+generated it.
+
+- `definition_1hop` at 49 — `scripts/generate_definition_questions.py` builds
+  these from the corpus, so the cost there is review, not authorship.
+- `interaction_multihop` at 49 — RulesGuru through `build_golden_pool.py` and
+  `classify_pool.py`, then hand annotation. **This is the real cost of Phase
+  10**, and no engineering substitutes for it.
+
+Plus 20 each for the two falsifier strata below: **138 questions in total.**
+
+### Decision rule, fixed before the run
+
+Two-sided permutation test on the difference of group mean *d*, 10,000
+permutations, seed recorded. α = 0.05.
+
+1. **δ̂ > 0 and *p* < 0.05** — the interaction holds. The scope statement is
+   upheld on fresh data and is published as a tested claim.
+2. **δ̂ < 0 and *p* < 0.05** — the interaction reverses. The scope statement is
+   **withdrawn**. Written down now so that this outcome is not renegotiated
+   later.
+3. ***p* ≥ 0.05** — `inconclusive`. The scope statement stays exactly as Phase 9
+   published it: descriptive, on 57 questions, not a tested claim. **It is not
+   re-described as "directionally supported".**
+
+**Secondary, reported and Holm-corrected at family size 2, never substituted
+for the primary:** exact McNemar, B against A, within each of the two primary
+strata. At n = 49 a raw *p* < 0.05 needs **6 discordant pairs one way**, and
+Holm's strictest step needs **8:0**.
+
+**The effect-size bar is δ ≥ 0.15, placed off the 1/n grid.** At n = 49 the
+attainable values of *d* are multiples of 1/49 = 0.0204, and 0.15 is not one of
+them. E-018 placed both of its bars on multiples of 1/20 and hit both exactly.
+
+### The falsifier, named before the pool is drawn
+
+**`keyword_rule_2hop` runs against the hypothesis.** It is a lookup stratum —
+the graph should lead — and the graph **loses 1 of 2** there. At n = 2 that is
+noise, and it is named here so that it cannot later be called noise *because*
+it disagreed.
+
+It is deliberately **not** in Design B's primary contrast, so the primary
+cannot be rescued by its absence. It is curated to **n = 20** and reported as a
+**declared secondary**: if the graph trails on `keyword_rule_2hop` at n = 20
+while leading on `definition_1hop`, the lookup-versus-composition story is
+wrong even if the primary fires, and the write-up says so in those words.
+
+**`negative_temporal` is a second, weaker falsifier** — a composition stratum
+where the graph **leads** (+0.143 at n = 7) while reaching the gold rule on
+only 2 of 7. Curated to n = 20 and reported the same way.
+
+### Predictions, recorded before the run
+
+1. δ̂ lands in **[0.15, 0.45]**. The point estimate from E-001 is 0.318 and the
+   registered bar is 0.15.
+2. **`definition_1hop`: B ≥ A.** E-001 has 10/11 against 8/11.
+3. **`interaction_multihop`: A ≥ B.** E-001 has 9/22 against 6/22.
+4. **Gold-rule reach stays near zero on `interaction_multihop` in every arm.**
+   Phase 9 measured 2/22, 2/22 and 3/22, and the two that A and B both reach
+   are hand-authored. This is a **retrieval** prediction; its failure would
+   invalidate the framing rather than the test.
+5. The **hybrid** arm leads overall, as it did on both existing measurements
+   (0.65). Reported, not tested.
+
+### Threats to validity, recorded before the run
+
+- **The judge is not validated**, and this entry inherits that whole. E-011
+  declined to publish correctness as validated and E-011a measured agreement on
+  `partial` at 4 of 14. **The judge audit at n ≥ 30 per label is a blocking
+  prerequisite**: a second verdict must not be measured with the ruler in the
+  condition the first one was measured with.
+- **An ordinal endpoint was considered and rejected.** Scoring
+  correct/partial/incorrect would capture more variance per question, but the
+  judge is least reliable exactly at the `partial`/`incorrect` boundary. A more
+  sensitive endpoint on a less reliable instrument is not more power.
+- **Newly curated questions may be easier than the originals**, and the gain
+  would then belong to the curation rather than to either arm. Mitigation: the
+  same annotation guide, the same stratification, `vector_should` annotated
+  **blind and before any retriever touches the pool**, and **the two verdicts
+  published side by side precisely because they are not directly comparable**.
+- **Planning values come from 11 and 22 questions.** If the true δ is 0.20
+  rather than 0.318, n = 49 per stratum delivers roughly **0.40** power and this
+  entry returns `inconclusive` having spent the whole curation. That is the
+  single largest risk here, and no design at a reachable n removes it.
+- **Design B's generality is narrower than the claim it tests.** The scope
+  statement is about topology reach in general; Design B tests its two extremes.
+  The write-up must not silently widen the conclusion back out.
+- **The arms return different kinds of evidence**, so item-level blinding of the
+  retrieval comparison is unachievable — measured in Phase 8 at 72% arm
+  identification from evidence kind alone, and unchanged here.
+- **`gold_cr_rules` is a function of the answer**, not of the question:
+  `docs/annotation-guide.md` step 4 has the annotator working with the key open.
+  Prediction 4 is therefore a statement about a target defined downstream of the
+  answer, which is what E-024 was registered to probe and could not resolve.
+
+### What this entry can and cannot reach at the n it will have
+
+Stated before running, because E-024 did not state it and returned nothing.
+
+- **Can reach:** branches 1, 2 and 3 of the primary, at δ ≥ 0.15.
+- **Cannot reach:** any per-stratum verdict on `keyword_rule_2hop` or
+  `negative_temporal`. At n = 20 those need 6 discordant pairs one way, and the
+  largest discordance E-001 observed in any stratum was 5 out of 22. **They are
+  reported as descriptive, and they are falsifiers rather than tests.**
+- **Cannot reach:** the taxonomy-wide interaction of Design A. That needs 296
+  questions and is out of scope for this project at any point.
+- **Cannot reach:** any claim that the graph is better *overall*. That is
+  E-001's question, E-001 answered it `inconclusive`, and this entry does not
+  reopen it.
+
+### Cost
+
+Three arms over 138 questions, plus the noise floor and the judge. At E-001's
+measured per-question cost this is roughly **US$ 4 to 7** of API spend. **The
+budget is not the constraint; the annotation is.** No arm runs until the pool is
+curated, `vector_should` is annotated blind, the judge audit has reported, and
+the split is frozen with its seed recorded.
+
+**The run records the git revision that built its prompts, and the prompt text,
+not only its hash.** E-018 recorded hashes alone, and 27 of its 60 rows stopped
+rebuilding when a later amendment changed the builder.
+
+### Actual result
+
+### Withdrawn 2026-09-14, before any curation — the design is rejected by the criterion it used to reject its own alternative
+
+Red-teamed the day it was registered, before a question was curated. The review
+returned twenty-one findings and **four of them are independently fatal**. The
+entry is withdrawn rather than amended: amending would keep a design whose
+central defect is that it should not have been chosen.
+
+#### 1. It fails its own test for rejecting Design A
+
+Design A was rejected here, in writing, for needing 296 questions. Design B was
+registered at n = 49 per stratum on the strength of 0.78 power — **computed at
+the selected point estimate, while the entry's declared minimum meaningful
+effect sits 100 lines further down and was never evaluated.**
+
+At n = 49 per stratum, SE = 0.1134:
+
+| true δ | power |
+|---:|---:|
+| 0.318 — the selected point estimate | 0.80 |
+| 0.20 | 0.42 |
+| **0.15 — the bar this entry declared** | **0.26** |
+
+**Eighty percent power at δ = 0.15 needs 220 per stratum — 440 questions.**
+Design B is rejected for the reason Design A was, by a wider margin, and the
+entry did not notice because it computed power in one section and declared the
+bar in another.
+
+#### 2. The planning value's interval contains zero
+
+The entry says the planning values "are not precise" and never prints the
+interval. Computed from its own Var(*d*) formula:
+
+| | |
+|---|---:|
+| SE(*d*) on `definition_1hop`, n = 11 | 0.173 |
+| SE(*d*) on `interaction_multihop`, n = 22 | 0.117 |
+| **SE of δ̂ = 0.318** | **0.209** |
+| **95% CI** | **[−0.09, +0.73]** |
+
+**The number the whole design is sized on is not distinguishable from zero in
+the data that produced it**, and it is additionally the largest of ten
+available pairwise contrasts, so its expectation under regression to the mean
+is materially lower before any shrinkage.
+
+#### 3. The two groups differ in question provenance, and the confound is perfect
+
+`definition_1hop` questions are built by `scripts/generate_definition_questions.py`
+from the parsed CR glossary, with the answer prose written here. `interaction_multihop`
+questions come from RulesGuru with keys in someone else's words. **Topology
+reach and question provenance are perfectly confounded across the two arms of
+the estimand**, which is the one confound a between-group design cannot absorb.
+A result of δ̂ = +0.30, *p* = 0.002 would be equally well explained by
+*"questions synthesised from our corpus are answerable from our corpus"*.
+
+Worse, and this the review did not reach: that generator's own docstring says
+the stratum exists to **restore the tie prediction** — *"if every stratum
+predicts a graph win, a reported win cannot be falsified and the comparison is
+worthless."* This entry registered a prediction that the graph **wins** on the
+stratum built to predict a draw.
+
+#### 4. The post-selection defence defends the design that was discarded
+
+The paragraph beginning *"Grouping, taken from a taxonomy that predates this
+entry"* argues that the grouping is a property of the question rather than of
+the outcomes. That argument is about **Design A**, which is rejected two
+paragraphs later. What was registered is Design B: **the argmax of |δ| over the
+ten pairs available from five strata**, chosen by reading the outcome column,
+with a *p*-value computed as though the pair had been named in advance.
+
+Fresh data removes the fitting. It does not remove the selection.
+
+#### Also found, and they would have mattered had the entry survived
+
+- **The judge gate is not a gate.** *"the judge audit has reported"* is not
+  *"has passed"*, and E-011a already returned 0.598 against a registered bound
+  of 0.720. The likely state of the world at that gate is a failed audit and
+  138 curated questions on disk — with no branch for it.
+- **`no_seed` is nowhere in the threats.** E-018 measured that retrieval
+  resolving no entity concentrates on interaction questions and scores as
+  `incorrect` without a model call. Part of δ̂ would have been a refusal rate.
+- **The effect bar could never fire.** At n = 49 the permutation critical value
+  is 0.222, so any result reaching branch 1 already clears 0.15 by 48%. The bar
+  was placed off the 1/n grid, which is the right idea applied to a threshold
+  with no reachable case.
+- **`definition_1hop` is at its ceiling** — arm B 10 of 11 — so a difference of
+  proportions mixes the effect with where each stratum's base rate sits.
+- **Stratum assignment is the independent variable and was never blinded.**
+  Only `vector_should` was.
+- **Two arithmetic errors of my own**: Holm's strictest step needs **7:0**, not
+  8:0 (E-018 states it correctly in this same file); and *"+0.018 is the
+  average of +0.182 and −0.136"* is not an identity — it is 0.0175 against
+  0.0230, with three other strata inside it. Standing rule 9, against my own
+  sentence.
+
+#### What is kept
+
+The red team called three things sound and they carry forward to whatever
+replaces this: refusing to reuse the 57; recording the prompt text and the
+building revision rather than only a hash; one ordering shared across arms; the
+falsifier named before the pool is drawn; and rejecting an ordinal endpoint
+because the judge is least reliable at the `partial` boundary.
+
+**The successor is not a repaired E-019.** E-026, registered below, measures why
+no correctness comparison on this corpus was ever going to work, and the phase
+is rebuilt on that.
+
+### Actual result
+
+_Not run. **Withdrawn 2026-09-14**, before any curation, on four independently
+fatal defects. Zero API spend and zero questions curated: the cost of finding
+out was one red-team pass over the entry on the day it was written._
+
+---
+
+## E-026 — what is the smallest effect this evaluation can see? (registered 2026-09-14, run 2026-09-14, **the floor is 0.20 at n = 57**)
+
+- **Registered and run the same day**, and marked so. It is a computation over
+  runs that already exist — no API, no graph, no model call — and it was
+  registered before being run because the answer decides Phase 10's shape.
+
+- **Where this comes from.** Three designs died on the same wall in eight days:
+  E-025 needed n ≈ 122, E-019's Design A needed 296, E-019's Design B needed 440
+  at its own declared bar. Three independent entries hitting one arithmetic
+  limit is not three mistakes. **Nobody had measured the limit.**
+
+- **The decision this informs.** Whether Phase 10 curates questions for another
+  correctness comparison, or is rebuilt on a different unit of analysis.
+
+### The question, in words before it is a number
+
+*Of the paired correctness comparisons this project has run on the Magic side,
+how many produced an effect large enough that a comparison of that size could
+have distinguished it from zero at 80% power?*
+
+**What else would make that count come back low**, asked before the count was
+taken, because a count of zero is the kind of result that flatters whoever
+computes it:
+
+1. **An extreme discordance rate**, making the floor unreachable by
+   construction. Measured: **17 of 57 = 0.298**, ordinary.
+2. **An error in the floor.** Computed twice, by two estimators, below.
+3. **A selected subset of contrasts.** The instrument carries **every** paired
+   correctness contrast this project has run, listed in `MEASURED` in
+   `scripts/detectability.py`. A contrast missing from that tuple would make the
+   result a chosen subset, which is the defect this entry exists to catch
+   elsewhere.
+
+### Design
+
+- **Instrument.** `scripts/detectability.py`. Var(*d*) for a paired difference
+  of proportions is *p_b* + *p_c* − (*p_b* − *p_c*)², and the subtracted term is
+  at most 0.0004 across every contrast here, so the discordance rate is the
+  variance to three decimals.
+- **Floor.** Smallest |effect| reaching 80% power at α = 0.05, by bisection.
+- **Two estimators**, because the registered tests in this project are
+  permutation and exact-McNemar, not z-tests.
+
+### Actual result
+
+**The floor, at E-001's pooled discordance:**
+
+| n | simple contrast | interaction |
+|---:|---:|---:|
+| 20 | 0.342 | 0.484 |
+| 40 | 0.242 | 0.342 |
+| **57** | **0.203** | 0.287 |
+| 120 | 0.140 | 0.198 |
+| 200 | 0.108 | 0.153 |
+| 400 | 0.077 | 0.108 |
+
+**An interaction costs about four times the questions of the simple effect it
+is built from.** That single line is what killed E-019, and it was available
+before E-019 was written.
+
+**Every paired correctness effect this project has measured on the Magic side:**
+
+| contrast | *d* | n | floor | n needed | verdict |
+|---|---:|---:|---:|---:|---|
+| E-001 overall, B vs A | +0.018 | 57 | 0.203 | — | below the floor |
+| E-001 `legality_1hop` | +0.133 | 15 | 0.395 | 132 | below the floor |
+| E-001 `definition_1hop` | +0.182 | 11 | 0.461 | 71 | below the floor |
+| E-001 `negative_temporal` | +0.143 | 7 | 0.578 | 115 | below the floor |
+| E-001 `interaction_multihop` | −0.136 | 22 | 0.326 | 126 | below the floor |
+| E-001 `keyword_rule_2hop` | −0.500 | 2 | 1.082 | 10 | below the floor |
+| E-018 treatment vs control | +0.100 | 20 | 0.342 | 235 | below the floor |
+| E-018 placebo vs control | −0.050 | 20 | 0.342 | 937 | below the floor |
+| E-020 order vs floor | +0.053 | 19 | 0.351 | 846 | below the floor |
+
+**Of the nine paired correctness comparisons this project has run, zero
+produced an effect its own sample could have distinguished from zero at 80%
+power.**
+
+**The second estimator disagrees, and in the direction that strengthens this:**
+
+| n | normal approximation | exact permutation | difference |
+|---:|---:|---:|---:|
+| 20 | 0.342 | **0.430** | 0.088 |
+| 57 | 0.203 | **0.220** | 0.017 |
+
+The approximation **understates** the floor below n ≈ 50, where *d* is discrete
+and the permutation null pools the variance. The real floor at n = 20 is 0.43,
+so E-018's and E-020's effects sit further below it than the table says. The
+approximation is used in the table above and this correction is published
+beside it rather than folded in.
+
+### What this does and does not support
+
+- **It does not say the effects are zero.** It says this evaluation could not
+  have told the difference, so **every `inconclusive` it returned was the only
+  answer available to it.** E-001 was not underpowered by accident and E-018 did
+  not fail; both reported correctly from instruments that could not have
+  reported otherwise.
+- **It does not condemn the entries.** An entry that registers its decision rule
+  and returns `inconclusive` did its job. What is measured here is whether the
+  instrument was ever capable of returning anything else.
+- **It does say that curating questions for another correctness comparison is
+  not a plan.** Detecting the largest effect this project ever measured
+  (+0.182, itself estimated at n = 11 with SE 0.17) needs **71** questions for a
+  simple contrast and roughly **280** for an interaction. The annotated golden
+  set holds 77 rows and all 77 are spent.
+
+### The way out, and it is the unit rather than the question
+
+Correctness is **one binary per question**, so n is the question count: 57, and
+a floor of 0.20 that nothing here moves. Evidence is not one per question.
+
+| arm | rule numbers | in gold | precision | token-normalised | median items |
+|---|---:|---:|---:|---:|---:|
+| A (vector) | 131 | 55 | **0.420** [0.339, 0.505] | 0.030 | 40.5 |
+| B (graph) | 327 | 73 | 0.223 [0.181, 0.271] | **0.112** | 12.0 |
+
+**Non-overlapping intervals, at n in the hundreds**, measured in Phase 8 and
+published. The graph is 3.38× more economical in items and 3.7× better per
+token; the vector arm is nearly 2× better per raw item. **These are differences
+this corpus can see.**
+
+### What this closes off, and it must be said because it was my own proposal
+
+I proposed moving the estimand from correctness to **gold-rule reach**, on the
+grounds that its effects are enormous. Measured before recommending it again:
+
+| stratum | A vector | B graph | C hybrid |
+|---|---:|---:|---:|
+| `interaction_multihop` | 2/22 | 2/22 | 3/22 |
+| `definition_1hop` | **11/11** | **11/11** | **11/11** |
+| `negative_temporal` | 1/7 | 2/7 | 2/7 |
+| `keyword_rule_2hop` | 0/2 | **2/2** | 2/2 |
+
+**Gold-rule reach does not distinguish the arms.** The enormous effect — 1.00
+against 0.09 — is between *strata*, which is a property of the problem and not
+of the graph. The only separation is `keyword_rule_2hop` at n = 2 and
+`negative_temporal` at n = 7. **That pivot is dead, and it was mine.**
+
+### Cost
+
+Zero. Arithmetic over runs that already existed, and it was available on
+2026-09-12 when E-001 reported.
+

@@ -90,6 +90,70 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — The floor of this evaluation is 0.20, and it explains every inconclusive the project has published
+
+E-019 was registered this morning, red-teamed the same afternoon, and is
+**withdrawn before a single question was curated**. The review returned
+twenty-one findings; four are independently fatal and I verified every piece of
+arithmetic in them myself before accepting it.
+
+**The one that ends it:** Design B was registered at n = 49 on 0.78 power,
+computed at the selected point estimate — while the entry's own declared
+minimum meaningful effect, δ ≥ 0.15, sits a hundred lines further down and was
+never evaluated. **Power at that bar is 0.26, and 80% needs 440 questions.** I
+rejected Design A in the same entry for needing 296. The design fails its own
+test for rejecting its alternative, and I did not notice because I computed the
+power in one section and declared the bar in another.
+
+Three more: the planning value δ = 0.318 has a 95% interval of **[−0.09, +0.73]**
+and I wrote "not precise" without ever printing it; the two groups are
+perfectly confounded with question **provenance**, since `definition_1hop` is
+generated from our own CR glossary and `interaction_multihop` comes from
+RulesGuru — and that generator's docstring says the stratum exists to
+**restore the tie prediction**, while E-019 predicted a graph win on it; and
+the post-selection defence in the entry argues for Design A, which the entry
+rejects two paragraphs later, while what was registered is the argmax of ten
+pairwise contrasts read off an outcome table.
+
+**So I stopped redesigning and measured the wall.** E-026, registered and run
+the same day, zero cost, arithmetic over runs that already existed:
+
+**The floor of this evaluation is 0.203 at n = 57. Of the nine paired
+correctness comparisons this project has run on the Magic side, zero produced
+an effect their own samples could have distinguished from zero at 80% power.**
+
+An interaction costs about four times the n of the simple effect it is built
+from. That single line was available on 2026-09-12 and would have prevented
+E-025, Design A and Design B — three entries, eight days, one arithmetic limit
+nobody had measured.
+
+**What this does not say**, and the entry leads with it: not that the effects
+are zero. That this evaluation could not have told the difference, so **every
+`inconclusive` it returned was the only answer available to it.** E-001 was not
+badly designed. It was measured with a ruler whose smallest mark is larger than
+the thing measured.
+
+**A pivot I proposed and then killed by checking it.** I suggested moving the
+estimand from correctness to gold-rule reach, where the effects look enormous.
+Measured before recommending it twice: reach is **11/11 in all three arms** on
+`definition_1hop` and **2/22 in both A and B** on `interaction_multihop`. The
+enormous effect is between *strata*, not between *arms* — a property of the
+problem. Recorded in E-026 under my own name because a recommendation withdrawn
+on evidence is worth more than one that was never made.
+
+**The way out is the unit, not the question.** Correctness is one binary per
+question, so n is 57 and the floor is 0.20. Evidence is hundreds of items:
+rule-number precision is A 0.420 [0.339, 0.505] against B 0.223 [0.181, 0.271]
+— **non-overlapping, at n in the hundreds** — with the graph 3.38× more
+economical in items and 3.7× better per token. Phase 10 is rebuilt there.
+
+**The claim the project can now defend:** a GraphRAG that delivers measurably
+more economical and auditable evidence at correctness statistically
+indistinguishable from the baseline, plus the demonstration that the
+indistinguishability is the evaluation's floor rather than a tie. Publishing a
+measured floor for one's own evaluation is rarer in this literature than a
+three-point win, and it is the more transferable of the two.
+
 ## 2026-09-14 — Phase 10 opens with its entry gate revised rather than met
 
 The gate said Phase 10 does not open until Phase 9 hits the retrieval target it
