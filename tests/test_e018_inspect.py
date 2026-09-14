@@ -87,6 +87,54 @@ class TestTheCliSuppliesWhatPrepareReads:
             insp.build_parser().parse_args(["--qid", "rg-51", "--population", "invented"])
 
 
+class TestTheBuilderIsChosenAgainstTheRecordedDigests:
+    """The working tree is not authoritative about what a past run sent.
+
+    The de-duplication amendment landed after this run and changed how the
+    conditions are built, so HEAD reproduces 33 of the 60 recorded prompts.
+    Three of the nine countersign cases were among the 27 it does not, and the
+    tool reported them as shown: `show` skipped them without counting them, so
+    a batch run printed "9 question(s) shown" with three rendering nothing.
+    """
+
+    def test_a_row_whose_digest_matches_is_not_counted(self) -> None:
+        built = {"a": {"prompts": {"treatment": "x"}}}
+        scored = {"a": {"treatment": {"prompt_sha256": insp.prompt_digest(insp.SYSTEM, "x")}}}
+        assert insp.mismatches(built, scored, ["a"], ("treatment",)) == 0
+
+    def test_a_row_whose_digest_differs_is_counted(self) -> None:
+        built = {"a": {"prompts": {"treatment": "x"}}}
+        scored = {"a": {"treatment": {"prompt_sha256": "not the digest of x"}}}
+        assert insp.mismatches(built, scored, ["a"], ("treatment",)) == 1
+
+    def test_a_row_the_run_recorded_no_hash_for_is_not_counted(self) -> None:
+        # Unverifiable is a different state from wrong, and it is reported by
+        # `show` as an unverified reconstruction rather than silently.
+        built = {"a": {"prompts": {"treatment": "x"}}}
+        assert insp.mismatches(built, {"a": {"treatment": {}}}, ["a"], ("treatment",)) == 0
+
+    def test_only_the_conditions_being_read_are_counted(self) -> None:
+        # The digest is the authority per row. A control that does not rebuild
+        # is not a reason to reject a treatment that does.
+        built = {"a": {"prompts": {"control": "y", "treatment": "x"}}}
+        scored = {
+            "a": {
+                "control": {"prompt_sha256": "wrong"},
+                "treatment": {"prompt_sha256": insp.prompt_digest(insp.SYSTEM, "x")},
+            }
+        }
+        assert insp.mismatches(built, scored, ["a"], ("treatment",)) == 0
+        assert insp.mismatches(built, scored, ["a"], ("control", "treatment")) == 1
+
+    def test_the_pinned_revision_is_recorded_as_a_constant(self) -> None:
+        assert insp.RUN_BUILDER_REV
+        assert insp.BUILDER_PATH == "scripts/run_e018.py"
+
+    def test_an_unreadable_revision_is_refused_not_worked_around(self) -> None:
+        with pytest.raises(SystemExit):
+            insp.builder("no-such-revision-exists-here")
+
+
 class TestTheRunFileFollowsThePopulation:
     """Reading one population's run against the other's rebuild is not a caveat.
 

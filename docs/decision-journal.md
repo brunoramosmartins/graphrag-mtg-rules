@@ -137,6 +137,45 @@ rather than as a counted quantity with its denominator named. The Phase 10
 entries state the denominator in words at the point the number is produced, not
 at the point it is published.
 
+### Later the same day: the inspector ran, and 27 of 60 prompts were not the ones sent
+
+The author's second reading raised a `** MISMATCH` the first dump had not
+reported. Counted properly: **of the 60 condition-rows in `runs/e018.jsonl`, 27
+rebuild to a digest the run never recorded** under the working tree — every
+placebo, eight controls, five treatments, including three of the nine
+countersign cases.
+
+**The run is intact; the builder is not the one that produced it.** Rebuilt
+with `scripts/run_e018.py` as of `598f200`, the revision that ran the primary:
+**0 of 60 mismatch.** The de-duplication amendment (`726c651`), written for the
+*secondary* subset, changed `injectable`, the placebo pool, and whether
+`draw_placebo` is called at all. Those change how much of the shared random
+stream each question consumes, and `conditions_for` shuffles the merged
+evidence from that stream in **every** condition — so an amendment aimed at the
+secondary moved the primary's control and treatment prompts as well. No result
+moves: labels, answers and digests are what they were.
+
+`e018_inspect.py` now picks its builder against the recorded digests rather
+than assuming the working tree, falling back to the pinned revision and naming
+which one rendered what. All nine countersign cases verify.
+
+**How it stayed hidden, which is the part worth keeping.** The mismatch branch
+in `show` skipped the row and did not increment the unverified counter, so a
+nine-case dump printed *"9 question(s) shown"* with three showing nothing. I
+then checked that dump by grepping for the word `unverified`, which that branch
+does not print, and reported zero — **a guard that passed because it was asked
+the wrong question, two turns after the phase note recorded that exact failure
+mode as standing rule 9.** The branch now counts, and the summary says
+`did NOT render`.
+
+**A run should record the revision that built it.** This one predates the
+field, and the revision had to be recovered by bisecting behaviour against the
+digests. Phase 10 runs record it.
+
+None of the three marks already made — `rg-1591`, `rg-198`, `rg-2249` — is
+among the three cases that failed to render, so no countersign was recorded
+against a blank page.
+
 ## 2026-09-14 — E-025 is withdrawn before its first reading, and the worry that produced it is answered the other way
 
 Asked whether the marking task was sound before spending an hour on it, I went

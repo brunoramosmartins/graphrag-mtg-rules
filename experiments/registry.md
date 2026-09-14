@@ -7152,6 +7152,35 @@ to the primary's `interaction_multihop` population. What transfers is the
 structural point: the floor did not measure the variance the contrast carries.
 How large that variance is on the primary is unknown and is what fix 1 buys.
 
+#### Reproducibility note, 2026-09-14: this run's prompts belong to `598f200`
+
+Found while opening the manual sample's countersign, and recorded here because
+anyone re-rendering this entry will hit it.
+
+**Of the 60 condition-rows in `runs/e018.jsonl`, 27 rebuild to a digest this run
+never recorded** when built by the working tree: all 14 placebos, 8 controls and
+5 treatments. Rebuilt by `scripts/run_e018.py` as of **`598f200`** — the
+revision that ran the primary — **0 of 60 mismatch.**
+
+The cause is this entry's own de-duplication amendment, implemented in
+`726c651` for the **secondary** subset. It changed `injectable`, the placebo
+pool (`rule_pools(cr, … | already)`), and whether `draw_placebo` runs at all.
+Each of those changes how much of the shared `random.Random(RANDOM_SEED)`
+stream a question consumes, and `conditions_for` shuffles the merged evidence
+from that stream in **every** condition — control included, by design, so the
+shuffle is not itself a difference between conditions. An amendment scoped to
+the secondary therefore moved the primary's control and treatment prompts too.
+
+**No figure in this entry moves.** The labels, answers, rationales and recorded
+digests are unchanged; what changed is which code can regenerate the prompt
+text behind them. `e018_inspect.py` now selects its builder against the
+recorded digests and names the one it used.
+
+**What this costs the design, stated plainly:** a run whose prompts exist only
+as hashes is reproducible only for as long as the builder is recoverable. This
+one was recoverable because the amendment was a separate commit. Runs from
+Phase 10 record the building revision in the run file.
+
 ---
 
 ## E-020 — does reordering identical evidence change the answer? (registered 2026-09-13, run 2026-09-13, **inconclusive**)
