@@ -6514,6 +6514,97 @@ the rendering deliverable all stand as amended earlier today. This changes what
 a condition contains and what the ceiling's question means — both before any
 verdict was recorded and before any spend.
 
+### Amendment 2026-09-13c — how the placebo is drawn, and a clause amendment 2026-09-13b broke and did not say so
+
+Written while implementing `scripts/run_e018.py`, **before any API call**. The
+run's checks are what produced each of these; none was reasoned out in advance.
+
+#### The placebo draws at the gold rule's own depth in the CR tree
+
+The first implementation drew **level-1 chapters**. The treatment never injects
+one — the 30 gold rules in this population are 19 level-2 numbered rules and 15
+level-3 lettered subrules, and none is a chapter — so the placebo was a
+different shape of object from the thing it controls, out of a pool of 147
+instead of 3,161. It could not match: no draw for a two-rule question landed
+inside the registered ±20% in 400 attempts, and the run **refused rather than
+widening the tolerance**, which is what the check exists for.
+
+**Registered:** the placebo draws one subtree per gold rule, **at that rule's
+level**, excluding every number in the treatment's subtrees. Level carries both
+things the placebo controls. *Volume*, because a level-2 subtree runs to a
+median 342 characters against a level-3 subtree's 200, so drawing across levels
+makes the token match a lottery. *Shape*, because a numbered rule trailing
+lettered subrules reads differently from a lone subrule, and a treatment that
+is always the first paired with a placebo that is sometimes the second differs
+by more than goldness.
+
+#### A clause amendment 2026-09-13b broke, named here rather than left standing
+
+The original entry reads: *"k is matched per question to the number of gold
+rules injected, so placebo and treatment add the **same number of items and
+comparable tokens**."* Amendment 2026-09-13b changed the treatment to inject
+subtrees and **did not update that clause**, which quietly stopped being true:
+matching the number of injected *roots* no longer matches the number of items,
+because subtree sizes differ. The first level-matched implementation produced
+`rg-2249` with **9 items against 23** at equal tokens — same volume, visibly
+different context.
+
+**Registered, replacing the clause:** tokens are the criterion and item count
+is a **tiebreak, not a second gate**. Every candidate draw inside the ±20%
+token tolerance is collected and the one whose item count is closest to the
+treatment's is taken. Realized counts are published per question either way.
+After the tiebreak the run matches item count exactly on 13 of 20 questions and
+within two on 18 of 20; `rg-2249` is 9 against 11.
+
+This is recorded as a **broken promise found by printing the number**, not as a
+refinement. The clause was published on 2026-09-13 and was false from the
+moment amendment b landed.
+
+#### The realized match, published before the run rather than after
+
+Worst token delta across the 20: **19.6%**, on `rg-396`, whose treatment adds
+56 tokens — the largest percentages sit on the smallest injections, where a few
+tokens are a large share, and that is where the tolerance binds rather than
+where the design is weak. Median delta 9.2%. The full per-question table is
+printed by `run --dry-run` and by the run itself.
+
+#### Constants fixed here and not elsewhere
+
+- **`TOKEN_BUDGET = 24,000`**, four times the shipped budget, for all three
+  conditions alike. E-013 measured `dropped` empty at 6,000 on this corpus and
+  the treatment adds a median 199 tokens, so the raise is generous — and the
+  run **hard-fails if anything is dropped or capped in any condition anyway**,
+  because a budget that is merely probably slack is a guard that passes for two
+  reasons.
+- **`RANDOM_SEED = 20260913`** for the draw and for the shuffle.
+- **Injected evidence carries `template="e018_injection"` and
+  `path="(:Rule {N})"`.** It is not a traversal and a path claiming one would
+  be a fabricated provenance inside the file that measures honesty about
+  provenance. It enters through the same `Evidence` dataclass and the same
+  `add_evidence` path as retrieved evidence, so `serialize`, `cited_handles`
+  and `expand`'s fabricated-citation detector cannot tell it apart — which is
+  what makes a citation of an injected rule count as a citation rather than as
+  a fabrication.
+- **`distance = 0`** on injected items: the oracle named this node, the way a
+  question naming a card gives that card distance 0. It also puts injected
+  items last in `enforce_budget`'s eviction order, which is moot because the
+  run refuses if anything is evicted at all.
+
+#### The noise floor runs first and the run refuses without it
+
+`floor` generates control twice on all 20 and publishes control-vs-control
+discordance; `run` refuses when `runs/e018_floor.jsonl` is absent and **reuses
+the first replicate as the comparison's control**, so the pairing is exact
+rather than approximate and the floor costs no extra control generations. At
+four or more discordant pairs the decision rule's thresholds are recomputed
+against the floor before any branch fires, as already registered.
+
+#### Cost, measured rather than estimated from a table
+
+`run --dry-run` prices the built prompts: **60 generations and 60 judge calls,
+about US$ 0.06** at the pinned model, plus the floor's 40 and 40. The entry's
+registered "under US$ 3" was an order of magnitude high and is superseded here.
+
 ### The ceiling, read 2026-09-13 and before any API call
 
 **17 of 20 — 0.850 [0.640, 0.948] Wilson.** The gate registered before the
