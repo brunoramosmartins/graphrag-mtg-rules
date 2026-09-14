@@ -108,6 +108,69 @@ two-hop columns — whose chains match their declared depth on every question �
 are what the bullet now quotes. The repair, the measurement and what survives
 are in the 2026-09-13 amendments to E-002 and E-012.
 
+## Where this graph works, and where nothing built here does
+
+The table above says the vector baseline wins the stratum this project was
+written about. It does not say **why**, and "the graph needs more work" was a
+guess. Phase 9 opened to repair retrieval so the governing rule would reach the
+context, and **closed without shipping a repair, because every repair was
+measured to be unavailable before one was built.** Total API spend: **US$ 0.19.**
+
+What came out instead is a bounded claim:
+
+> **This GraphRAG outperforms the vector baseline exactly where its topology
+> reaches, and is outperformed outside it.** The reach is not a tuning
+> parameter; it is a property of the edges the corpus supports.
+
+**Decompose what retrieval delivers** on `interaction_multihop`, arm B:
+
+| what retrieval has to find | delivered |
+|---|---:|
+| the cards the question names | **39 / 40** |
+| the rulings of those cards | **182 / 191** |
+| **the governing CR rule** | **2 / 22** |
+
+Everything reachable from a card arrives at 95% or better. The rule the answer
+key says governs arrives on **9%**.
+
+And the budget follows the edges, not the question. Across the whole split,
+**50.1%** of arm B's context tokens expand keywords into chapter 700 — the only
+chapter reachable from a card. Where the question *is* a keyword definition
+that spends the entire budget on exactly the right thing, and the graph answers
+**10 of 11** against the baseline's 8. Where it is a multi-card interaction,
+**36%** of the budget still goes to keyword definitions, the governing rule
+arrives twice in twenty-two, and the graph answers **6 of 22** against 9.
+
+**It is not the graph.** On the same 22 questions the vector arm reaches the
+gold rule **2 of 22 — the same two questions**, and both are ones where the
+target rule was annotated in-house. Of the **13** whose target was transcribed
+from RulesGuru's judge-curated citations, the vector arm reaches **0**, the
+graph arm **0**, the hybrid **1**. The governing rule for a multi-card
+interaction is not recoverable from the question's surface text or the card's
+neighbourhood **by any method built here** — which makes this a property of the
+problem, not of one implementation.
+
+**Four repairs, each measured, each unavailable:**
+
+| candidate | measured | outcome |
+|---|---|---|
+| the bridge out of chapter 700 | expanding `REFERENCES` and parent/child both ways from what retrieval delivers | **1 of 39 at one hop (3%)**; the two-hop closure adds a median of 138 rules per question |
+| injecting gold rulings | Scryfall's rulings against what arrived | **182 of 191** already there — nothing to inject on 21 of 22 |
+| wrong-sense entity linking | glossary entries with multiple numbered senses | **4 questions of 57**, 3.5% of context. Not systemic |
+| budget policy | `dropped` and `capped` | empty on every question measured |
+
+And the intervention that would have justified the programme returned nothing:
+**injecting the governing rule directly came back `unresolved`** — 2 discordant
+pairs where 7:0 was needed. Reading all nine derivable-and-wrong cases with the
+prompt as sent puts **four of 16** in "reasoned wrong with the evidence in
+hand"; that classification was read case by case and countersigned, and its
+denominator is oracle-conditioned, so it is a lead and not a rate.
+
+**This revises no figure in the result above.** It is the scope statement that
+was missing from it. Full working, with the limitations that bound each number,
+in [`docs/evaluation.md`](docs/evaluation.md) and
+[`docs/error-samples/e018.md`](docs/error-samples/e018.md).
+
 ## Why Magic
 
 The Comprehensive Rules are a genuine dense-regulatory-text proxy —
@@ -121,11 +184,14 @@ was chosen because it lets us *measure the truth*. Full rationale in
 
 ## Status
 
-**Phase 8 — Demo, README & Release.** The pipeline runs end to end: the
-graph, retrieval, grounded generation, a three-arm evaluation with confidence
+**Phase 9 — Scope, not repair.** The pipeline runs end to end: the graph,
+retrieval, grounded generation, a three-arm evaluation with confidence
 intervals, OpenTelemetry spans on every stage, a live demo, and CI that
 exercises all three arms with no API key. The evaluation split was opened once
-and the result is above. Roadmap: Phases 0→8 (vector→graph→agentic trilogy).
+and the result is above. Phase 9 then asked what it would take to close the
+retrieval gap, measured four candidate repairs, and shipped none of them —
+the section above is what it returned instead. Roadmap: Phases 0→9
+(vector→graph→agentic trilogy).
 
 **What this project is actually a demonstration of.** The graph did not beat
 the baseline, and the interesting part is that this is knowable. The
@@ -134,6 +200,16 @@ was pinned in August before any arm ran; the split was drawn, frozen, and
 touched once. When the answer came back inconclusive there was nothing left to
 negotiate — which is the whole point of writing the rule down first. A system
 that can only report a win is not an evaluation.
+
+Phase 9 is the same discipline pointed at the follow-up work. Four repairs were
+costed from the run's own inputs before any was implemented, and all four were
+dropped on the arithmetic. Three defects were found in the measuring
+instruments themselves — a noise floor that sampled less variance than the
+contrast it guarded, a median that returned the maximum on an even-length list
+and thereby confirmed the hypothesis, and a prediction promoted to a decision
+boundary inside its own script — and each was written into the registry rather
+than quietly corrected. **Knowing what an intervention cannot buy before paying
+for it is the deliverable.**
 
 ## Quickstart
 
@@ -371,6 +447,25 @@ Stated here because they bound every number above; the full list is in
   need removed all five `legality_1hop` questions from that sample.
 - **The demo runs a registered ablation**, TF-IDF rather than the dense hybrid
   text half, and says so on screen.
+- **The per-stratum figures above are descriptive, not a verdict.** The
+  head-to-head refused to publish comparisons at these stratum sizes and that
+  refusal is inherited here: `keyword_rule_2hop` holds two questions and runs
+  *against* the pattern. It is what a next hypothesis should be sized to test.
+- **The target rules are mostly external, and nine are not.**
+  `gold_cr_rules` reproduces RulesGuru's judge-curated citations on 24 of 24
+  golden-set questions carrying one at chapter level, 23 of 24 exactly — which
+  is what "curate, don't author" was for. The exceptions are six hand-written
+  questions and three whose citation field was empty; **none of the nine has
+  been read by a second annotator**, and nine is too few to measure annotation
+  determinacy on.
+- **Rule reach is counted by exact rule number.** A rule reached through its
+  parent — `608.2` where the annotation says `608.2n` — counts as a miss, so
+  the 2/22 is a lower bound on a looser definition of "reached".
+- **One retrieval defect is open and is not part of any claim above.** Seven
+  card evidence items across six questions reach the graph arm as a bare name:
+  `card_core` emits card text only, and **power and toughness are never
+  serialized for any card**. Zero occurrences in the vector arm. Small,
+  specific, cheap to close, and it does not move the 2/22.
 
 ## Repository layout
 
