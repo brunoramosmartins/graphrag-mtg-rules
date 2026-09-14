@@ -274,7 +274,9 @@ def score(args: argparse.Namespace) -> int:
         unparsed = 0
         per_sample = 0
         total = 0
-        for qid, samples in sorted(by_condition.get(name, {}).items()):
+        # Every accumulator below is order-independent, so the id the sort was
+        # keyed on was never used for anything.
+        for samples in by_condition.get(name, {}).values():
             hits_here = sum(1 for s in samples if s["hit"])
             unparsed += sum(1 for s in samples if s["named"] is None)
             per_sample += hits_here
