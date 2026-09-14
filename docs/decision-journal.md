@@ -90,6 +90,42 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — Phase 10 opens with its entry gate revised rather than met
+
+The gate said Phase 10 does not open until Phase 9 hits the retrieval target it
+registered. **Phase 9 did not hit it and will not.** The target was measured
+unavailable, the roadmap records the revision in place rather than editing the
+gate away, and this entry exists so the difference between *revised* and *met*
+is on the record and not in someone's recollection.
+
+**Nothing carries over.** Phase 9's checklist closes with one item unmet — the
+paired before/after recall, which has no object because no front entered — and
+one deliberately not run, E-023. Both are recorded as such in the roadmap. The
+two items that were genuinely open at the last kickoff are done: the README
+carries the scope statement, and the manual sample is countersigned.
+
+**The premise of the phase changed with the gate.** Phase 10 was written to
+take a second measurement over a repaired system. Nothing was repaired, so
+E-019 as registered would be a replication of E-001 on a fresh split — spending
+the project's most expensive asset to reconfirm an underpowered `inconclusive`.
+
+**The revised objective is the verdict E-001 could not reach:** the
+stratum-by-arm interaction. E-001 averaged over strata that cancel and returned
+`inconclusive`, which was the correct answer to the question it asked. The new
+question is pre-registered and the split is sized for *it*, per stratum, rather
+than for an average.
+
+**The falsifier is named before any curation:** `keyword_rule_2hop` runs
+against the hypothesis at n=2. It enters the entry as a named falsifier, not as
+noise, and it enters before the pool that would decide its fate is drawn.
+
+**What this phase actually costs is curation, not code.** The golden set holds
+about 119 stratified rows and 77 are spent. A fresh split does not come out of
+what exists, and no amount of engineering substitutes for it.
+
+Opened on the branch `phase-10/second-verdict`. Note:
+`notes/phase10-second-verdict.md`.
+
 ## 2026-09-14 — Phase 9 closes on option (ii): a scope statement instead of a repair
 
 The phase opened to make retrieval reach the governing rule. **It closes
