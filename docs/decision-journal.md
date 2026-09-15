@@ -90,6 +90,56 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — An external audit raised nine alerts, and the one that landed was in the entry that catalogues this exact error
+
+An outside review of the pipeline and the design, four passes, closed by the
+reviewer with *"no critical defect that invalidates the published results."*
+Of nine alerts: two refuted outright, two already handled here in stronger
+forms, three confirmed-and-already-documented, one PASS, and **one correction**.
+
+**The correction is in `detectability.py`, which is the instrument of E-026 —
+the entry whose entire subject is numbers that mislead.** Its table printed
+`n | simple contrast | interaction` over two columns read at *different* sample
+sizes: `n` is total questions for the simple contrast and questions **per
+group** for the interaction, which takes two groups. The row `57 → 0.287` reads
+as an interaction reachable with 57 questions. **At 57 questions in total it is
+0.409**, and a study planned off that row would be under-powered by 43%.
+
+The arithmetic was never wrong — the 4× claim verifies exactly, at 228 questions
+against 57. What was wrong is that the convention making it right was never
+printed. **That is this project's most-catalogued error class, sitting inside
+the entry that catalogues it**, and it survived every internal pass including
+the one that wrote the entry.
+
+**How it was found is the part worth keeping.** The reviewer reproduced every
+figure correctly, got the right answer, and *still* hesitated — writing *"o n
+precisa ser aproximadamente duas vezes? Há uma sutileza aqui"* before moving on.
+A reader who reproduces your arithmetic and then hesitates has found something,
+and the hesitation is the signal, not the conclusion they eventually reached.
+Internal review does not produce that signal, because the convention is already
+in the reviewer's head.
+
+**A-001 is confirmed and does not reopen anything.** `card_interaction` receives
+only the first two resolved cards. Nine of 57 questions resolve three or more,
+eight of them in `interaction_multihop`, so the traversal covers **22% of the
+available card pairs** in that stratum and 6% in the shipped arm. It is a
+product limitation, the 22 questions were fixed in advance and every arm
+answered the same ones, and repairing it could not produce a detectable
+correctness effect — the floor at n = 22 is 0.326. **The discipline E-030 taught
+applies on the first reading this time**: the fix is a scope statement, not an
+experiment.
+
+**And the reviewer's closing observation is the one I would have missed.** The
+largest remaining risk is not a defect but a reading — *"someone reading the
+README more broadly than the registry permits."* The registry has been careful
+for months; the README is what a stranger reads. Five limitations added against
+that, including the conclusion stated at the width it actually supports:
+*on this corpus, under this ontology, this seeding mechanism and this protocol,
+the graph showed no statistically detectable advantage, and its usefulness is
+conditional on the question having structure the graph can reach.* That sentence
+is narrower than anything the README said before, and it is the one the evidence
+carries.
+
 ## 2026-09-14 — The project closes at Phase 11 as a release, and the reason is a pattern rather than a setback
 
 Scope decision, taken after E-030's withdrawal: **Phase 11 becomes a release

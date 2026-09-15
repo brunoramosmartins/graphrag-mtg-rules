@@ -1835,12 +1835,25 @@ E-026 asked one question, in words before it was a number:
 The smallest effect this evaluation can see, at E-001's pooled discordance of
 17/57:
 
-| n | simple contrast | interaction |
-|---:|---:|---:|
-| 20 | 0.342 | 0.484 |
-| **57** | **0.203** | 0.287 |
-| 120 | 0.140 | 0.198 |
-| 400 | 0.077 | 0.108 |
+**The two columns are read at different sample sizes**, and the header now says
+so *(labelled 2026-09-14, after an external audit reproduced this arithmetic
+correctly and still stopped at the convention)*. `n` is **total** questions for
+the simple contrast and questions **per group** for the interaction, which needs
+two groups:
+
+| n | simple contrast (n total) | interaction (n per group) | = questions |
+|---:|---:|---:|---:|
+| 20 | 0.342 | 0.484 | 40 |
+| **57** | **0.203** | 0.287 | 114 |
+| 120 | 0.140 | 0.198 | 240 |
+| 400 | 0.077 | 0.108 | 800 |
+
+Read as a single `n` across both columns, the row says an interaction of 0.287
+is reachable with 57 questions. **With 57 questions in total it is 0.409** — 43%
+worse than the row appears to promise. A study planned off the unlabelled
+version would have been under-powered by exactly that margin, which is this
+document's own error class: a number that is right under a convention nobody
+printed.
 
 **An interaction costs about four times the questions of the simple effect it
 is built from.** That line was available on 2026-09-12 and would have prevented

@@ -228,11 +228,15 @@ can see at all. **Of the nine paired correctness comparisons this project has
 run, zero produced an effect their own samples could have distinguished from
 zero at 80% power.**
 
-| n | smallest detectable effect | as an interaction |
-|---:|---:|---:|
-| 20 | 0.342 | 0.484 |
-| **57** | **0.203** | 0.287 |
-| 120 | 0.140 | 0.198 |
+| n | simple contrast (n total) | as an interaction (n per group) | = questions |
+|---:|---:|---:|---:|
+| 20 | 0.342 | 0.484 | 40 |
+| **57** | **0.203** | 0.287 | 114 |
+| 120 | 0.140 | 0.198 | 240 |
+
+The two columns are read at different sample sizes: an interaction needs two
+groups, so its row at `n` is a study of `2n` questions. With 57 questions **in
+total** the interaction floor is 0.409, not 0.287.
 
 The largest correctness effect ever measured here is +0.182. **An interaction
 costs about four times the questions of the simple effect it is built from** —
@@ -556,8 +560,40 @@ The development split runs freely and costs nothing to re-measure:
 ## Limitations
 
 Stated here because they bound every number above; the full list is in
-[`docs/evaluation.md`](docs/evaluation.md).
+[`docs/evaluation.md`](docs/evaluation.md). The five below were added or
+sharpened on 2026-09-14 after an **external audit** of the pipeline and the
+experimental design; it found no defect that invalidates a published result,
+and its closing observation was that the largest remaining risk is **a reader
+taking the README more broadly than the registry permits.** These exist to
+close that gap.
 
+- **The conclusion this project supports, in the only width it supports it.**
+  Not *"GraphRAG is better for Magic rules."* It is: *on this corpus, under this
+  ontology, this seeding mechanism and this protocol, the graph showed no
+  statistically detectable advantage over the vector baseline, and its
+  usefulness is conditional on the question having structure the graph can
+  reach.* Every figure below is inside that sentence.
+- **Graph reachability is a property of the ontology, not of GraphRAG.** The
+  graph holds `Card`, `CardFace`, `Format`, `Keyword`, `Rule`, `Ruling` and a
+  deliberately narrow relation set — only chapter 701/702 glossary terms become
+  `Keyword` nodes, and `Ruling → governing Rule` was **removed in Phase 3**
+  because the data did not support it. So a measured graph recall is
+  *recall given this ontology, this extraction policy and these seeds*, and it
+  is not an estimate of what a knowledge graph of Magic could reach.
+- **Card interaction is queried as a pair, not as a set.** The router passes the
+  first two resolved cards to the `card_interaction` traversal. On the
+  evaluation split **9 of 57 questions resolve three or more cards** — eight of
+  them in `interaction_multihop` — so the traversal covers **22% of the
+  available card pairs in that stratum** (16 of 72), and 6% in the hybrid arm,
+  which resolves more cards. This is an architectural limitation of the product
+  and it does not reopen E-001: the stratum's 22 questions were fixed in advance
+  and every arm answered the same ones. **But nothing here should be read as
+  interaction retrieval over an arbitrary number of cards.**
+- **Arm C is not "arm A plus the graph".** It is a different pipeline: the graph
+  linker resolves cards, their oracle text expands the query, and *then* arm A's
+  retriever runs. So `C − A` is the effect of **graph-derived query expansion
+  plus text retrieval**, not an isolated graph contribution, and no analysis in
+  this repository decomposes it into one.
 - **n = 57, and the floor that follows from it is 0.203.** Exact McNemar needs
   6 discordant pairs one way to reach *p* < 0.05 and Holm's strictest step
   needs 7:0. The largest discordance observed anywhere is 5. This split could
@@ -566,7 +602,11 @@ Stated here because they bound every number above; the full list is in
   anywhere in this repository should be read without that floor beside it.**
   The floor was itself measured twice: the exact permutation value is higher
   still (0.220 at n = 57, 0.430 at n = 20), so the normal approximation quoted
-  here is the optimistic one.
+  here is the optimistic one. **And 0.203 is not "the statistical precision of
+  this experiment."** It is the MDE for this protocol *under the pooled
+  discordance of 17/57 chosen as the reference rate* — deliberately pooled, so
+  that the floor does not move with the result being judged, and therefore not a
+  per-contrast figure.
 - **The economy figures are exploratory, not pre-registered.** E-027 was
   registered retrospectively and says so: the numbers were computed while
   deciding whether the entry was worth writing. No decision rule was fixed in

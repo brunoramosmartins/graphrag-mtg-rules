@@ -9449,3 +9449,74 @@ costs zero generations, and **no branch of the entry produced it as an outcome.*
 _Not run. **Withdrawn 2026-09-14**, the day it was registered, before the guard
 was touched and before any answer existed. Zero API spend. The cost of finding
 out was one red-team pass and one grep over a dump that was already on disk._
+
+---
+
+## External audit, 2026-09-14 — nine alerts raised, one correction landed, no result reopened
+
+An outside review of the pipeline and the experimental design, delivered in four
+passes and closed by the reviewer. Recorded here because the dispositions are
+evidence about the record, not only about the code, and because **one of the
+nine changed a published table**.
+
+| id | alert | disposition |
+|---|---|---|
+| A-001 | `card_interaction` sees only the first two cards | **Confirmed.** Architectural limitation; scope statement added to the README; E-001 not reopened |
+| A-002 | `corpus_sha256` omits `kind`/`title`/`rule_number`/`oracle_id`/`legalities` | **Refuted.** Used only in `dense.py` cache headers; no run record carries it. Index identity, never experiment identity |
+| A-003 | Arm C is not "arm A plus the graph" | **Confirmed, already true in the docs.** No document decomposes `C − A` into a graph effect; stated explicitly in the README now |
+| A-004 | Token parity ≠ retrieval-opportunity parity | **Already handled, in a stronger form.** The 2026-08-15 amendment states that the pin *"governs affordances"* and that the asymmetry lives in the source data — which produced the corpus-parity fix |
+| A-005 | The floor needs independent verification | **Reproduced exactly** by the reviewer, including the 4× interaction factor. One caveat adopted: 0.203 is the MDE under the pooled rate chosen as reference, not the experiment's universal precision |
+| A-006 | "0 of 9" must read as capability, not absence of effect | PASS |
+| A-007 | `partial → not correct` is a strong estimand choice | PASS for the primary metric; the three-class taxonomy carries the judge's known boundary instability |
+| A-008 | The ontology does not represent `Ruling → governing Rule` | **Confirmed and intentional** — removed in Phase 3 because the data did not support it. Now stated in the README |
+| A-009 | Graph ceiling is conditioned by ontology and seeding | **Confirmed.** The single most important framing correction: measured graph recall is *recall given this ontology, extraction policy and seeds* |
+
+### What A-001 measures, since the alert asked for the distribution
+
+Cards resolved per question on the evaluation split: **0 → 15, 1 → 21, 2 → 12,
+3 → 3, 4 → 1, 5 → 4, 6 → 1.** Nine questions resolve three or more, and eight of
+those are `interaction_multihop` — **8 of 22 in the stratum the thesis was
+written about.** Pair coverage, since the router queries exactly one pair:
+
+| arm | pairs available | pairs queried | coverage |
+|---|---:|---:|---|
+| B — graph | 82 | 21 | **26%** |
+| C — shipped | 418 | 23 | **6%** |
+| `interaction_multihop` only | 72 | 16 | **22%** |
+
+**It does not reopen E-001** — the 22 questions were fixed in advance and every
+arm answered the same ones — and repairing it could not produce a detectable
+correctness effect either: the floor at n = 22 is **0.326**. Recorded as a
+product limitation with a scope statement, which is where E-030's lesson lands.
+
+### The one correction: a table whose column header named two different n
+
+`detectability.py` printed `n | simple contrast | interaction` over columns read
+at **different sample sizes**. `n` is total questions for the simple contrast
+and questions **per group** for the interaction, which needs two groups. The
+reviewer reproduced every figure correctly — and still stopped at the
+convention, hesitating over whether the cost is 2× or 4×.
+
+It is **4×**, and both halves apply: matching a simple contrast's SE needs 2n
+per group, and an interaction needs two groups. The simple floor at n = 57 is
+0.203; an interaction reaches it at 114 per group, **228 questions, exactly
+4.00×**.
+
+But the unlabelled table said *"n = 57 → 0.287"*, which a reader takes as an
+interaction reachable with 57 questions. **At 57 questions in total it is
+0.409** — 43% worse than the row appeared to promise, and a study planned off
+it would have been under-powered by that margin. Corrected in the script, in
+`docs/evaluation.md` and in the README, each with the date.
+
+**This is the project's own catalogued error class, found in the entry that
+catalogues it:** a number that is right under a convention nobody printed. It
+took an outside reader who got the arithmetic right to expose it, which is the
+argument for the audit rather than against the entry.
+
+### What the audit did not find
+
+No defect that invalidates a published result. The reviewer's closing risk is
+not a number but a reading: *"someone reading the README more broadly than the
+registry permits."* Five limitations were added or sharpened against exactly
+that, including the width the conclusion actually supports, stated as a
+sentence rather than left to inference.
