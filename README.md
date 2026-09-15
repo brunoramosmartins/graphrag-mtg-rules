@@ -151,13 +151,23 @@ arrives twice in twenty-two, and the graph answers **6 of 22** against 9.
 They cleared entity linking, retrieved 1–6 cards and 4–22 rulings, reached no
 CR rule, and the `no_seed` guard refused before a model call — scoring
 `incorrect` with the rulings still in hand. On the 17 it did attempt, the graph
-answers **6 against the baseline's 8**. **They are not five recoverable
-points:** the vector arm answered those same five from cards and rulings alone
-and scored **1 of 5**, which is the only evidence available for what lifting
-the guard would buy. The guard is still the wrong behaviour for a shipped
-system — discarding 22 rulings to report *no usable evidence* is not a
-refusal — and it is separated from the retrieval failure here because the two
-have different repairs and only one of them is cheap.
+answers **6 against the baseline's 8**. **They are not five recoverable points,
+and this is measured twice** *(corrected 2026-09-14 — an earlier version of this
+paragraph, written the same day, called the guard "the wrong behaviour for a
+shipped system". It is not in the shipped system)*. The vector arm answered
+those same five from cards and rulings and scored **1 of 5**. The **hybrid arm
+— which is what ships** — answers all five from a context that is a superset of
+the graph arm's, 38–62 items against 5–28, and scores **1 correct and 1
+partial**. Two arms with far more evidence land in the same place: these five
+are hard, not withheld.
+
+**The guard does not fire in the shipped system at all.** `ADR-007` routes
+`no_seed` to text retrieval rather than treating it as a miss, so arm C records
+**zero** `no_seed` on the split. The behaviour described above is a property of
+the graph-only arm, which exists to isolate what the topology reaches — and
+isolating it is the arm's job. What remains a real defect is narrower: the
+refusal string says *"retrieval returned no usable evidence"* on a path where
+evidence exists, which is false wherever that path is taken.
 
 **It is not the graph.** On the same 22 questions the vector arm reaches the
 gold rule **2 of 22 — the same two questions**, and both are ones where the
@@ -285,23 +295,33 @@ was chosen because it lets us *measure the truth*. Full rationale in
 
 ## Status
 
-**Phase 10 — The floor, and what sits above it.** The pipeline runs end to end: the graph,
-retrieval, grounded generation, a three-arm evaluation with confidence
-intervals, OpenTelemetry spans on every stage, a live demo, and CI that
-exercises all three arms with no API key. The evaluation split was opened once
-and the result is above. Phase 9 then asked what it would take to close the
-retrieval gap, measured four candidate repairs, and shipped none of them.
-Phase 10 opened to take a second correctness verdict, measured that no such
-verdict was available to it, and published the floor instead. Roadmap:
-Phases 0→10 (vector→graph→agentic trilogy).
+**Complete.** The pipeline runs end to end: the graph, retrieval, grounded
+generation, a three-arm evaluation with confidence intervals, OpenTelemetry
+spans on every stage, a live demo, and CI that exercises all three arms with no
+API key. The evaluation split was opened once and the result is above. Phase 9
+asked what it would take to close the retrieval gap, measured four candidate
+repairs, and shipped none. Phase 10 opened to take a second correctness verdict,
+measured that no such verdict was available to it, and published the floor
+instead. Roadmap: Phases 0→11 (vector→graph→agentic trilogy).
 
-**What this project is actually a demonstration of.** The graph did not beat
-the baseline, and the interesting part is that this is knowable. The
-hypothesis was registered in July with its falsifier named; the decision rule
-was pinned in August before any arm ran; the split was drawn, frozen, and
-touched once. When the answer came back inconclusive there was nothing left to
-negotiate — which is the whole point of writing the rule down first. A system
-that can only report a win is not an evaluation.
+**Why it stopped here, stated rather than trailed off.** Three registered
+experiments in a row — E-019, E-025, E-030 — were **withdrawn on the day they
+were registered**, each because a measurement that already existed answered
+them. The last was going to change a refusal guard in "the shipped system"; the
+shipped arm records **zero** occurrences of the condition, because `ADR-007`
+routes it to text retrieval and has since August. With the golden set spent at
+77 rows, a correctness floor of 0.20 nothing has ever cleared, and three
+proposals dying to data already on disk, the honest read is that **this corpus
+has been asked what it can answer.** Ending on that is a decision; running a
+fourth entry to fill a phase would not have been.
+
+**What this project is actually a demonstration of.** The graph did not
+measurably beat the baseline, and the interesting part is that this is
+knowable. The hypothesis was registered in July with its falsifier named; the
+decision rule was pinned in August before any arm ran; the split was drawn,
+frozen, and touched once. When the answer came back inconclusive there was
+nothing left to negotiate — which is the whole point of writing the rule down
+first. A system that can only report a win is not an evaluation.
 
 Phase 9 is the same discipline pointed at the follow-up work. Four repairs were
 costed from the run's own inputs before any was implemented, and all four were
@@ -312,6 +332,17 @@ and thereby confirmed the hypothesis, and a prediction promoted to a decision
 boundary inside its own script — and each was written into the registry rather
 than quietly corrected. **Knowing what an intervention cannot buy before paying
 for it is the deliverable.**
+
+**What Project 3 inherits.** The vector baseline built in Phase 6 becomes the
+agentic router's text tool. Three things carry as constraints rather than as
+code: an evaluation's **floor is a property you can compute before you design
+anything**, and computing it first would have prevented three entries here; an
+**interaction costs roughly four times the n of the simple effect** it is built
+from; and the endpoints that separated on this corpus — tokens, evidence items,
+provenance — are exactly the ones that **need no labels**, while every
+label-bound endpoint sat under a floor it never cleared. The router's first
+question should be which of its claims need a human to score them, and what
+that implies about how many it can afford to make.
 
 ## Quickstart
 

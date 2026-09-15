@@ -17,6 +17,7 @@ from graphrag_mtg.generation.answerer import (
     answer,
     build_prompt,
     is_refusal,
+    refusal_reason,
 )
 from graphrag_mtg.generation.citations import UNVERIFIED
 from graphrag_mtg.retrieval.subgraph import Evidence, Outcome, Subgraph
@@ -34,6 +35,17 @@ def resolved() -> Subgraph:
                 path="(:Keyword {flying})-[:DEFINED_BY]->(:Rule {702.9b})",
             )
         ],
+    )
+
+
+def held_item(key: str, kind: str) -> Evidence:
+    """One item that reached the refusal branch — the thing the old text denied."""
+    return Evidence(
+        kind=kind,
+        key=key,
+        text="what the node says",
+        template="card_rulings",
+        path=f"(:Card {{Bring to Light}})-[:HAS_RULING]->(:{kind.title()} {{{key}}})",
     )
 
 
@@ -70,6 +82,65 @@ class TestRefusalWithoutGenerating:
         generate = replies("x")
         result = answer("q", Subgraph(question="q"), generate)
         assert result.refused and generate.calls == []
+
+
+class TestTheRefusalSaysWhatIsActuallyMissing:
+    """The message used to be false on the path it was most often emitted from.
+
+    `no_seed` means entities resolved and none reached the rule graph. On the
+    E-001 evaluation split the five `no_seed` questions arrived at this branch
+    carrying 1-6 cards and 4-22 rulings, and were told *"retrieval returned no
+    usable evidence"*. E-030 was registered and withdrawn over the difference;
+    the repair it treated as a side note is what these tests pin.
+    """
+
+    def test_no_seed_with_evidence_does_not_claim_nothing_arrived(self) -> None:
+        held = Subgraph(
+            question="q",
+            outcome=Outcome.NO_SEED,
+            evidence=[held_item(f"r{i}", "ruling") for i in range(22)],
+        )
+        text = answer("q", held, replies("should not be called")).text
+        assert "no usable evidence" not in text
+        assert "returned nothing" not in text
+        assert "22" in text
+
+    def test_it_names_what_is_absent_rather_than_what_is_present(self) -> None:
+        held = Subgraph(
+            question="q",
+            outcome=Outcome.NO_SEED,
+            evidence=[held_item("Bring to Light", "card")],
+        )
+        assert "Comprehensive Rules" in refusal_reason(held)
+
+    def test_an_empty_context_still_says_nothing_arrived(self) -> None:
+        # The two cases this message exists to keep apart. `no_match` with an
+        # empty subgraph is the one where the old sentence was true.
+        empty = Subgraph(question="q", outcome=Outcome.NO_MATCH)
+        assert "returned nothing" in refusal_reason(empty)
+
+    def test_no_seed_with_an_empty_context_is_reported_as_empty(self) -> None:
+        # Outcome and emptiness are independent, and emptiness wins: claiming
+        # "none reaches a rule" implies something was there to not reach it.
+        assert "returned nothing" in refusal_reason(Subgraph(question="q", outcome=Outcome.NO_SEED))
+
+    def test_every_outcome_still_names_itself(self) -> None:
+        # The outcome code is what an operator greps for; no rewording drops it.
+        for outcome in (Outcome.NO_ENTITIES, Outcome.AMBIGUOUS, Outcome.NO_SEED, Outcome.NO_MATCH):
+            held = Subgraph(
+                question="q",
+                outcome=outcome,
+                evidence=[held_item("k", "card")],
+            )
+            assert str(outcome) in refusal_reason(held)
+            assert str(outcome) in answer("q", held, replies("x")).text
+
+    def test_the_refusal_marker_survives_the_rewording(self) -> None:
+        # `is_refusal` and the judge both key off REFUSAL; changing the reason
+        # text must not change how a refusal is detected downstream.
+        result = answer("q", failed(Outcome.NO_SEED), replies("x"))
+        assert result.text.startswith(REFUSAL)
+        assert is_refusal(result.text)
 
 
 class TestGrounding:

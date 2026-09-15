@@ -48,6 +48,41 @@ PROMPT_VERSION = "p5-a3"
 #: sentence naming what is missing, which is the useful part.
 REFUSAL = "CANNOT ANSWER"
 
+
+def refusal_reason(subgraph: Subgraph) -> str:
+    """Say what is actually missing, not that nothing arrived.
+
+    This message used to read *"retrieval returned no usable evidence"* on
+    every non-`RESOLVED` outcome. On `NO_SEED` that is **false**: entities
+    resolved and the traversals ran, and on the E-001 evaluation split the five
+    `no_seed` questions reached this branch carrying 1-6 cards and 4-22
+    rulings. What is absent is a CR rule reachable from them, which is a very
+    different thing to tell a reader — and a sentence that is false on the path
+    where it is emitted is the shape of sentence that makes an aggregate read
+    wrong six weeks later (E-018 amendment, 2026-09-14).
+
+    The count is included because *"no rule was reachable from 22 rulings"* and
+    *"nothing was retrieved"* are the two cases this message has to keep apart.
+
+    Args:
+        subgraph: The retrieval result that failed to qualify for generation.
+
+    Returns:
+        One sentence naming the outcome and what the context did hold.
+    """
+    held = len(subgraph.evidence)
+    if subgraph.outcome is Outcome.NO_SEED and held:
+        return (
+            f"retrieval resolved {held} evidence item(s) but none reaches a "
+            f"Comprehensive Rules entry ({subgraph.outcome})."
+        )
+    if subgraph.is_empty:
+        return f"retrieval returned nothing ({subgraph.outcome})."
+    return (
+        f"retrieval returned {held} evidence item(s), not usable for this "
+        f"question ({subgraph.outcome})."
+    )
+
 #: Required by the Wizards Fan Content Policy on every rendered answer.
 FAN_CONTENT_NOTICE = (
     "Unofficial Fan Content permitted under the Wizards of the Coast Fan Content "
@@ -217,7 +252,7 @@ def answer(
             annotate(span, **{spans.GENERATED: False, spans.REFUSED: True})
             return Answer(
                 question=question,
-                text=f"{REFUSAL} — retrieval returned no usable evidence ({subgraph.outcome}).",
+                text=f"{REFUSAL} — {refusal_reason(subgraph)}",
                 refused=True,
                 generated=False,
                 outcome=subgraph.outcome,

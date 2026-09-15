@@ -90,6 +90,126 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — The project closes at Phase 11 as a release, and the reason is a pattern rather than a setback
+
+Scope decision, taken after E-030's withdrawal: **Phase 11 becomes a release
+phase, not a research phase.** The alternative — find a fourth question — was
+considered and declined because I could not name a candidate worth defending.
+
+The evidence for stopping is a pattern, not a mood. **Three registered entries
+in a row were withdrawn on the day they were registered** — E-019 (power 0.26 at
+its own declared bar), E-025 (withdrawn before its first reading), E-030 (the
+guard does not fire in the shipped system) — and each died to a measurement that
+already existed when the entry was written. Against that: a correctness floor of
+0.203 at n = 57 that **nothing this project ever measured has cleared**, a golden
+set spent at 77 rows, and a judge audit that cannot pass at any n. The
+questions this corpus can answer have been asked.
+
+**What ships in Phase 11**, and it is small on purpose: the refusal string that
+was false on the path it was emitted from, and the `Outcome` docstring that said
+*"None of them may be answered from"* while ADR-007 routes `NO_SEED` to text
+retrieval. *"Must handle" is not "must refuse"*, and the two readings diverge on
+exactly one value — which is the sentence that would have stopped E-030 before
+it was written, and is now in the source where the next reader meets it.
+
+**The transferable form of why this stops here**, recorded for Project 3: every
+endpoint that separated on this corpus — context tokens, evidence items,
+provenance paths — is an endpoint that **needs no labels**. Every endpoint that
+needed a label was capped at 77 rows and sat under a floor it never cleared.
+That is not a fact about Magic. It is what an evaluation budget looks like when
+the unit of analysis requires a human, and it should be the first thing the
+agentic router's design asks about itself.
+
+## 2026-09-14 — E-030 is withdrawn hours after it was registered, and the phase it opened has no object left
+
+The red team was dispatched on E-030 before the first generation, the way E-019
+was. It came back with a defect in the entry's **first line**, and I verified it
+against the dumps before accepting it.
+
+E-030's stated decision was *"whether `answerer.py` should keep refusing on
+`no_seed` (…) **in the shipped system**."* **Arm C is the shipped system, and
+arm C records zero `no_seed` on the evaluation split.** The module the entry
+quotes says why, in text I had read the same morning while getting the
+mechanism right: *"`NO_SEED` is the case **ADR-007 routes to text retrieval**
+rather than treating as a miss."*
+
+**The decision was made on 2026-08-09 by ADR-007 and shipped.** E-030 proposed
+to make the graph-only arm behave the way the shipped system already behaves —
+and had it run, a 4-of-5 result would have fired *"ship the change"* over a
+change that alters **zero** answers in the shipped system.
+
+**The measurement it wanted to buy was also already on disk.** Arm C answered
+all five from a superset of arm B's context, 38–62 items against 5–28, and
+scored 1 `correct` and 1 `partial`. Arm A scored 1 of 5. **Two arms,
+independently, with two to twelve times the evidence, land at about one of
+five.** The registered prediction was right and was confirmable for free.
+
+**What I got wrong, and it is the same error twice in one day.** This morning I
+corrected the refusal mechanism by reading the enum instead of the outcome's
+name. The enum's own module docstring, six lines above, said `NO_SEED` is routed
+by ADR-007. I read the definition and stopped at the definition. **Reading far
+enough to fix the error I was looking for is not reading far enough to avoid the
+next one** — and the entry, the roadmap phase, the branch name and a paragraph
+of the README were all built on the stretch I did not read. The README paragraph
+is corrected today; it survived less than a day.
+
+**The phase has no object left, and that is the finding rather than a setback.**
+Phase 11 was one entry and a release. The entry is dead. What survives is a
+one-line repair the entry treated as a side note and produced under **no**
+branch: the refusal string says *"retrieval returned no usable evidence"* on a
+path where evidence exists. It is false wherever that path is taken, it costs
+zero generations, and it does not need a phase.
+
+**The honest state of the project:** the correctness question is closed by
+E-026's floor, the economy claim is published with its bound, provenance is
+demonstrated, the judge audit is closed by arithmetic, and the golden set is
+spent. Three entries in a row — E-019, E-025, E-030 — have now been withdrawn
+on the day they were registered, each because a measurement that already existed
+answered them. **That is no longer a run of bad luck; it is the signal that this
+corpus has been asked what it can answer.** The next scope decision is the
+author's: close at v1.3, or find a question I cannot currently defend proposing.
+
+## 2026-09-14 — Phase 11 opens on a product defect, with its own ceiling written into the opening
+
+Phase 10 closed with its deliverables complete and **one DoD item recorded as
+not met**: *"the efficiency contrast has power calculated in advance."* The
+calculation closes — the token difference is ten standard errors — but E-027 is
+**registered retrospectively**, so the clause asking for advance registration
+was not satisfied. Satisfying it means running E-028, and the registry's own
+judgement is that confirming a ten-sigma effect is not where the remaining
+effort has value. **Carried as open rather than as a task**, and the phase
+closed with it open rather than ticked because the number came out right.
+
+Phase 11 opens on the `no_seed` guard: `answerer.py` refuses on any outcome
+that is not `RESOLVED`, which on five questions discards 1–6 cards and 4–22
+already-retrieved rulings and emits a sentence that is false on all five.
+
+**The ceiling is written into the opening, not discovered at the close.** The
+vector arm answered those same five from cards and rulings alone and scored
+**1 of 5**. That is the nearest evidence for what lifting the guard buys, and
+it says *about one question*. Best case the stratum moves +0.09 against a floor
+of 0.326 at n = 22 — inconclusive by construction. **The reason to change the
+guard is that a system discarding 22 retrieved rulings to report "no usable
+evidence" is lying to its user**, and that reason does not depend on the score.
+
+**Out of scope, each with the reason rather than a deferral:** a correctness
+claim on the five, the stratum or the split (E-026's floor applies here
+unchanged); re-opening the 57; arm C's copy of the same guard; **E-011b**,
+which is the only legitimate path to a judge audit that passes and **does not
+rescue the hypothesis** — trading binary for continuous drops the floor from
+~0.20 to ~0.11 and the observed effect is +0.018; and E-028.
+
+**One process change, and it comes from reading Phase 10's own note at close.**
+That note's Lessons Learned and Failed Attempts were written at the phase's
+*opening*, when the plan was E-019 plus a pool expansion plus blind
+re-annotation. The plan died on 14 September and the note kept describing it:
+seven statements had to be marked stale, including a lesson teaching the exact
+clustered-interval error E-027 exists to correct, and two describing curation
+that never happened. **A note written as assertions about what the phase will
+conclude ages into a record of a plan.** Phase 11's stubs are therefore written
+as *questions the phase must answer*, not as statements of what it will find,
+and the ceiling above is stated at the top where a later reader cannot miss it.
+
 ## 2026-09-14 — The refusal mechanism was corrected once into a second wrong answer, and the registry had the right one the whole time
 
 The 2026-09-13 entry *"An audit for the same defect elsewhere, and it found three

@@ -9358,3 +9358,94 @@ the run stops and the entry is amended rather than paid for.
 
 _Not run. Registered 2026-09-14, before the guard was touched and before any
 answer existed._
+
+#### E-030 — WITHDRAWN 2026-09-14, the day it was registered, before the guard was touched
+
+Red-teamed before the first generation, as E-019 was. The pass returned four
+independently fatal defects and one that ends the entry on its own.
+
+**Fatal, and it is the first line of the entry.** The stated decision is
+*"whether `answerer.py` should keep refusing on `outcome = no_seed` when the
+context is non-empty, **in the shipped system**."* Arm C is the shipped system,
+and **arm C records zero `no_seed` on the evaluation split**:
+
+| arm | `no_seed` | `no_match` | `resolved` |
+|---|---:|---:|---:|
+| A — vector | 0 | 0 | 57 |
+| B — graph | **5** | 1 | 51 |
+| **C — shipped** | **0** | 1 | **56** |
+
+This is not luck, it is the architecture, and it is written in the module the
+entry quotes: *"`NO_SEED` is the case **ADR-007 routes to text retrieval**
+rather than treating as a miss"* (`retrieval/subgraph.py`). **The product
+decision E-030 claimed to inform was made on 2026-08-09 by ADR-007 and has been
+shipped since.** The entry proposed to make the graph-only arm behave the way
+the shipped system already behaves. Had it run, a 4-of-5 result would have fired
+"ship the change" over a change altering **zero** answers in the shipped system.
+
+**And the question it wanted to buy was already answered, for nothing.** Arm C
+generated on all five, from a context that is a superset of arm B's — 38–62
+items against 5–28:
+
+| question | A (vector) | B (graph) | C (shipped) |
+|---|---|---|---|
+| `hand-clone-copies-printed-pt` | incorrect | *refused by pipeline* | incorrect |
+| `hand-humility-opalescence` | incorrect | *refused by pipeline* | incorrect |
+| `rg-1182` | **correct** | *refused by pipeline* | **correct** |
+| `rg-1469` | incorrect | *refused by pipeline* | **partial** |
+| `rg-3915` | incorrect | *refused by pipeline* | incorrect |
+
+**Two arms, independently, with two to twelve times the evidence, land at about
+one of five.** The entry's registered prediction — *"I predict 1 of 5"*, from
+arm A alone and flagged as an unmatched comparator — is confirmed by a better
+comparator that was on disk while the entry was being written. **The guard costs
+approximately nothing, and five generations were about to be bought to learn it.**
+
+**The other three, recorded because they are reusable:**
+
+- **The decision rule cannot fire as written.** `G = 3` fires *both* "ship
+  behind the citation gate" *and* "keep the guard", with opposite directives —
+  and `G = 3` is squarely inside the entry's own predicted range. `G ≤ 2` with
+  `U ≤ 1` fires nothing. A fourth outcome the entry never considered — **all
+  five self-refuse** — either fires nothing, or, under the loose reading of
+  "grounded", fires *ship*, because an answer that says `CANNOT ANSWER` makes no
+  uncited claims. The pipeline refused before, the model refuses now, the
+  deployed behaviour is identical, and the entry publishes *"4 of 5 grounded,
+  shipped."*
+- **"Grounded" has two defensible readings with opposite verdicts**, and the
+  entry defines neither. The five contexts hold **zero CR rules**, so a loose
+  reading ("no fabricated handles") is near-mechanically guaranteed by
+  `expand()`, while a strict reading ("no rules outcome without a supporting
+  item") fails nearly any substantive answer. The entry's own blinding
+  mitigation — read the prompts *before* re-reading the decision rule —
+  guarantees the criterion is constructed after the data is seen, by the
+  unblinded author of the change.
+- **The prediction is registered on the variable that fires no branch.**
+  Correctness is predicted; `G` decides everything and is not predicted. This is
+  E-019's fatal defect #1 in a new costume: a quantity computed in one section
+  and a bar declared in another, with nobody checking they are the same
+  quantity.
+
+**Two arithmetic corrections to my own entry.** The floor invoked to dismiss a
+correctness test — 0.326 at n = 22 — is the floor for the *between-arm* contrast,
+not for the *B-new vs B-old* paired contrast the change actually induces. The
+right fact is sharper and belonged in the entry: at **5 discordant pairs,
+two-sided exact McNemar returns p = 2 × (1/32) = 0.0625** and cannot reach 0.05
+under **any** outcome. And the cost gate — stop at US$ 0.50 against an estimate
+of US$ 0.005 — sits at a hundred times the estimate and could never bind, which
+is the standard E-018's Change 4 set: *"an honest bar has to be able to bind."*
+
+**What is kept.** The population reconciles exactly and no arithmetic error was
+found in it. Refusing to route the decision through the LLM judge was right.
+Refusing to test correctness on five self-selected cases was right, for the
+wrong stated reason. The self-conditioning threat was named first and in the
+right words. **And the one repair that survives is the one the entry treated as
+a side note:** the refusal string says *"retrieval returned no usable evidence"*
+on a path where evidence exists. It is false wherever that path is taken, it
+costs zero generations, and **no branch of the entry produced it as an outcome.**
+
+### Actual result
+
+_Not run. **Withdrawn 2026-09-14**, the day it was registered, before the guard
+was touched and before any answer existed. Zero API spend. The cost of finding
+out was one red-team pass and one grep over a dump that was already on disk._
