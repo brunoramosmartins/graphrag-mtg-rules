@@ -70,13 +70,19 @@ Three measurements say why, and each is registered:
   output, against 24 wrong entities.** Fewer than one failure in three is a
   reasoning error.
 - **On the Magic side the graph arm's seven "refusals" are mostly not refusals
-  at all** *(corrected 2026-09-13, by reading all seven — an earlier version of
-  this bullet pooled them and inherited the wrong mechanism)*. **Six carry
-  `generated=False`: retrieval resolved no entity and the model was never
-  called** — five `no_seed`, one `no_match`. That is entity linking failing,
-  not a model declining. The seventh is a real refusal and a correct one: the
-  model walked the rules and said the context never gave it the creature's
-  toughness.
+  at all**, and this bullet has now named the wrong mechanism twice *(pooled
+  with model refusals until 2026-09-13; blamed on entity linking until
+  2026-09-14, when E-018's own amendment was finally read against the dumps)*.
+  **Six carry `generated=False` and the model was never called** — five
+  `no_seed`, one `no_match`. **`no_seed` is not linking failing.** The
+  retrieval enum defines it as *entities exist, none reaches the rule graph*;
+  the separate `no_entities` code — *linking resolved nothing at all* — fired
+  **zero** times; and the five reached the guard holding 1–6 cards and **4–22
+  rulings** each. What is absent is the **card→rule edge**, the bridge measured
+  and not shipped in the next section. The guard then discarded those rulings
+  and emitted *"retrieval returned no usable evidence"*, which is false on all
+  five. The seventh is a real refusal and a correct one: the model walked the
+  rules and said the context never gave it the creature's toughness.
 - **The retrieval comparison is budget-confounded**, by a 3× rule set before
   the split opened. At matched token budget the vector arm keeps a median of
   40.5 items against the graph's 12.0 — 3.38×. So the headline retrieval
@@ -141,6 +147,18 @@ that spends the entire budget on exactly the right thing, and the graph answers
 **36%** of the budget still goes to keyword definitions, the governing rule
 arrives twice in twenty-two, and the graph answers **6 of 22** against 9.
 
+**Five of those 22 the graph never answered at all** *(recorded 2026-09-14)*.
+They cleared entity linking, retrieved 1–6 cards and 4–22 rulings, reached no
+CR rule, and the `no_seed` guard refused before a model call — scoring
+`incorrect` with the rulings still in hand. On the 17 it did attempt, the graph
+answers **6 against the baseline's 8**. **They are not five recoverable
+points:** the vector arm answered those same five from cards and rulings alone
+and scored **1 of 5**, which is the only evidence available for what lifting
+the guard would buy. The guard is still the wrong behaviour for a shipped
+system — discarding 22 rulings to report *no usable evidence* is not a
+refusal — and it is separated from the retrieval failure here because the two
+have different repairs and only one of them is cheap.
+
 **It is not the graph.** On the same 22 questions the vector arm reaches the
 gold rule **2 of 22 — the same two questions**, and both are ones where the
 target rule was annotated in-house. Of the **13** whose target was transcribed
@@ -171,6 +189,89 @@ was missing from it. Full working, with the limitations that bound each number,
 in [`docs/evaluation.md`](docs/evaluation.md) and
 [`docs/error-samples/e018.md`](docs/error-samples/e018.md).
 
+## What it costs to get there, and the floor under every number above
+
+The table at the top says the three arms are indistinguishable. **It does not
+say they are the same system**, and the difference is not in the answers — it
+is in what each one spends to produce them.
+
+Paired within question over the same 57, bootstrapped over questions:
+
+| | vector (A) | graph (B) | B − A | 95% CI |
+|---|---:|---:|---:|---|
+| context tokens | 3,892 | **744** | **−3,148** | [−3,428, −2,843] |
+| evidence items | 38.9 | **12.5** | **−26.4** | [−29.5, −22.9] |
+| CR rule items | 2.09 | **5.47** | **+3.39** | [+1.65, +5.37] |
+| correctness | 0.60 | 0.61 | +0.02 | **[−0.12, +0.16]** |
+
+> **The graph answers within [−0.12, +0.16] of the baseline's correctness on
+> 19% of the context tokens**, while surfacing more of the rulebook.
+
+**"Within ±0.16" is not "the same", and the gap between those two is the point
+of the next section.** The economy is a ten-standard-error effect; the
+equivalence it rests on is the widest figure in this repository.
+
+### The floor: why "indistinguishable" is a property of the ruler
+
+Before curating anything for a second verdict, we measured what this evaluation
+can see at all. **Of the nine paired correctness comparisons this project has
+run, zero produced an effect their own samples could have distinguished from
+zero at 80% power.**
+
+| n | smallest detectable effect | as an interaction |
+|---:|---:|---:|
+| 20 | 0.342 | 0.484 |
+| **57** | **0.203** | 0.287 |
+| 120 | 0.140 | 0.198 |
+
+The largest correctness effect ever measured here is +0.182. **An interaction
+costs about four times the questions of the simple effect it is built from** —
+one line of arithmetic that, had anyone computed it in September, would have
+prevented three registered experiments from being written.
+
+This does not say the effects are zero. It says **every `inconclusive` this
+project published was the only answer its instrument could return.**
+
+Publishing a measured floor for one's own evaluation is rarer than a
+three-point win, and it is the more transferable of the two. Full working in
+[`docs/evaluation.md`](docs/evaluation.md); instruments in
+[`scripts/detectability.py`](scripts/detectability.py) and
+[`scripts/e027_economy.py`](scripts/e027_economy.py), both zero-cost arithmetic
+over runs that already exist.
+
+### And the thing no correctness figure captures
+
+Every evidence item in every arm carries a provenance field, populated **100%
+of the time in all three arms**. That number is not the measurement:
+
+| arm | items | with a path | **distinct paths** |
+|---|---:|---:|---:|
+| A — vector | 2,215 | 100% | **1** |
+| B — graph | 710 | 100% | **275** |
+
+The vector arm writes one constant string on every item — *"hybrid retrieval
+over the shared corpus"* — which is true of everything an index returns. The
+graph arm writes `(:Card {Bring to Light})-[:HAS_RULING]->(:Ruling)`: a claim
+about *this* item that a reader can check against the corpus.
+
+```
+python scripts/provenance_demo.py --qid rg-1591
+```
+
+This is a capability, not a result: it makes no answer more correct, and it is
+what a person auditing a rules answer actually uses.
+
+### Three claims, proposed and killed in one day
+
+| proposal | killed by |
+|---|---|
+| stratum × arm **interaction** on correctness | power at its own declared bar is 0.26; 80% needs 440 questions — more than the 296 that had just disqualified its alternative |
+| **gold-rule reach** as the comparison | reach is 11/11 in *all three* arms on `definition_1hop`; the large effect is between strata, not between arms |
+| evidence **precision** | the non-overlapping interval was pooled over items clustered inside questions; paired, it is −0.001 [−0.044, +0.039] |
+
+Each died to a measurement available before the proposal was made. That is the
+part worth copying.
+
 ## Why Magic
 
 The Comprehensive Rules are a genuine dense-regulatory-text proxy —
@@ -184,14 +285,15 @@ was chosen because it lets us *measure the truth*. Full rationale in
 
 ## Status
 
-**Phase 9 — Scope, not repair.** The pipeline runs end to end: the graph,
+**Phase 10 — The floor, and what sits above it.** The pipeline runs end to end: the graph,
 retrieval, grounded generation, a three-arm evaluation with confidence
 intervals, OpenTelemetry spans on every stage, a live demo, and CI that
 exercises all three arms with no API key. The evaluation split was opened once
 and the result is above. Phase 9 then asked what it would take to close the
-retrieval gap, measured four candidate repairs, and shipped none of them —
-the section above is what it returned instead. Roadmap: Phases 0→9
-(vector→graph→agentic trilogy).
+retrieval gap, measured four candidate repairs, and shipped none of them.
+Phase 10 opened to take a second correctness verdict, measured that no such
+verdict was available to it, and published the floor instead. Roadmap:
+Phases 0→10 (vector→graph→agentic trilogy).
 
 **What this project is actually a demonstration of.** The graph did not beat
 the baseline, and the interesting part is that this is knowable. The
@@ -425,17 +527,29 @@ The development split runs freely and costs nothing to re-measure:
 Stated here because they bound every number above; the full list is in
 [`docs/evaluation.md`](docs/evaluation.md).
 
-- **n = 57.** Exact McNemar needs 6 discordant pairs one way to reach
-  *p* < 0.05 and Holm's strictest step needs 8:0. The largest discordance
-  observed anywhere is 5. This split could not have produced a confirmation at
-  these effect sizes — which was computed and written down in August, not
-  discovered afterwards.
-- **The judge is not validated.** Agreement with a human is 0.727 [0.598,
-  0.827] against a 0.720 threshold, so it is published descriptively with its
-  ceiling beside it. It does read the supplied key rather than its own
-  knowledge — a key-fidelity control over deliberately wrong keys scored 30/30
-  — but `partial` and `incorrect` overlap textually and that is where both the
-  judge and the human annotator are unstable.
+- **n = 57, and the floor that follows from it is 0.203.** Exact McNemar needs
+  6 discordant pairs one way to reach *p* < 0.05 and Holm's strictest step
+  needs 7:0. The largest discordance observed anywhere is 5. This split could
+  not have produced a confirmation at these effect sizes — computed and written
+  down in August, not discovered afterwards — and **no correctness figure
+  anywhere in this repository should be read without that floor beside it.**
+  The floor was itself measured twice: the exact permutation value is higher
+  still (0.220 at n = 57, 0.430 at n = 20), so the normal approximation quoted
+  here is the optimistic one.
+- **The economy figures are exploratory, not pre-registered.** E-027 was
+  registered retrospectively and says so: the numbers were computed while
+  deciding whether the entry was worth writing. No decision rule was fixed in
+  advance, and the confirmatory successor is named but not run.
+- **The judge is not validated, and cannot be at this accuracy.** Agreement
+  with a human is 0.727 [0.598, 0.827] against a 0.720 threshold. The threshold
+  sits on the *lower bound* and the judge's point estimate on the decisive cell
+  is **0.722** — so no sample size up to 50,000 clears it, and buying more
+  labels only tightens the interval around a failure. The bar is not moved: it
+  is the lower bound of the human's own self-agreement, fixed before any judge
+  label existed. **What the audit does establish is directional: in 55 audited
+  answers the judge never once graded better than the human**, so every
+  correctness figure here is a **floor rather than an estimate**, and the
+  comparison between arms is unaffected by a bias both arms share.
 - **The retrieval comparison is budget-confounded** at 3.38× median item
   count, so token-normalised precision is the headline retrieval figure.
 - **Precision was judged by one annotator, unblinded.** The blinding claim was

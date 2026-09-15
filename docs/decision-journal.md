@@ -90,6 +90,334 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-14 — The refusal mechanism was corrected once into a second wrong answer, and the registry had the right one the whole time
+
+The 2026-09-13 entry *"An audit for the same defect elsewhere, and it found three
+more"* recorded, as finding 2, that the graph arm's six non-generations are
+**"retrieval resolved no entity (…) that is entity linking failing."** That
+entry stands as written, because entries are not rewritten. It is wrong, and
+this is the correction.
+
+`Outcome` in `retrieval/subgraph.py` defines two separate codes:
+
+```
+NO_ENTITIES = "no_entities"  # linking resolved nothing at all
+NO_SEED     = "no_seed"      # entities exist, none reaches the rule graph
+```
+
+**`no_entities` fired zero times on the evaluation split.** The five `no_seed`
+questions reached the guard carrying **1–6 cards and 4–22 rulings** each, from
+`card_core`, `card_keyword_rules` and `card_rulings`. Entity linking worked on
+all five. What is missing is the **card→rule edge** — the same absent bridge
+E-022 costed at 1 of 39 at one hop and did not ship.
+
+**The registry already said this**, in E-018's amendment written the same day
+as the wrong entry: *"`NO_SEED` means entities exist, none reaches the rule
+graph (…) the refusal text is false as written on all five."* The correction
+existed and never propagated. Both statements were in this repository at once
+for a day, and the wrong one was the one in the README, where a reader would
+act on it — by going to fix a linker that has nothing wrong with it.
+
+**What produced the error is worth more than the error.** The 09-13 entry was
+itself a correction: an earlier version pooled the six with model refusals, and
+reading all seven fixed the pooling. Having found one mechanism wrong, I
+supplied a second from the outcome *name* rather than from the enum's own
+comment two lines below it. **A correction is not self-verifying, and the pass
+that produces one is the pass least likely to check it** — the relief of having
+found the bug substitutes for reading the definition.
+
+**And the repair is smaller than it looks, which is the second half of this
+entry.** The guard scores five `interaction_multihop` questions `incorrect`
+while holding their rulings, so "the graph answers 6 of 22" is 6 of **17
+attempted** plus 5 never attempted. It is tempting to read five recoverable
+points there. Standing rule 9, against my own proposal: *what else would make
+those five look recoverable?* Nothing does — and the evidence against is direct.
+**The vector arm answered those same five from cards and rulings alone and
+scored 1 of 5.** The best available estimate of what lifting the guard buys is
+therefore about one question, not five.
+
+The guard is still wrong for a shipped system: discarding 22 retrieved rulings
+to report *"retrieval returned no usable evidence"* is a false sentence and a
+bad product behaviour, and that is the reason to change it. It is not a
+correctness repair, and E-026's floor of 0.20 at n = 57 would not see it if it
+were. Corrected in `README.md` today; the 09-13 entry and the CLAUDE.md rule-8
+rationale that inherited the same gloss are marked rather than rewritten.
+
+## 2026-09-14 — Phase 10's manual sample has no object, and inventing one would be worse than skipping it
+
+Standing rule 8 requires a manual sample of every outcome category before any
+number from a **comparative evaluation** is published. Phase 10 carried that
+deliverable, with the added correction the E-018 countersign earned: the prior
+hidden until the mark is recorded.
+
+**It has no object.** E-019, the only comparative evaluation this phase
+registered, was withdrawn before curation. E-026, E-027 and E-029 are
+arithmetic and rendering over runs that already existed — they add no answers
+and no judgements. E-018's sample is read and countersigned.
+
+E-027 is the only candidate and it **has no outcome categories**: it is a
+paired difference in token counts, not a set of classified answers. There is no
+`correct` / `partial` / `refused` / `unparseable` to sample one of each from.
+Building a sample over it would mean **inventing the object the rule requires
+in order to satisfy the rule**, which is worse than recording that the
+deliverable does not apply — it would put a checkbox where a reader expects
+evidence.
+
+Recorded the same way Phase 9's paired recall was: **a deliverable without an
+object, not an overlooked one.** The hidden-prior requirement stands registered
+for the next comparative evaluation this project runs, and it is the first
+thing that evaluation does.
+
+**Why this matters beyond the checkbox.** A rule that is satisfied by
+constructing its own subject stops being a constraint. Rule 8 exists because
+aggregates hid a context that did not answer its question; applying it to a
+token count would teach the project that the rule is paperwork. The refusal is
+the maintenance.
+
+## 2026-09-14 — A field populated 100% of the time in all three arms, and only one arm's varies
+
+Phase 10 needed to say what the graph does that the vector baseline cannot,
+after correctness came back indistinguishable and gold-rule reach came back
+identical. The answer was in a field nobody had looked past the coverage of.
+
+Every evidence item in every arm carries a `path`, populated on **100% of items
+in all three arms**. Standing rule 9 asks what *else* would make a quantity
+return the value it just returned:
+
+| arm | items | with a path | distinct paths |
+|---|---:|---:|---:|
+| A — vector | 2,215 | 100% | **1** |
+| B — graph | 710 | 100% | **275** |
+
+**The vector arm writes one constant string on all 2,215 items.** Coverage of
+100% and a distinct-value count of 1 are the same field measured twice, and
+only the second says anything. A guard that passes for two different reasons is
+as broken as one that cannot fail — this is that, in a documentation field
+rather than a test.
+
+**Registered as E-029 and explicitly not as an experiment.** No hypothesis, no
+decision rule, no p-value. *"The answer cites the edge it walked"* is not a
+quantity with a sampling distribution, and manufacturing a statistic for
+something structural — after E-026 measured that this evaluation cannot see
+correctness differences below 0.20 — would be dressing a capability as a
+result. It has an instrument and a home in the registry, labelled for what it
+is.
+
+**A defect in my own instrument, found and kept.** The first version reduced a
+path to its shape by keeping `()[]-><*:` and reported **six** shapes. Card
+names contain hyphens — *Snow-Covered Forest* — so the hyphen leaked into the
+shape and split one shape in two. Stripping node contents first gives **four**.
+The wrong number was in one run's output; it is recorded in the entry rather
+than silently corrected, and the test that would have caught it now exists.
+
+**What is deliberately not claimed:** that provenance makes answers more
+correct (it does not), that a vector baseline cannot carry provenance (this one
+does not, because a nearest-neighbour lookup has no edge to record), or that
+more paths is better than fewer. What matters is that one arm's field varies
+with the item and the other's does not.
+
+## 2026-09-14 — The judge audit cannot pass at any n, and the 55 labels already answer a better question
+
+Phase 10 carried the judge audit as a blocking prerequisite and I was about to
+build the instrument for roughly 37 more human labels. **Asked first whether
+the gate can fire.** It cannot, and the answer was in labels frozen in
+September.
+
+E-011 gates per label, and the bar is **0.720 on a lower bound**. The judge's
+point estimate on the `correct` cell — the one every published figure depends
+on — is **0.722**, from 13 of 18. A lower bound reaches a bar its point
+estimate exceeds by 0.002 only by driving the interval to near-zero width: at
+n = 1,600 the lower bound is 0.700, at 6,400 it is 0.711, and **nothing up to
+50,000 clears it.** Thirty-seven more labels buy a tighter interval around a
+failure.
+
+**This is E-025's defect in a different entry** — an instrument registered
+against a bar its own measurement cannot reach — and it is the fourth time this
+week. The pattern is now unmistakable and worth naming as a habit rather than a
+series of incidents: **compute whether the gate can fire before buying the
+sample that would fire it.**
+
+**The bar does not move.** It is the lower bound of the human's own
+self-agreement, fixed before any judge label existed. Lowering it now, having
+seen 0.722, is precisely the post-hoc threshold that voided E-024 and
+contributed to withdrawing E-019. Refusing is the point; the alternative is an
+evaluation that can only report a pass.
+
+**A tempting rescue that does not work.** `run_eval.py report` publishes the
+two-way collapse, so the three-way audit measures a distinction no published
+number uses — which reads like an argument for auditing the collapse instead.
+Collapsed agreement is 50/55 = 0.909 [0.804, 0.961] and 0.804 clears the bar.
+**But E-011 gates per label, and the pooling is the trick**: it merges the cell
+the judge is weakest on, 13/18, with one it gets right 37 of 37 times. Per
+cell, `correct` is still 0.722 [0.491, 0.875]. This entry had already written
+that the collapse "is now robust for a measured reason instead of an argued
+one" — and nobody had computed the measure. That sentence was an argument
+wearing a measurement's clothes and I withdrew it.
+
+**What the 55 labels do support is worth more than the gate.** The confusion
+matrix is zero below its diagonal: **in 55 audited answers the judge never once
+graded better than the human.** The one-directionality was already noted in an
+amendment from 2026-09-10; what nobody had drawn from it is the consequence — a
+uniformly strict grader applied to every arm leaves the comparison intact and
+makes each arm's absolute figure **a floor rather than an estimate**. E-001's
+0.60 / 0.61 / 0.65 are lower bounds on correctness. That characterisation needs
+no gate and was available two months ago.
+
+The audit is removed from Phase 10's prerequisites — **measured as unreachable,
+not deferred** — and the legitimate path to a passing audit is E-011b's rubric
+revision: raise the judge's accuracy so the point estimate sits clear of the
+bar, then audit. Auditing an instrument whose accuracy matches its bar to three
+decimals was never going to conclude.
+
+## 2026-09-14 — The precision gap was the clustering, and what survives is economy
+
+I proposed moving Phase 10 onto evidence precision, citing Phase 8's
+non-overlapping intervals: A 0.420 [0.339, 0.505] against B 0.223
+[0.181, 0.271]. **Checked it before writing the entry this time. It does not
+survive.**
+
+Those intervals are computed over 131 and 327 pooled evidence items, and
+**evidence items are clustered inside questions**. Paired within question and
+bootstrapped over questions, the same contrast returns **−0.001
+[−0.044, +0.039]**. The entire gap was the clustering. Had I registered E-027
+on the proposal, it would have rested on the same class of error I withdrew
+E-019 for eight hours earlier — a number computed at the wrong unit and never
+inspected at the level of one case.
+
+**What does survive is larger than what I proposed**, and it is economy rather
+than precision. Paired, n = 57, 10,000 resamples:
+
+| endpoint | A | B | B − A | 95% CI | |
+|---|---:|---:|---:|---|---|
+| evidence items | 38.86 | 12.46 | −26.40 | [−29.46, −22.89] | separates |
+| context tokens | 3892 | 744 | −3148 | [−3428, −2843] | separates |
+| CR rule items | 2.09 | 5.47 | +3.39 | [+1.65, +5.37] | separates |
+| rule precision | 0.07 | 0.08 | +0.00 | [−0.02, +0.02] | crosses zero |
+| gold-rule reach | 0.43 | 0.48 | +0.05 | [−0.07, +0.19] | crosses zero |
+| correctness | 0.60 | 0.61 | +0.02 | [−0.12, +0.16] | crosses zero |
+
+**The graph answers on 19% of the context tokens and 32% of the items, while
+surfacing more CR rules.** The token difference is roughly ten standard errors.
+
+**The claim carries its bound or it is not the claim.** *"The same answers"*
+means *"within [−0.12, +0.16] correctness"*, which is wide, and E-026 measured
+why it cannot be narrower here. The economy is strong; the equivalence it rests
+on is weak. **That asymmetry is the honest shape of the result** and it goes
+wherever the figure goes.
+
+**E-027 is registered retrospectively and marked so**, because the numbers were
+computed while deciding whether the entry was worth writing. There was no
+pre-registered rule and it is not a confirmatory test. E-028 is named as the
+successor that would pre-register it — with the note that confirming a
+ten-sigma effect may not be where the remaining effort earns most, which is a
+judgement recorded now rather than discovered later.
+
+**Three proposals of mine have now died on checking**, in one day: the
+correctness interaction, the gold-rule-reach pivot, and evidence precision.
+Each died to a measurement I could have taken before proposing. The pattern is
+the lesson, and it is the same one E-018 wrote: **the check that matters is the
+one run before the claim, not after it.**
+
+## 2026-09-14 — The floor of this evaluation is 0.20, and it explains every inconclusive the project has published
+
+E-019 was registered this morning, red-teamed the same afternoon, and is
+**withdrawn before a single question was curated**. The review returned
+twenty-one findings; four are independently fatal and I verified every piece of
+arithmetic in them myself before accepting it.
+
+**The one that ends it:** Design B was registered at n = 49 on 0.78 power,
+computed at the selected point estimate — while the entry's own declared
+minimum meaningful effect, δ ≥ 0.15, sits a hundred lines further down and was
+never evaluated. **Power at that bar is 0.26, and 80% needs 440 questions.** I
+rejected Design A in the same entry for needing 296. The design fails its own
+test for rejecting its alternative, and I did not notice because I computed the
+power in one section and declared the bar in another.
+
+Three more: the planning value δ = 0.318 has a 95% interval of **[−0.09, +0.73]**
+and I wrote "not precise" without ever printing it; the two groups are
+perfectly confounded with question **provenance**, since `definition_1hop` is
+generated from our own CR glossary and `interaction_multihop` comes from
+RulesGuru — and that generator's docstring says the stratum exists to
+**restore the tie prediction**, while E-019 predicted a graph win on it; and
+the post-selection defence in the entry argues for Design A, which the entry
+rejects two paragraphs later, while what was registered is the argmax of ten
+pairwise contrasts read off an outcome table.
+
+**So I stopped redesigning and measured the wall.** E-026, registered and run
+the same day, zero cost, arithmetic over runs that already existed:
+
+**The floor of this evaluation is 0.203 at n = 57. Of the nine paired
+correctness comparisons this project has run on the Magic side, zero produced
+an effect their own samples could have distinguished from zero at 80% power.**
+
+An interaction costs about four times the n of the simple effect it is built
+from. That single line was available on 2026-09-12 and would have prevented
+E-025, Design A and Design B — three entries, eight days, one arithmetic limit
+nobody had measured.
+
+**What this does not say**, and the entry leads with it: not that the effects
+are zero. That this evaluation could not have told the difference, so **every
+`inconclusive` it returned was the only answer available to it.** E-001 was not
+badly designed. It was measured with a ruler whose smallest mark is larger than
+the thing measured.
+
+**A pivot I proposed and then killed by checking it.** I suggested moving the
+estimand from correctness to gold-rule reach, where the effects look enormous.
+Measured before recommending it twice: reach is **11/11 in all three arms** on
+`definition_1hop` and **2/22 in both A and B** on `interaction_multihop`. The
+enormous effect is between *strata*, not between *arms* — a property of the
+problem. Recorded in E-026 under my own name because a recommendation withdrawn
+on evidence is worth more than one that was never made.
+
+**The way out is the unit, not the question.** Correctness is one binary per
+question, so n is 57 and the floor is 0.20. Evidence is hundreds of items:
+rule-number precision is A 0.420 [0.339, 0.505] against B 0.223 [0.181, 0.271]
+— **non-overlapping, at n in the hundreds** — with the graph 3.38× more
+economical in items and 3.7× better per token. Phase 10 is rebuilt there.
+
+**The claim the project can now defend:** a GraphRAG that delivers measurably
+more economical and auditable evidence at correctness statistically
+indistinguishable from the baseline, plus the demonstration that the
+indistinguishability is the evaluation's floor rather than a tie. Publishing a
+measured floor for one's own evaluation is rarer in this literature than a
+three-point win, and it is the more transferable of the two.
+
+## 2026-09-14 — Phase 10 opens with its entry gate revised rather than met
+
+The gate said Phase 10 does not open until Phase 9 hits the retrieval target it
+registered. **Phase 9 did not hit it and will not.** The target was measured
+unavailable, the roadmap records the revision in place rather than editing the
+gate away, and this entry exists so the difference between *revised* and *met*
+is on the record and not in someone's recollection.
+
+**Nothing carries over.** Phase 9's checklist closes with one item unmet — the
+paired before/after recall, which has no object because no front entered — and
+one deliberately not run, E-023. Both are recorded as such in the roadmap. The
+two items that were genuinely open at the last kickoff are done: the README
+carries the scope statement, and the manual sample is countersigned.
+
+**The premise of the phase changed with the gate.** Phase 10 was written to
+take a second measurement over a repaired system. Nothing was repaired, so
+E-019 as registered would be a replication of E-001 on a fresh split — spending
+the project's most expensive asset to reconfirm an underpowered `inconclusive`.
+
+**The revised objective is the verdict E-001 could not reach:** the
+stratum-by-arm interaction. E-001 averaged over strata that cancel and returned
+`inconclusive`, which was the correct answer to the question it asked. The new
+question is pre-registered and the split is sized for *it*, per stratum, rather
+than for an average.
+
+**The falsifier is named before any curation:** `keyword_rule_2hop` runs
+against the hypothesis at n=2. It enters the entry as a named falsifier, not as
+noise, and it enters before the pool that would decide its fate is drawn.
+
+**What this phase actually costs is curation, not code.** The golden set holds
+about 119 stratified rows and 77 are spent. A fresh split does not come out of
+what exists, and no amount of engineering substitutes for it.
+
+Opened on the branch `phase-10/second-verdict`. Note:
+`notes/phase10-second-verdict.md`.
+
 ## 2026-09-14 — Phase 9 closes on option (ii): a scope statement instead of a repair
 
 The phase opened to make retrieval reach the governing rule. **It closes
@@ -983,6 +1311,14 @@ the rules and said the context never supplied the creature's toughness. The
 `Answer` dataclass already separates `generated` from `refused` and documents
 why; the claim pooled them anyway. Seven instances is ten minutes of reading
 and nobody had read them.
+
+*[Corrected 2026-09-14, and left standing as written. "Retrieval resolved no
+entity" and "that is entity linking failing" are both false. `no_seed` means
+entities resolved and none reached the rule graph; the separate `no_entities`
+code fired zero times; all five carried 1–6 cards and 4–22 rulings. This
+paragraph fixed a pooling error and introduced a mechanism error in the same
+breath — see the 2026-09-14 entry at the top of this file, which is about
+exactly that.]*
 
 **3. The audit's own instrument had the defect.** A hand-written keyword map
 flagged *"what **kind** of movie is The King"* as inconsistent because its
