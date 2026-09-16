@@ -36,7 +36,14 @@ def args(**overrides: object) -> SimpleNamespace:
         "always_text": False,
         "retrieval_only": False,
         "cr": Path("data/raw/comprehensive_rules.txt"),
-        "vectors": Path("data/interim/e001_vectors.bin"),
+        # Deliberately a path that cannot exist, rather than the real
+        # `data/interim/e001_vectors.bin`. That file is gitignored, so a test
+        # reaching the index check would pass on a machine that has built the
+        # index and fail on one that has not — which is exactly what happened:
+        # green locally, red in CI. A test whose verdict depends on ambient
+        # state is not testing the thing it names. Any test that needs the
+        # index present says so and creates one under `tmp_path`.
+        "vectors": Path("data/interim/no-index-for-tests.bin"),
     }
     base.update(overrides)
     return SimpleNamespace(**base)
@@ -125,9 +132,17 @@ class TestPreflightFailsBeforeTheExpensivePart:
     def test_a_missing_corpus_is_named_before_anything_is_built(
         self, monkeypatch, tmp_path
     ) -> None:
+        """One missing thing at a time, or the message names the wrong one.
+
+        The index is handed over as present so that the corpus is the only
+        absence left. Without that this test reports whichever artefact the
+        machine happens to lack, which is how it passed here and failed in CI.
+        """
         monkeypatch.setattr(ask, "get_settings", lambda: settings(anthropic="k", openai="k"))
+        index = tmp_path / "vectors.bin"
+        index.write_bytes(b"")
         with pytest.raises(SystemExit) as exit_info:
-            ask.preflight(args(cr=tmp_path / "absent.txt"))
+            ask.preflight(args(cr=tmp_path / "absent.txt", vectors=index))
         assert "bootstrap" in str(exit_info.value)
 
     def test_a_missing_vector_index_is_named_before_the_corpus_is_built(
