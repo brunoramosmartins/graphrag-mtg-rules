@@ -17,8 +17,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import multihop_observability as obs
-
-from graphrag_mtg.retrieval.subgraph import Evidence, Outcome, Subgraph, serialize
+from graphrag_mtg.retrieval.subgraph import Outcome, serialize
 
 
 def item(kind: str, key: str, text: str = "what the node says") -> dict:

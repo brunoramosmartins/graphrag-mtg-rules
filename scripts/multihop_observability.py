@@ -33,14 +33,13 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from e001_inspect import artefacts, load_jsonl, outcome_of  # noqa: E402
-
-from graphrag_mtg.generation.answerer import (  # noqa: E402
+from e001_inspect import artefacts, load_jsonl, outcome_of
+from graphrag_mtg.generation.answerer import (
     PROMPT_VERSION,
     SYSTEM,
     build_prompt,
 )
-from graphrag_mtg.retrieval.subgraph import (  # noqa: E402
+from graphrag_mtg.retrieval.subgraph import (
     Evidence,
     Outcome,
     Subgraph,

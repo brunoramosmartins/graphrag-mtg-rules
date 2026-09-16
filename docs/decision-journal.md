@@ -90,6 +90,42 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-16 — A format that needs a careful reader is a format with a defect
+
+The reviewer who misread E-013's ceiling as a result was not careless. The
+bullet said *"The ceiling, computed before the run"* — and "computed" is what
+made it readable as a measurement, because it **was** one, just taken
+beforehand and later found mis-specified. Nothing was hidden. It was still read
+wrong, and that is a property of the format, not of the reader.
+
+Three things changed, and the order matters — **the legend first**, because the
+headings only carry entry-level state and the reviewer's error was inside an
+entry:
+
+1. **A "How to read an entry" section at the top of the registry**, opening with
+   this exact mistake. Its load-bearing sentence: *a number inside an entry is
+   not necessarily a result* — entries are written before they run, so most of
+   what they contain is prediction, and the measured outcome lives under one
+   heading only.
+2. **Every entry heading now carries a state.** Twelve had none at all —
+   including **E-001**, the entry the whole project rests on. A reader scanning
+   headings could not tell whether the headline experiment had executed.
+   E-030's heading still said `not yet run` two days after it was withdrawn,
+   which is the same defect as the three `not yet run` headings corrected on
+   the 14th, recurring within 48 hours of being fixed.
+3. **The superseded ceiling is marked at the point of the claim**, not only in
+   the `Actual result` further down. The original text is kept unedited — the
+   marker sits above it.
+
+**The legend describes the vocabulary in use rather than the one I would have
+chosen.** Writing it, I found three terms outside my own table — `never run`,
+`unrun`, `not run` — and my first instinct was to normalise five dated headings
+to fit a table five minutes old. That is backwards: the entries are the record
+and the legend is a description of it, so the legend grew instead. The same
+pass added the distinction a reader actually needs, which no heading had ever
+stated: **`inconclusive` is a result and `not run` is a state**, and they are
+not two flavours of the same thing.
+
 ## 2026-09-16 — The sharpest question the project received had a false premise, and measuring it was the answer
 
 A reviewer asked the thing nobody inside the project had asked plainly: *"the

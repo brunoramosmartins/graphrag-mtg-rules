@@ -11,9 +11,50 @@ Metric reporting rules (binding, see [../docs/evaluation.md](../docs/evaluation.
 confidence intervals always, paired tests for paired comparisons, a
 multiple-comparison correction when strata are tested jointly.
 
+## How to read an entry — added 2026-09-16, because a reader got it wrong
+
+An outside reviewer quoted *"18 of the 52 missing rules are reachable by one
+`REFERENCES` hop"* as a finding. It is **E-013's pre-registered ceiling**,
+written before the run; E-013 then ran and the repair gained **one** rule, and
+the ceiling itself was mis-specified — recomputed properly it is zero. Nothing
+was hidden and the bullet said *"computed before the run"*. It was still read as
+a result, and a format that needs a careful reader is a format with a defect.
+
+**A number inside an entry is not necessarily a result.** Entries are written
+before they run, so most of what an entry contains is *prediction*: expected
+effects, power calculations, ceilings, decision thresholds and falsifiers. The
+measured outcome lives under one heading only — **`Actual result`** — and
+everything above it was written without knowing the answer.
+
+**Every heading carries a state.** The vocabulary, and nothing else is used:
+
+| in the heading | means |
+|---|---|
+| `registered <date>` | the entry existed in this file before anything ran |
+| `registered retrospectively` | past work entered later, **never** presented as pre-registered |
+| `run <date>` | it executed; see `Actual result` |
+| `not yet run` / `not run` | registered, nothing executed, no result exists |
+| `withdrawn <date>` | killed before running, with the reason in the entry |
+| `dropped` / `suspended` / `abandoned` | registered and deliberately not run; the entry says why |
+| `never run` / `unrun` | emphasis on the above — no result exists under any heading |
+| `exploratory` | no decision rule; it cannot confirm anything, including itself |
+| `capability demonstration` / `not an experiment` | no hypothesis and no p-value; adding one would be dishonest |
+| `results in the sub-entries below` | a parent whose numbers live in its children |
+
+Three entries carry an outcome word as well — `inconclusive`, `unresolved`,
+`FAIL`. Those are **results**, produced by applying a decision rule that was
+fixed beforehand, and they are not the same as the states above: `inconclusive`
+means the test ran and could not separate, while `not run` means it never
+executed.
+
+**Amendments are appended, never rewritten**, and a superseded figure stays on
+the page with a dated marker beside it rather than being deleted. So a number
+you find here may be one an amendment later corrected — the marker will say so
+at the point of the claim, not only at the end of the entry.
+
 ---
 
-## E-001 — Graph traversal vs. vector baseline on the golden set
+## E-001 — Graph traversal vs. vector baseline on the golden set (registered 2026-07-19, **evaluation split opened once and run 2026-09-12**, `inconclusive` on all four registered strata)
 
 - **Registered:** 2026-07-19 (a priori — predictions were recorded in
   [../docs/evaluation.md](../docs/evaluation.md) and
@@ -1062,7 +1103,7 @@ multiple-comparison correction when strata are tested jointly.
   multi-hop — is the opposite of the registered stratification, and it is
   reported as a direction, not a result.
 
-## E-002 — MetaQA calibration
+## E-002 — MetaQA calibration (registered 2026-08-15, run 2026-09-03, **FAIL**; the three-hop column **withdrawn 2026-09-13** by amendment)
 
 - **Objective (as first declared, 2026-07-19, intent only):** run the same
   machinery on an academic multi-hop benchmark with an answer key, to
@@ -1732,7 +1773,7 @@ that owns the repair.
 
 ---
 
-## E-003 — Linking and extraction quality against manual annotations
+## E-003 — Linking and extraction quality against manual annotations (registered 2026-07-20, run 2026-08-09, **results also in the sub-entries below**)
 
 - **Registered:** 2026-07-20 (a priori — the sample froze first at seed
   `20260720` in `data/golden/extraction_sample_ids.json`; no extractor
@@ -1844,7 +1885,7 @@ that owns the repair.
   vs 0.634). G3 fires: reduce the schema, report the negative. Full write-up
   with limitations in `docs/evaluation.md`.
 
-### E-003a — intra-annotator agreement (the ceiling)
+### E-003a — intra-annotator agreement (the ceiling) (registered 2026-08-09, run 2026-08-09, **ceiling 0.815**)
 
 - **Registered:** 2026-08-09, before the second pass is written. Closes the
   known limitation recorded 2026-08-08.
@@ -1923,7 +1964,7 @@ stating "(704.5w)" where the August 2026 CR moved that state-based action to
 catches it. `scripts/cr_migrate.py` can migrate the gold; it cannot migrate a
 historical document.
 
-### E-006 — retrieval reach on the Phase 4 development split
+### E-006 — retrieval reach on the Phase 4 development split (registered 2026-08-09, run 2026-08-09, **0.067**; re-run 2026-08-15 identical)
 
 - **Registered:** 2026-08-09, before the first end-to-end run. The Phase 4
   DoD carries a threshold, and a threshold recorded after the number exists
@@ -2121,7 +2162,7 @@ historical document.
   hypothesis may be tested on the E-003 annotation split.
 - **Actual result:** _not run._
 
-### E-003b — composition of the E-003 disagreements
+### E-003b — composition of the E-003 disagreements (registered 2026-08-09, run 2026-08-09)
 
 - **Registered:** 2026-08-09, before any disagreement is inspected.
 - **Objective:** decompose the citation F1 gap. Exact match scores a wrong rule
@@ -2204,7 +2245,7 @@ historical document.
 
 ---
 
-## E-007 — do the generated answers cite what they claim?
+## E-007 — do the generated answers cite what they claim? (registered 2026-08-10, run 2026-08-10 and 2026-08-15, **further results in the sub-entries below**)
 
 - **Registered:** 2026-08-10, at Phase 5 kickoff, before `answerer.py` exists.
   Red-teamed the same day, before any generation; what the review changed is
@@ -2882,7 +2923,7 @@ brand-new hand-made gold.
   that does not contain the sentence. That is a different failure with a
   different fix, and E-003a's number said nothing about it.
 
-## E-008 — does the model answer from the graph or from what it already knows?
+## E-008 — does the model answer from the graph or from what it already knows? (registered 2026-08-10, run 2026-08-10, **clean, and the clean result is the smaller claim**)
 
 - **Registered:** 2026-08-10, at Phase 5 kickoff, before any prompt exists.
   Red-teamed the same day, before any probe ran.
@@ -3872,7 +3913,7 @@ dress-rehearsal sample** before it gates anything. No sentence in
 `docs/evaluation.md` claims a judge "cannot" exceed a human's
 self-agreement.
 
-### E-011a — the correctness ceiling itself (registered 2026-09-04, pass 1 open)
+### E-011a — the correctness ceiling itself (registered 2026-09-04, **both passes run 2026-09-09, ceiling 0.843**; amended 2026-09-14 — the audit gate cannot pass at any n)
 
 The amendment above fixed the *rule* — the judge's threshold is the lower
 bound of a human self-agreement interval, and no other mapping is permitted
@@ -4619,7 +4660,7 @@ rule separating an answer that reaches the key's verdict while asserting
 something the key contradicts. The second is a real defect in the rubric
 text. It is not established to be the cause of anything.
 
-## E-012 — is long-context generation the bottleneck, and is it size or depth?
+## E-012 — is long-context generation the bottleneck, and is it size or depth? (registered 2026-09-03, **results in E-012a and E-012b below**; the three-hop conclusion **withdrawn 2026-09-13**)
 
 - **Registered:** 2026-09-03, before any 12b question has been drawn and
   before `enforce_budget` has been touched. E-002's data already exists and
@@ -4645,7 +4686,7 @@ text. It is not established to be the cause of anything.
   206 evidence items against 17 at 2-hop — so the drop has two candidate
   causes and the design cannot separate them.
 
-### E-012a — exploratory, on data that already exists
+### E-012a — exploratory, on data that already exists (**exploratory, not confirmatory** — run 2026-09-03)
 
 Correctness against context size and hop depth, among the 1,148 questions
 whose answer was shown, from the completed A3 run. **No decision hangs on
@@ -4691,7 +4732,7 @@ straddles 8–64, so *k* is amended from {16, 64, 256} to **{8, 16, 64, 256}**
 plus untrimmed. `k=8` anchors the arm where accuracy is still high and is
 where a depth effect, if one exists, has the clearest room to show.
 
-### E-012b — confirmatory, and the only part that decides
+### E-012b — confirmatory, and the only part that decides (registered 2026-09-03 before any question was drawn, run 2026-09-03)
 
 - **Design.** Questions are run at **matched context sizes** across hops,
   with the answer-bearing evidence guaranteed present. For each question,
@@ -5003,7 +5044,15 @@ built on it is quoted anywhere.
   plan — after the keyword→rule hop, over the graph exactly as it stands —
   raises the fraction of gold CR rules that reach the context, and at what
   cost in precision and budget.
-- **The ceiling, computed before the run.** Of the **52 distinct** gold rules
+- **The ceiling, computed before the run — and SUPERSEDED. This is a
+  prediction, not a finding.** *(Marked 2026-09-16: an external reviewer quoted
+  the 18 below as a measured fact and built a "routing problem" on it. The run
+  gained **one** rule, and this ceiling was itself mis-specified — recomputed
+  from each question's own retrieved rules it is **zero**. See `Actual result`
+  further down. The original text is kept, unedited, because amendments are
+  appended here and never rewritten.)*
+
+  Of the **52 distinct** gold rules
   needed and missed, **18 are reachable** by one `REFERENCES` hop from a
   keyword-defined rule and **34 are not**. So gold-rule recall can rise from
   **7/64 = 10.9%** to at most **25/64 = 39.1%** and no further. Anything above
@@ -9241,7 +9290,7 @@ Instrument: `scripts/provenance_demo.py`.
 
 ---
 
-## E-030 — does the `no_seed` guard protect the answer, or throw it away? (registered 2026-09-14, **not yet run**)
+## E-030 — does the `no_seed` guard protect the answer, or throw it away? (registered 2026-09-14, **withdrawn 2026-09-14 the same day, before the guard was touched** — the guard does not fire in the shipped arm)
 
 - **Pre-registered before any generation.** No condition below has been run, no
   answer has been produced, and the population is frozen from E-001's recorded
@@ -9452,7 +9501,7 @@ out was one red-team pass and one grep over a dump that was already on disk._
 
 ---
 
-## External audit, 2026-09-14 — nine alerts raised, one correction landed, no result reopened
+## External audit — nine alerts raised, one correction landed, no result reopened (**not an experiment**; review received and dispositioned 2026-09-14)
 
 An outside review of the pipeline and the experimental design, delivered in four
 passes and closed by the reviewer. Recorded here because the dispositions are
