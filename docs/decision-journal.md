@@ -90,6 +90,51 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-16 — The sharpest question the project received had a false premise, and measuring it was the answer
+
+A reviewer asked the thing nobody inside the project had asked plainly: *"the
+graph receives the same information plus relations — how can the vector arm be
+better? Isn't the graph getting in the way?"* It reads as a red flag about graph
+construction, and it deserved a measurement rather than an explanation.
+
+**The premise is false.** On the 22 `interaction_multihop` questions the arms
+retrieve almost disjoint sets: 879 items against 404, **123 shared**. Two-thirds
+of what the graph put in front of the model, the vector arm never saw. The
+graph's context is not the vector's with paths attached — it is a different
+purchase made with the same budget.
+
+**And the purchase is legible.** Median rulings per question: A 25, B 7. Median
+CR rules: **A zero, B three.** The vector arm's median context on the stratum it
+wins contains *no CR rule at all*. A ruling is the Comprehensive Rules already
+applied to a specific card, in the register the question is asked in; the graph
+buys rules reached by traversal, the vector buys rulings reached lexically, and
+on this stratum the second is what answers. That is the 2026-09-12 observation
+—*"the arm ahead is not answering from the rules"*— finally measured instead of
+inferred, and it locates the cause in the Phase 3 ontology decision rather than
+in a traversal being wrong.
+
+**Rule 9 changed which number I published.** My first figure was a Jaccard of
+0.106. What else makes a Jaccard small? A size asymmetry — at 50 items against
+12 the index caps at 0.24 for a perfect subset, and the 3.38x item gap was
+already published. So the figure that carries the claim is **containment**,
+0.343 median, with the Jaccard printed beside it. The number I reached for first
+would have been right for the wrong reason.
+
+**The review also argued a routing level that does not exist.** It quoted *"18
+of 52 missing rules reachable through edges that already existed, but the router
+never planned `REFERENCES`"* — which is **E-013's registered ceiling, not its
+result**. E-013 ran on 2026-09-11: the hop gains one rule, and the ceiling was
+mis-specified; recomputed properly it is zero. A hypothesis in the registry was
+read as a finding. **The registry's own format made that possible**, and it is
+worth noting that an outside reader cannot tell a pre-registration from a result
+unless the heading says so — which is why three headings were corrected two days
+ago for saying `not yet run` over a filled result.
+
+**Nothing here reopens anything.** The floor at n = 22 is 0.326 against a
+stratum gap of 0.136; E-031 is exploratory, registered retrospectively, and says
+so wherever it appears. What it adds is a mechanism for a direction the project
+has been reporting without one since September 12.
+
 ## 2026-09-14 — An external audit raised nine alerts, and the one that landed was in the entry that catalogues this exact error
 
 An outside review of the pipeline and the design, four passes, closed by the

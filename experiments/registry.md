@@ -9520,3 +9520,107 @@ not a number but a reading: *"someone reading the README more broadly than the
 registry permits."* Five limitations were added or sharpened against exactly
 that, including the width the conclusion actually supports, stated as a
 sentence rather than left to inference.
+
+---
+
+## E-031 — the two arms are not the same context plus relations (**registered retrospectively** 2026-09-16, run 2026-09-16, **the graph trades rulings for rules**)
+
+- **Registered retrospectively, and marked so.** The numbers were computed while
+  answering a reviewer's question, before any entry existed. No decision rule,
+  no falsifier, no correction: this is an **exploratory re-cut of a finished
+  run**, and it is labelled one wherever it appears. E-027 set the precedent.
+
+- **The question it answers**, which came from outside and is the sharpest
+  challenge the project received: *"the graph receives the same information
+  plus relations — how can the vector arm be better? Isn't the graph getting in
+  the way?"*
+
+- **The answer is that the premise is false**, and that is the whole entry. The
+  two arms do not retrieve the same items. On the 22 `interaction_multihop`
+  questions they retrieve **almost disjoint sets**, and the graph's context is
+  not a superset, a subset, or a decoration of the vector arm's.
+
+### Actual result
+
+22 questions. Items: A 879, B 404, **shared 123**.
+
+| | median | pooled |
+|---|---:|---:|
+| of the graph's context, what the vector arm also had | **0.343** | 0.304 |
+| of the vector's context, what the graph also had | 0.135 | 0.140 |
+| Jaccard | 0.110 | 0.106 |
+
+**Roughly two-thirds of what the graph put in front of the model, the vector
+arm never saw — and six-sevenths the other way.**
+
+What the same 6,000-token budget bought, per question:
+
+| | A (vector) | B (graph) |
+|---|---:|---:|
+| median rulings | **25.0** | 7.0 |
+| median CR rules | **0.0** | 3.0 |
+
+**The vector arm's median context on this stratum holds zero CR rules, and it
+wins the stratum** — 9/22 against 6/22. The graph holds more rules on **14 of
+22** questions; the vector holds more rulings on **21 of 22**. The trade is
+general, not carried by a few questions.
+
+Per kind, summed over the 22: only in A — 441 rulings, 282 cards, 30 rules;
+only in B — 123 rules, 73 rulings, 55 cards, 30 keywords.
+
+**And on the five questions where A is correct and B is not**, B is missing 30
+to 46 of A's items, *almost all of them rulings and cards*. `dropped` is empty
+on every one: the graph did not discard that evidence, it **never reached it**.
+
+### Standing rule 9, applied before the figure was quoted
+
+*"Of the items the two arms retrieved on this stratum, how many are shared?"* —
+the Jaccard, 0.106. What **else** makes a Jaccard small? **A size asymmetry.**
+With 50 items against 12, the index is capped at 0.24 even when the smaller set
+is a perfect subset of the larger — and this project already published a 3.38x
+median item gap, so part of 0.106 is arithmetic about sizes already known.
+
+**Containment is therefore the figure the claim rests on**, and the Jaccard is
+printed beside it rather than quoted alone. The medians and the pooled ratios
+agree to within 0.04, which is the check that no single question carries the
+result.
+
+### What this explains, and what it does not
+
+**Explains:** why "more structure" did not mean "more useful evidence". A ruling
+is the Comprehensive Rules *already applied to a specific card*, written in the
+register the question is asked in. The graph spends its budget on rules reached
+by traversal; the vector arm spends it on rulings reached lexically; on this
+stratum the second is what answers. That is consistent with the 2026-09-12
+observation that the arm ahead on multi-hop *"is not answering from the rules"*,
+and it is now measured rather than inferred.
+
+**Does not explain, and must not be read as:** a correctness effect. The floor
+at n = 22 is **0.326** and the observed stratum gap is 0.136. Nothing here is a
+test, and the 9/22-against-6/22 remains what E-001 said it was — a direction.
+
+**Does not say the graph is badly built.** It says the ontology decided what the
+traversal could buy. `Ruling → governing Rule` was removed in Phase 3 because
+its F1 did not support it, which is the choice that makes rulings unreachable
+*as rules* — a deliberate decision, and the external audit's A-008 and A-009.
+
+### A claim this refutes, from the review that prompted the entry
+
+The review argued a **routing** problem: *"18 of the 52 missing rules were
+reachable through edges that already existed, but the router did not plan the
+`REFERENCES` template — the knowledge exists and the system does not know to
+traverse it."*
+
+**That 18 is E-013's registered ceiling, not its result.** E-013 ran on
+2026-09-11: the `REFERENCES` hop gains **one** rule, and *"the ceiling
+registered for it was mis-specified — recomputed from each question's own
+retrieved rules it is zero."* The hypothesis was read as a finding. There is no
+routing level; the experiment written to test it closed it five days earlier.
+
+### Cost
+
+Zero. Set arithmetic over E-001's retrieval dumps.
+Instrument: `scripts/multihop_observability.py`, which also renders all 22
+questions on both arms — retrieval, prompt, answer, verdict — to
+`data/interim/`, with every prompt **rebuilt and verified byte for byte**
+against the recorded context rather than assumed.
