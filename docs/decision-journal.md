@@ -90,6 +90,257 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-16 — A format that needs a careful reader is a format with a defect
+
+The reviewer who misread E-013's ceiling as a result was not careless. The
+bullet said *"The ceiling, computed before the run"* — and "computed" is what
+made it readable as a measurement, because it **was** one, just taken
+beforehand and later found mis-specified. Nothing was hidden. It was still read
+wrong, and that is a property of the format, not of the reader.
+
+Three things changed, and the order matters — **the legend first**, because the
+headings only carry entry-level state and the reviewer's error was inside an
+entry:
+
+1. **A "How to read an entry" section at the top of the registry**, opening with
+   this exact mistake. Its load-bearing sentence: *a number inside an entry is
+   not necessarily a result* — entries are written before they run, so most of
+   what they contain is prediction, and the measured outcome lives under one
+   heading only.
+2. **Every entry heading now carries a state.** Twelve had none at all —
+   including **E-001**, the entry the whole project rests on. A reader scanning
+   headings could not tell whether the headline experiment had executed.
+   E-030's heading still said `not yet run` two days after it was withdrawn,
+   which is the same defect as the three `not yet run` headings corrected on
+   the 14th, recurring within 48 hours of being fixed.
+3. **The superseded ceiling is marked at the point of the claim**, not only in
+   the `Actual result` further down. The original text is kept unedited — the
+   marker sits above it.
+
+**The legend describes the vocabulary in use rather than the one I would have
+chosen.** Writing it, I found three terms outside my own table — `never run`,
+`unrun`, `not run` — and my first instinct was to normalise five dated headings
+to fit a table five minutes old. That is backwards: the entries are the record
+and the legend is a description of it, so the legend grew instead. The same
+pass added the distinction a reader actually needs, which no heading had ever
+stated: **`inconclusive` is a result and `not run` is a state**, and they are
+not two flavours of the same thing.
+
+## 2026-09-16 — The sharpest question the project received had a false premise, and measuring it was the answer
+
+A reviewer asked the thing nobody inside the project had asked plainly: *"the
+graph receives the same information plus relations — how can the vector arm be
+better? Isn't the graph getting in the way?"* It reads as a red flag about graph
+construction, and it deserved a measurement rather than an explanation.
+
+**The premise is false.** On the 22 `interaction_multihop` questions the arms
+retrieve almost disjoint sets: 879 items against 404, **123 shared**. Two-thirds
+of what the graph put in front of the model, the vector arm never saw. The
+graph's context is not the vector's with paths attached — it is a different
+purchase made with the same budget.
+
+**And the purchase is legible.** Median rulings per question: A 25, B 7. Median
+CR rules: **A zero, B three.** The vector arm's median context on the stratum it
+wins contains *no CR rule at all*. A ruling is the Comprehensive Rules already
+applied to a specific card, in the register the question is asked in; the graph
+buys rules reached by traversal, the vector buys rulings reached lexically, and
+on this stratum the second is what answers. That is the 2026-09-12 observation
+—*"the arm ahead is not answering from the rules"*— finally measured instead of
+inferred, and it locates the cause in the Phase 3 ontology decision rather than
+in a traversal being wrong.
+
+**Rule 9 changed which number I published.** My first figure was a Jaccard of
+0.106. What else makes a Jaccard small? A size asymmetry — at 50 items against
+12 the index caps at 0.24 for a perfect subset, and the 3.38x item gap was
+already published. So the figure that carries the claim is **containment**,
+0.343 median, with the Jaccard printed beside it. The number I reached for first
+would have been right for the wrong reason.
+
+**The review also argued a routing level that does not exist.** It quoted *"18
+of 52 missing rules reachable through edges that already existed, but the router
+never planned `REFERENCES`"* — which is **E-013's registered ceiling, not its
+result**. E-013 ran on 2026-09-11: the hop gains one rule, and the ceiling was
+mis-specified; recomputed properly it is zero. A hypothesis in the registry was
+read as a finding. **The registry's own format made that possible**, and it is
+worth noting that an outside reader cannot tell a pre-registration from a result
+unless the heading says so — which is why three headings were corrected two days
+ago for saying `not yet run` over a filled result.
+
+**Nothing here reopens anything.** The floor at n = 22 is 0.326 against a
+stratum gap of 0.136; E-031 is exploratory, registered retrospectively, and says
+so wherever it appears. What it adds is a mechanism for a direction the project
+has been reporting without one since September 12.
+
+## 2026-09-14 — An external audit raised nine alerts, and the one that landed was in the entry that catalogues this exact error
+
+An outside review of the pipeline and the design, four passes, closed by the
+reviewer with *"no critical defect that invalidates the published results."*
+Of nine alerts: two refuted outright, two already handled here in stronger
+forms, three confirmed-and-already-documented, one PASS, and **one correction**.
+
+**The correction is in `detectability.py`, which is the instrument of E-026 —
+the entry whose entire subject is numbers that mislead.** Its table printed
+`n | simple contrast | interaction` over two columns read at *different* sample
+sizes: `n` is total questions for the simple contrast and questions **per
+group** for the interaction, which takes two groups. The row `57 → 0.287` reads
+as an interaction reachable with 57 questions. **At 57 questions in total it is
+0.409**, and a study planned off that row would be under-powered by 43%.
+
+The arithmetic was never wrong — the 4× claim verifies exactly, at 228 questions
+against 57. What was wrong is that the convention making it right was never
+printed. **That is this project's most-catalogued error class, sitting inside
+the entry that catalogues it**, and it survived every internal pass including
+the one that wrote the entry.
+
+**How it was found is the part worth keeping.** The reviewer reproduced every
+figure correctly, got the right answer, and *still* hesitated — writing *"o n
+precisa ser aproximadamente duas vezes? Há uma sutileza aqui"* before moving on.
+A reader who reproduces your arithmetic and then hesitates has found something,
+and the hesitation is the signal, not the conclusion they eventually reached.
+Internal review does not produce that signal, because the convention is already
+in the reviewer's head.
+
+**A-001 is confirmed and does not reopen anything.** `card_interaction` receives
+only the first two resolved cards. Nine of 57 questions resolve three or more,
+eight of them in `interaction_multihop`, so the traversal covers **22% of the
+available card pairs** in that stratum and 6% in the shipped arm. It is a
+product limitation, the 22 questions were fixed in advance and every arm
+answered the same ones, and repairing it could not produce a detectable
+correctness effect — the floor at n = 22 is 0.326. **The discipline E-030 taught
+applies on the first reading this time**: the fix is a scope statement, not an
+experiment.
+
+**And the reviewer's closing observation is the one I would have missed.** The
+largest remaining risk is not a defect but a reading — *"someone reading the
+README more broadly than the registry permits."* The registry has been careful
+for months; the README is what a stranger reads. Five limitations added against
+that, including the conclusion stated at the width it actually supports:
+*on this corpus, under this ontology, this seeding mechanism and this protocol,
+the graph showed no statistically detectable advantage, and its usefulness is
+conditional on the question having structure the graph can reach.* That sentence
+is narrower than anything the README said before, and it is the one the evidence
+carries.
+
+## 2026-09-14 — The project closes at Phase 11 as a release, and the reason is a pattern rather than a setback
+
+Scope decision, taken after E-030's withdrawal: **Phase 11 becomes a release
+phase, not a research phase.** The alternative — find a fourth question — was
+considered and declined because I could not name a candidate worth defending.
+
+The evidence for stopping is a pattern, not a mood. **Three registered entries
+in a row were withdrawn on the day they were registered** — E-019 (power 0.26 at
+its own declared bar), E-025 (withdrawn before its first reading), E-030 (the
+guard does not fire in the shipped system) — and each died to a measurement that
+already existed when the entry was written. Against that: a correctness floor of
+0.203 at n = 57 that **nothing this project ever measured has cleared**, a golden
+set spent at 77 rows, and a judge audit that cannot pass at any n. The
+questions this corpus can answer have been asked.
+
+**What ships in Phase 11**, and it is small on purpose: the refusal string that
+was false on the path it was emitted from, and the `Outcome` docstring that said
+*"None of them may be answered from"* while ADR-007 routes `NO_SEED` to text
+retrieval. *"Must handle" is not "must refuse"*, and the two readings diverge on
+exactly one value — which is the sentence that would have stopped E-030 before
+it was written, and is now in the source where the next reader meets it.
+
+**The transferable form of why this stops here**, recorded for Project 3: every
+endpoint that separated on this corpus — context tokens, evidence items,
+provenance paths — is an endpoint that **needs no labels**. Every endpoint that
+needed a label was capped at 77 rows and sat under a floor it never cleared.
+That is not a fact about Magic. It is what an evaluation budget looks like when
+the unit of analysis requires a human, and it should be the first thing the
+agentic router's design asks about itself.
+
+## 2026-09-14 — E-030 is withdrawn hours after it was registered, and the phase it opened has no object left
+
+The red team was dispatched on E-030 before the first generation, the way E-019
+was. It came back with a defect in the entry's **first line**, and I verified it
+against the dumps before accepting it.
+
+E-030's stated decision was *"whether `answerer.py` should keep refusing on
+`no_seed` (…) **in the shipped system**."* **Arm C is the shipped system, and
+arm C records zero `no_seed` on the evaluation split.** The module the entry
+quotes says why, in text I had read the same morning while getting the
+mechanism right: *"`NO_SEED` is the case **ADR-007 routes to text retrieval**
+rather than treating as a miss."*
+
+**The decision was made on 2026-08-09 by ADR-007 and shipped.** E-030 proposed
+to make the graph-only arm behave the way the shipped system already behaves —
+and had it run, a 4-of-5 result would have fired *"ship the change"* over a
+change that alters **zero** answers in the shipped system.
+
+**The measurement it wanted to buy was also already on disk.** Arm C answered
+all five from a superset of arm B's context, 38–62 items against 5–28, and
+scored 1 `correct` and 1 `partial`. Arm A scored 1 of 5. **Two arms,
+independently, with two to twelve times the evidence, land at about one of
+five.** The registered prediction was right and was confirmable for free.
+
+**What I got wrong, and it is the same error twice in one day.** This morning I
+corrected the refusal mechanism by reading the enum instead of the outcome's
+name. The enum's own module docstring, six lines above, said `NO_SEED` is routed
+by ADR-007. I read the definition and stopped at the definition. **Reading far
+enough to fix the error I was looking for is not reading far enough to avoid the
+next one** — and the entry, the roadmap phase, the branch name and a paragraph
+of the README were all built on the stretch I did not read. The README paragraph
+is corrected today; it survived less than a day.
+
+**The phase has no object left, and that is the finding rather than a setback.**
+Phase 11 was one entry and a release. The entry is dead. What survives is a
+one-line repair the entry treated as a side note and produced under **no**
+branch: the refusal string says *"retrieval returned no usable evidence"* on a
+path where evidence exists. It is false wherever that path is taken, it costs
+zero generations, and it does not need a phase.
+
+**The honest state of the project:** the correctness question is closed by
+E-026's floor, the economy claim is published with its bound, provenance is
+demonstrated, the judge audit is closed by arithmetic, and the golden set is
+spent. Three entries in a row — E-019, E-025, E-030 — have now been withdrawn
+on the day they were registered, each because a measurement that already existed
+answered them. **That is no longer a run of bad luck; it is the signal that this
+corpus has been asked what it can answer.** The next scope decision is the
+author's: close at v1.3, or find a question I cannot currently defend proposing.
+
+## 2026-09-14 — Phase 11 opens on a product defect, with its own ceiling written into the opening
+
+Phase 10 closed with its deliverables complete and **one DoD item recorded as
+not met**: *"the efficiency contrast has power calculated in advance."* The
+calculation closes — the token difference is ten standard errors — but E-027 is
+**registered retrospectively**, so the clause asking for advance registration
+was not satisfied. Satisfying it means running E-028, and the registry's own
+judgement is that confirming a ten-sigma effect is not where the remaining
+effort has value. **Carried as open rather than as a task**, and the phase
+closed with it open rather than ticked because the number came out right.
+
+Phase 11 opens on the `no_seed` guard: `answerer.py` refuses on any outcome
+that is not `RESOLVED`, which on five questions discards 1–6 cards and 4–22
+already-retrieved rulings and emits a sentence that is false on all five.
+
+**The ceiling is written into the opening, not discovered at the close.** The
+vector arm answered those same five from cards and rulings alone and scored
+**1 of 5**. That is the nearest evidence for what lifting the guard buys, and
+it says *about one question*. Best case the stratum moves +0.09 against a floor
+of 0.326 at n = 22 — inconclusive by construction. **The reason to change the
+guard is that a system discarding 22 retrieved rulings to report "no usable
+evidence" is lying to its user**, and that reason does not depend on the score.
+
+**Out of scope, each with the reason rather than a deferral:** a correctness
+claim on the five, the stratum or the split (E-026's floor applies here
+unchanged); re-opening the 57; arm C's copy of the same guard; **E-011b**,
+which is the only legitimate path to a judge audit that passes and **does not
+rescue the hypothesis** — trading binary for continuous drops the floor from
+~0.20 to ~0.11 and the observed effect is +0.018; and E-028.
+
+**One process change, and it comes from reading Phase 10's own note at close.**
+That note's Lessons Learned and Failed Attempts were written at the phase's
+*opening*, when the plan was E-019 plus a pool expansion plus blind
+re-annotation. The plan died on 14 September and the note kept describing it:
+seven statements had to be marked stale, including a lesson teaching the exact
+clustered-interval error E-027 exists to correct, and two describing curation
+that never happened. **A note written as assertions about what the phase will
+conclude ages into a record of a plan.** Phase 11's stubs are therefore written
+as *questions the phase must answer*, not as statements of what it will find,
+and the ceiling above is stated at the top where a later reader cannot miss it.
+
 ## 2026-09-14 — The refusal mechanism was corrected once into a second wrong answer, and the registry had the right one the whole time
 
 The 2026-09-13 entry *"An audit for the same defect elsewhere, and it found three

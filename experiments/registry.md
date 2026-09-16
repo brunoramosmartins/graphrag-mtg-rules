@@ -11,9 +11,50 @@ Metric reporting rules (binding, see [../docs/evaluation.md](../docs/evaluation.
 confidence intervals always, paired tests for paired comparisons, a
 multiple-comparison correction when strata are tested jointly.
 
+## How to read an entry — added 2026-09-16, because a reader got it wrong
+
+An outside reviewer quoted *"18 of the 52 missing rules are reachable by one
+`REFERENCES` hop"* as a finding. It is **E-013's pre-registered ceiling**,
+written before the run; E-013 then ran and the repair gained **one** rule, and
+the ceiling itself was mis-specified — recomputed properly it is zero. Nothing
+was hidden and the bullet said *"computed before the run"*. It was still read as
+a result, and a format that needs a careful reader is a format with a defect.
+
+**A number inside an entry is not necessarily a result.** Entries are written
+before they run, so most of what an entry contains is *prediction*: expected
+effects, power calculations, ceilings, decision thresholds and falsifiers. The
+measured outcome lives under one heading only — **`Actual result`** — and
+everything above it was written without knowing the answer.
+
+**Every heading carries a state.** The vocabulary, and nothing else is used:
+
+| in the heading | means |
+|---|---|
+| `registered <date>` | the entry existed in this file before anything ran |
+| `registered retrospectively` | past work entered later, **never** presented as pre-registered |
+| `run <date>` | it executed; see `Actual result` |
+| `not yet run` / `not run` | registered, nothing executed, no result exists |
+| `withdrawn <date>` | killed before running, with the reason in the entry |
+| `dropped` / `suspended` / `abandoned` | registered and deliberately not run; the entry says why |
+| `never run` / `unrun` | emphasis on the above — no result exists under any heading |
+| `exploratory` | no decision rule; it cannot confirm anything, including itself |
+| `capability demonstration` / `not an experiment` | no hypothesis and no p-value; adding one would be dishonest |
+| `results in the sub-entries below` | a parent whose numbers live in its children |
+
+Three entries carry an outcome word as well — `inconclusive`, `unresolved`,
+`FAIL`. Those are **results**, produced by applying a decision rule that was
+fixed beforehand, and they are not the same as the states above: `inconclusive`
+means the test ran and could not separate, while `not run` means it never
+executed.
+
+**Amendments are appended, never rewritten**, and a superseded figure stays on
+the page with a dated marker beside it rather than being deleted. So a number
+you find here may be one an amendment later corrected — the marker will say so
+at the point of the claim, not only at the end of the entry.
+
 ---
 
-## E-001 — Graph traversal vs. vector baseline on the golden set
+## E-001 — Graph traversal vs. vector baseline on the golden set (registered 2026-07-19, **evaluation split opened once and run 2026-09-12**, `inconclusive` on all four registered strata)
 
 - **Registered:** 2026-07-19 (a priori — predictions were recorded in
   [../docs/evaluation.md](../docs/evaluation.md) and
@@ -1062,7 +1103,7 @@ multiple-comparison correction when strata are tested jointly.
   multi-hop — is the opposite of the registered stratification, and it is
   reported as a direction, not a result.
 
-## E-002 — MetaQA calibration
+## E-002 — MetaQA calibration (registered 2026-08-15, run 2026-09-03, **FAIL**; the three-hop column **withdrawn 2026-09-13** by amendment)
 
 - **Objective (as first declared, 2026-07-19, intent only):** run the same
   machinery on an academic multi-hop benchmark with an answer key, to
@@ -1732,7 +1773,7 @@ that owns the repair.
 
 ---
 
-## E-003 — Linking and extraction quality against manual annotations
+## E-003 — Linking and extraction quality against manual annotations (registered 2026-07-20, run 2026-08-09, **results also in the sub-entries below**)
 
 - **Registered:** 2026-07-20 (a priori — the sample froze first at seed
   `20260720` in `data/golden/extraction_sample_ids.json`; no extractor
@@ -1844,7 +1885,7 @@ that owns the repair.
   vs 0.634). G3 fires: reduce the schema, report the negative. Full write-up
   with limitations in `docs/evaluation.md`.
 
-### E-003a — intra-annotator agreement (the ceiling)
+### E-003a — intra-annotator agreement (the ceiling) (registered 2026-08-09, run 2026-08-09, **ceiling 0.815**)
 
 - **Registered:** 2026-08-09, before the second pass is written. Closes the
   known limitation recorded 2026-08-08.
@@ -1923,7 +1964,7 @@ stating "(704.5w)" where the August 2026 CR moved that state-based action to
 catches it. `scripts/cr_migrate.py` can migrate the gold; it cannot migrate a
 historical document.
 
-### E-006 — retrieval reach on the Phase 4 development split
+### E-006 — retrieval reach on the Phase 4 development split (registered 2026-08-09, run 2026-08-09, **0.067**; re-run 2026-08-15 identical)
 
 - **Registered:** 2026-08-09, before the first end-to-end run. The Phase 4
   DoD carries a threshold, and a threshold recorded after the number exists
@@ -2121,7 +2162,7 @@ historical document.
   hypothesis may be tested on the E-003 annotation split.
 - **Actual result:** _not run._
 
-### E-003b — composition of the E-003 disagreements
+### E-003b — composition of the E-003 disagreements (registered 2026-08-09, run 2026-08-09)
 
 - **Registered:** 2026-08-09, before any disagreement is inspected.
 - **Objective:** decompose the citation F1 gap. Exact match scores a wrong rule
@@ -2204,7 +2245,7 @@ historical document.
 
 ---
 
-## E-007 — do the generated answers cite what they claim?
+## E-007 — do the generated answers cite what they claim? (registered 2026-08-10, run 2026-08-10 and 2026-08-15, **further results in the sub-entries below**)
 
 - **Registered:** 2026-08-10, at Phase 5 kickoff, before `answerer.py` exists.
   Red-teamed the same day, before any generation; what the review changed is
@@ -2882,7 +2923,7 @@ brand-new hand-made gold.
   that does not contain the sentence. That is a different failure with a
   different fix, and E-003a's number said nothing about it.
 
-## E-008 — does the model answer from the graph or from what it already knows?
+## E-008 — does the model answer from the graph or from what it already knows? (registered 2026-08-10, run 2026-08-10, **clean, and the clean result is the smaller claim**)
 
 - **Registered:** 2026-08-10, at Phase 5 kickoff, before any prompt exists.
   Red-teamed the same day, before any probe ran.
@@ -3872,7 +3913,7 @@ dress-rehearsal sample** before it gates anything. No sentence in
 `docs/evaluation.md` claims a judge "cannot" exceed a human's
 self-agreement.
 
-### E-011a — the correctness ceiling itself (registered 2026-09-04, pass 1 open)
+### E-011a — the correctness ceiling itself (registered 2026-09-04, **both passes run 2026-09-09, ceiling 0.843**; amended 2026-09-14 — the audit gate cannot pass at any n)
 
 The amendment above fixed the *rule* — the judge's threshold is the lower
 bound of a human self-agreement interval, and no other mapping is permitted
@@ -4619,7 +4660,7 @@ rule separating an answer that reaches the key's verdict while asserting
 something the key contradicts. The second is a real defect in the rubric
 text. It is not established to be the cause of anything.
 
-## E-012 — is long-context generation the bottleneck, and is it size or depth?
+## E-012 — is long-context generation the bottleneck, and is it size or depth? (registered 2026-09-03, **results in E-012a and E-012b below**; the three-hop conclusion **withdrawn 2026-09-13**)
 
 - **Registered:** 2026-09-03, before any 12b question has been drawn and
   before `enforce_budget` has been touched. E-002's data already exists and
@@ -4645,7 +4686,7 @@ text. It is not established to be the cause of anything.
   206 evidence items against 17 at 2-hop — so the drop has two candidate
   causes and the design cannot separate them.
 
-### E-012a — exploratory, on data that already exists
+### E-012a — exploratory, on data that already exists (**exploratory, not confirmatory** — run 2026-09-03)
 
 Correctness against context size and hop depth, among the 1,148 questions
 whose answer was shown, from the completed A3 run. **No decision hangs on
@@ -4691,7 +4732,7 @@ straddles 8–64, so *k* is amended from {16, 64, 256} to **{8, 16, 64, 256}**
 plus untrimmed. `k=8` anchors the arm where accuracy is still high and is
 where a depth effect, if one exists, has the clearest room to show.
 
-### E-012b — confirmatory, and the only part that decides
+### E-012b — confirmatory, and the only part that decides (registered 2026-09-03 before any question was drawn, run 2026-09-03)
 
 - **Design.** Questions are run at **matched context sizes** across hops,
   with the answer-bearing evidence guaranteed present. For each question,
@@ -5003,7 +5044,15 @@ built on it is quoted anywhere.
   plan — after the keyword→rule hop, over the graph exactly as it stands —
   raises the fraction of gold CR rules that reach the context, and at what
   cost in precision and budget.
-- **The ceiling, computed before the run.** Of the **52 distinct** gold rules
+- **The ceiling, computed before the run — and SUPERSEDED. This is a
+  prediction, not a finding.** *(Marked 2026-09-16: an external reviewer quoted
+  the 18 below as a measured fact and built a "routing problem" on it. The run
+  gained **one** rule, and this ceiling was itself mis-specified — recomputed
+  from each question's own retrieved rules it is **zero**. See `Actual result`
+  further down. The original text is kept, unedited, because amendments are
+  appended here and never rewritten.)*
+
+  Of the **52 distinct** gold rules
   needed and missed, **18 are reachable** by one `REFERENCES` hop from a
   keyword-defined rule and **34 are not**. So gold-rule recall can rise from
   **7/64 = 10.9%** to at most **25/64 = 39.1%** and no further. Anything above
@@ -9241,7 +9290,7 @@ Instrument: `scripts/provenance_demo.py`.
 
 ---
 
-## E-030 — does the `no_seed` guard protect the answer, or throw it away? (registered 2026-09-14, **not yet run**)
+## E-030 — does the `no_seed` guard protect the answer, or throw it away? (registered 2026-09-14, **withdrawn 2026-09-14 the same day, before the guard was touched** — the guard does not fire in the shipped arm)
 
 - **Pre-registered before any generation.** No condition below has been run, no
   answer has been produced, and the population is frozen from E-001's recorded
@@ -9358,3 +9407,269 @@ the run stops and the entry is amended rather than paid for.
 
 _Not run. Registered 2026-09-14, before the guard was touched and before any
 answer existed._
+
+#### E-030 — WITHDRAWN 2026-09-14, the day it was registered, before the guard was touched
+
+Red-teamed before the first generation, as E-019 was. The pass returned four
+independently fatal defects and one that ends the entry on its own.
+
+**Fatal, and it is the first line of the entry.** The stated decision is
+*"whether `answerer.py` should keep refusing on `outcome = no_seed` when the
+context is non-empty, **in the shipped system**."* Arm C is the shipped system,
+and **arm C records zero `no_seed` on the evaluation split**:
+
+| arm | `no_seed` | `no_match` | `resolved` |
+|---|---:|---:|---:|
+| A — vector | 0 | 0 | 57 |
+| B — graph | **5** | 1 | 51 |
+| **C — shipped** | **0** | 1 | **56** |
+
+This is not luck, it is the architecture, and it is written in the module the
+entry quotes: *"`NO_SEED` is the case **ADR-007 routes to text retrieval**
+rather than treating as a miss"* (`retrieval/subgraph.py`). **The product
+decision E-030 claimed to inform was made on 2026-08-09 by ADR-007 and has been
+shipped since.** The entry proposed to make the graph-only arm behave the way
+the shipped system already behaves. Had it run, a 4-of-5 result would have fired
+"ship the change" over a change altering **zero** answers in the shipped system.
+
+**And the question it wanted to buy was already answered, for nothing.** Arm C
+generated on all five, from a context that is a superset of arm B's — 38–62
+items against 5–28:
+
+| question | A (vector) | B (graph) | C (shipped) |
+|---|---|---|---|
+| `hand-clone-copies-printed-pt` | incorrect | *refused by pipeline* | incorrect |
+| `hand-humility-opalescence` | incorrect | *refused by pipeline* | incorrect |
+| `rg-1182` | **correct** | *refused by pipeline* | **correct** |
+| `rg-1469` | incorrect | *refused by pipeline* | **partial** |
+| `rg-3915` | incorrect | *refused by pipeline* | incorrect |
+
+**Two arms, independently, with two to twelve times the evidence, land at about
+one of five.** The entry's registered prediction — *"I predict 1 of 5"*, from
+arm A alone and flagged as an unmatched comparator — is confirmed by a better
+comparator that was on disk while the entry was being written. **The guard costs
+approximately nothing, and five generations were about to be bought to learn it.**
+
+**The other three, recorded because they are reusable:**
+
+- **The decision rule cannot fire as written.** `G = 3` fires *both* "ship
+  behind the citation gate" *and* "keep the guard", with opposite directives —
+  and `G = 3` is squarely inside the entry's own predicted range. `G ≤ 2` with
+  `U ≤ 1` fires nothing. A fourth outcome the entry never considered — **all
+  five self-refuse** — either fires nothing, or, under the loose reading of
+  "grounded", fires *ship*, because an answer that says `CANNOT ANSWER` makes no
+  uncited claims. The pipeline refused before, the model refuses now, the
+  deployed behaviour is identical, and the entry publishes *"4 of 5 grounded,
+  shipped."*
+- **"Grounded" has two defensible readings with opposite verdicts**, and the
+  entry defines neither. The five contexts hold **zero CR rules**, so a loose
+  reading ("no fabricated handles") is near-mechanically guaranteed by
+  `expand()`, while a strict reading ("no rules outcome without a supporting
+  item") fails nearly any substantive answer. The entry's own blinding
+  mitigation — read the prompts *before* re-reading the decision rule —
+  guarantees the criterion is constructed after the data is seen, by the
+  unblinded author of the change.
+- **The prediction is registered on the variable that fires no branch.**
+  Correctness is predicted; `G` decides everything and is not predicted. This is
+  E-019's fatal defect #1 in a new costume: a quantity computed in one section
+  and a bar declared in another, with nobody checking they are the same
+  quantity.
+
+**Two arithmetic corrections to my own entry.** The floor invoked to dismiss a
+correctness test — 0.326 at n = 22 — is the floor for the *between-arm* contrast,
+not for the *B-new vs B-old* paired contrast the change actually induces. The
+right fact is sharper and belonged in the entry: at **5 discordant pairs,
+two-sided exact McNemar returns p = 2 × (1/32) = 0.0625** and cannot reach 0.05
+under **any** outcome. And the cost gate — stop at US$ 0.50 against an estimate
+of US$ 0.005 — sits at a hundred times the estimate and could never bind, which
+is the standard E-018's Change 4 set: *"an honest bar has to be able to bind."*
+
+**What is kept.** The population reconciles exactly and no arithmetic error was
+found in it. Refusing to route the decision through the LLM judge was right.
+Refusing to test correctness on five self-selected cases was right, for the
+wrong stated reason. The self-conditioning threat was named first and in the
+right words. **And the one repair that survives is the one the entry treated as
+a side note:** the refusal string says *"retrieval returned no usable evidence"*
+on a path where evidence exists. It is false wherever that path is taken, it
+costs zero generations, and **no branch of the entry produced it as an outcome.**
+
+### Actual result
+
+_Not run. **Withdrawn 2026-09-14**, the day it was registered, before the guard
+was touched and before any answer existed. Zero API spend. The cost of finding
+out was one red-team pass and one grep over a dump that was already on disk._
+
+---
+
+## External audit — nine alerts raised, one correction landed, no result reopened (**not an experiment**; review received and dispositioned 2026-09-14)
+
+An outside review of the pipeline and the experimental design, delivered in four
+passes and closed by the reviewer. Recorded here because the dispositions are
+evidence about the record, not only about the code, and because **one of the
+nine changed a published table**.
+
+| id | alert | disposition |
+|---|---|---|
+| A-001 | `card_interaction` sees only the first two cards | **Confirmed.** Architectural limitation; scope statement added to the README; E-001 not reopened |
+| A-002 | `corpus_sha256` omits `kind`/`title`/`rule_number`/`oracle_id`/`legalities` | **Refuted.** Used only in `dense.py` cache headers; no run record carries it. Index identity, never experiment identity |
+| A-003 | Arm C is not "arm A plus the graph" | **Confirmed, already true in the docs.** No document decomposes `C − A` into a graph effect; stated explicitly in the README now |
+| A-004 | Token parity ≠ retrieval-opportunity parity | **Already handled, in a stronger form.** The 2026-08-15 amendment states that the pin *"governs affordances"* and that the asymmetry lives in the source data — which produced the corpus-parity fix |
+| A-005 | The floor needs independent verification | **Reproduced exactly** by the reviewer, including the 4× interaction factor. One caveat adopted: 0.203 is the MDE under the pooled rate chosen as reference, not the experiment's universal precision |
+| A-006 | "0 of 9" must read as capability, not absence of effect | PASS |
+| A-007 | `partial → not correct` is a strong estimand choice | PASS for the primary metric; the three-class taxonomy carries the judge's known boundary instability |
+| A-008 | The ontology does not represent `Ruling → governing Rule` | **Confirmed and intentional** — removed in Phase 3 because the data did not support it. Now stated in the README |
+| A-009 | Graph ceiling is conditioned by ontology and seeding | **Confirmed.** The single most important framing correction: measured graph recall is *recall given this ontology, extraction policy and seeds* |
+
+### What A-001 measures, since the alert asked for the distribution
+
+Cards resolved per question on the evaluation split: **0 → 15, 1 → 21, 2 → 12,
+3 → 3, 4 → 1, 5 → 4, 6 → 1.** Nine questions resolve three or more, and eight of
+those are `interaction_multihop` — **8 of 22 in the stratum the thesis was
+written about.** Pair coverage, since the router queries exactly one pair:
+
+| arm | pairs available | pairs queried | coverage |
+|---|---:|---:|---|
+| B — graph | 82 | 21 | **26%** |
+| C — shipped | 418 | 23 | **6%** |
+| `interaction_multihop` only | 72 | 16 | **22%** |
+
+**It does not reopen E-001** — the 22 questions were fixed in advance and every
+arm answered the same ones — and repairing it could not produce a detectable
+correctness effect either: the floor at n = 22 is **0.326**. Recorded as a
+product limitation with a scope statement, which is where E-030's lesson lands.
+
+### The one correction: a table whose column header named two different n
+
+`detectability.py` printed `n | simple contrast | interaction` over columns read
+at **different sample sizes**. `n` is total questions for the simple contrast
+and questions **per group** for the interaction, which needs two groups. The
+reviewer reproduced every figure correctly — and still stopped at the
+convention, hesitating over whether the cost is 2× or 4×.
+
+It is **4×**, and both halves apply: matching a simple contrast's SE needs 2n
+per group, and an interaction needs two groups. The simple floor at n = 57 is
+0.203; an interaction reaches it at 114 per group, **228 questions, exactly
+4.00×**.
+
+But the unlabelled table said *"n = 57 → 0.287"*, which a reader takes as an
+interaction reachable with 57 questions. **At 57 questions in total it is
+0.409** — 43% worse than the row appeared to promise, and a study planned off
+it would have been under-powered by that margin. Corrected in the script, in
+`docs/evaluation.md` and in the README, each with the date.
+
+**This is the project's own catalogued error class, found in the entry that
+catalogues it:** a number that is right under a convention nobody printed. It
+took an outside reader who got the arithmetic right to expose it, which is the
+argument for the audit rather than against the entry.
+
+### What the audit did not find
+
+No defect that invalidates a published result. The reviewer's closing risk is
+not a number but a reading: *"someone reading the README more broadly than the
+registry permits."* Five limitations were added or sharpened against exactly
+that, including the width the conclusion actually supports, stated as a
+sentence rather than left to inference.
+
+---
+
+## E-031 — the two arms are not the same context plus relations (**registered retrospectively** 2026-09-16, run 2026-09-16, **the graph trades rulings for rules**)
+
+- **Registered retrospectively, and marked so.** The numbers were computed while
+  answering a reviewer's question, before any entry existed. No decision rule,
+  no falsifier, no correction: this is an **exploratory re-cut of a finished
+  run**, and it is labelled one wherever it appears. E-027 set the precedent.
+
+- **The question it answers**, which came from outside and is the sharpest
+  challenge the project received: *"the graph receives the same information
+  plus relations — how can the vector arm be better? Isn't the graph getting in
+  the way?"*
+
+- **The answer is that the premise is false**, and that is the whole entry. The
+  two arms do not retrieve the same items. On the 22 `interaction_multihop`
+  questions they retrieve **almost disjoint sets**, and the graph's context is
+  not a superset, a subset, or a decoration of the vector arm's.
+
+### Actual result
+
+22 questions. Items: A 879, B 404, **shared 123**.
+
+| | median | pooled |
+|---|---:|---:|
+| of the graph's context, what the vector arm also had | **0.343** | 0.304 |
+| of the vector's context, what the graph also had | 0.135 | 0.140 |
+| Jaccard | 0.110 | 0.106 |
+
+**Roughly two-thirds of what the graph put in front of the model, the vector
+arm never saw — and six-sevenths the other way.**
+
+What the same 6,000-token budget bought, per question:
+
+| | A (vector) | B (graph) |
+|---|---:|---:|
+| median rulings | **25.0** | 7.0 |
+| median CR rules | **0.0** | 3.0 |
+
+**The vector arm's median context on this stratum holds zero CR rules, and it
+wins the stratum** — 9/22 against 6/22. The graph holds more rules on **14 of
+22** questions; the vector holds more rulings on **21 of 22**. The trade is
+general, not carried by a few questions.
+
+Per kind, summed over the 22: only in A — 441 rulings, 282 cards, 30 rules;
+only in B — 123 rules, 73 rulings, 55 cards, 30 keywords.
+
+**And on the five questions where A is correct and B is not**, B is missing 30
+to 46 of A's items, *almost all of them rulings and cards*. `dropped` is empty
+on every one: the graph did not discard that evidence, it **never reached it**.
+
+### Standing rule 9, applied before the figure was quoted
+
+*"Of the items the two arms retrieved on this stratum, how many are shared?"* —
+the Jaccard, 0.106. What **else** makes a Jaccard small? **A size asymmetry.**
+With 50 items against 12, the index is capped at 0.24 even when the smaller set
+is a perfect subset of the larger — and this project already published a 3.38x
+median item gap, so part of 0.106 is arithmetic about sizes already known.
+
+**Containment is therefore the figure the claim rests on**, and the Jaccard is
+printed beside it rather than quoted alone. The medians and the pooled ratios
+agree to within 0.04, which is the check that no single question carries the
+result.
+
+### What this explains, and what it does not
+
+**Explains:** why "more structure" did not mean "more useful evidence". A ruling
+is the Comprehensive Rules *already applied to a specific card*, written in the
+register the question is asked in. The graph spends its budget on rules reached
+by traversal; the vector arm spends it on rulings reached lexically; on this
+stratum the second is what answers. That is consistent with the 2026-09-12
+observation that the arm ahead on multi-hop *"is not answering from the rules"*,
+and it is now measured rather than inferred.
+
+**Does not explain, and must not be read as:** a correctness effect. The floor
+at n = 22 is **0.326** and the observed stratum gap is 0.136. Nothing here is a
+test, and the 9/22-against-6/22 remains what E-001 said it was — a direction.
+
+**Does not say the graph is badly built.** It says the ontology decided what the
+traversal could buy. `Ruling → governing Rule` was removed in Phase 3 because
+its F1 did not support it, which is the choice that makes rulings unreachable
+*as rules* — a deliberate decision, and the external audit's A-008 and A-009.
+
+### A claim this refutes, from the review that prompted the entry
+
+The review argued a **routing** problem: *"18 of the 52 missing rules were
+reachable through edges that already existed, but the router did not plan the
+`REFERENCES` template — the knowledge exists and the system does not know to
+traverse it."*
+
+**That 18 is E-013's registered ceiling, not its result.** E-013 ran on
+2026-09-11: the `REFERENCES` hop gains **one** rule, and *"the ceiling
+registered for it was mis-specified — recomputed from each question's own
+retrieved rules it is zero."* The hypothesis was read as a finding. There is no
+routing level; the experiment written to test it closed it five days earlier.
+
+### Cost
+
+Zero. Set arithmetic over E-001's retrieval dumps.
+Instrument: `scripts/multihop_observability.py`, which also renders all 22
+questions on both arms — retrieval, prompt, answer, verdict — to
+`data/interim/`, with every prompt **rebuilt and verified byte for byte**
+against the recorded context rather than assumed.

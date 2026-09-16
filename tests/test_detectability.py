@@ -52,6 +52,41 @@ class TestTheStandardErrors:
         assert det.se_interaction(200, 0.3) == pytest.approx(det.se_simple(100, 0.3))
 
 
+class TestTheInteractionCostsFourTimes:
+    """The convention that made the published table read wrong.
+
+    `n` is total questions for the simple contrast and questions **per group**
+    for the interaction. An external audit reproduced every figure correctly
+    and still hesitated over whether the cost is 2x or 4x, which is the
+    evidence the convention needed printing rather than implying.
+    """
+
+    def test_matching_a_simple_floor_costs_four_times_the_questions(self) -> None:
+        simple = det.mde(57, det.POOLED_DISCORDANCE)
+        per_group = det.n_for(simple, det.POOLED_DISCORDANCE, interaction=True)
+        assert per_group == 114
+        assert 2 * per_group == pytest.approx(4 * 57, rel=0.02)
+
+    def test_the_per_group_reading_is_what_the_published_row_shows(self) -> None:
+        # 0.287 is the interaction floor at 57 PER GROUP, i.e. 114 questions.
+        assert det.mde(57, det.POOLED_DISCORDANCE, interaction=True) == pytest.approx(
+            0.287, abs=0.002
+        )
+
+    def test_the_same_questions_spent_on_an_interaction_buy_a_worse_floor(self) -> None:
+        # The number the unlabelled table hid: 57 questions TOTAL, split into
+        # two groups of 28, reach 0.409 and not 0.287.
+        assert det.mde(28, det.POOLED_DISCORDANCE, interaction=True) == pytest.approx(
+            0.409, abs=0.003
+        )
+
+    def test_the_interaction_standard_error_is_root_two_times_the_simple(self) -> None:
+        simple = det.se_simple(57, det.POOLED_DISCORDANCE)
+        assert det.se_interaction(57, det.POOLED_DISCORDANCE) == pytest.approx(
+            simple * 2**0.5
+        )
+
+
 class TestTheFloor:
     def test_the_floor_is_where_power_reaches_the_target(self) -> None:
         floor = det.mde(57, det.POOLED_DISCORDANCE)

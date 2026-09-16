@@ -1835,12 +1835,25 @@ E-026 asked one question, in words before it was a number:
 The smallest effect this evaluation can see, at E-001's pooled discordance of
 17/57:
 
-| n | simple contrast | interaction |
-|---:|---:|---:|
-| 20 | 0.342 | 0.484 |
-| **57** | **0.203** | 0.287 |
-| 120 | 0.140 | 0.198 |
-| 400 | 0.077 | 0.108 |
+**The two columns are read at different sample sizes**, and the header now says
+so *(labelled 2026-09-14, after an external audit reproduced this arithmetic
+correctly and still stopped at the convention)*. `n` is **total** questions for
+the simple contrast and questions **per group** for the interaction, which needs
+two groups:
+
+| n | simple contrast (n total) | interaction (n per group) | = questions |
+|---:|---:|---:|---:|
+| 20 | 0.342 | 0.484 | 40 |
+| **57** | **0.203** | 0.287 | 114 |
+| 120 | 0.140 | 0.198 | 240 |
+| 400 | 0.077 | 0.108 | 800 |
+
+Read as a single `n` across both columns, the row says an interaction of 0.287
+is reachable with 57 questions. **With 57 questions in total it is 0.409** — 43%
+worse than the row appears to promise. A study planned off the unlabelled
+version would have been under-powered by exactly that margin, which is this
+document's own error class: a number that is right under a convention nobody
+printed.
 
 **An interaction costs about four times the questions of the simple effect it
 is built from.** That line was available on 2026-09-12 and would have prevented
@@ -2029,6 +2042,78 @@ fewer. What matters is that one arm's field varies with the item and the
 other's does not.
 
 Reproduce: `python scripts/provenance_demo.py --qid rg-1591`.
+
+## 5. The two arms are not the same context plus relations (E-031, 2026-09-16)
+
+An external reviewer put the sharpest challenge this project received:
+
+> *"The graph receives the same information plus relations. How can the vector
+> arm be better? Isn't the graph getting in the way?"*
+
+**The premise is false, and measuring it is the answer.** On the 22
+`interaction_multihop` questions the two arms retrieve **almost disjoint sets**.
+The graph's context is not a superset of the vector arm's, not a subset, and not
+the same items with paths attached.
+
+| | median | pooled |
+|---|---:|---:|
+| of the graph's context, what the vector arm also had | **0.343** | 0.304 |
+| of the vector's context, what the graph also had | 0.135 | 0.140 |
+
+Items over the 22: A 879, B 404, **shared 123**. Roughly **two-thirds of what
+the graph put in front of the model, the vector arm never saw.**
+
+### What the same 6,000-token budget bought
+
+| | A (vector) | B (graph) |
+|---|---:|---:|
+| median rulings per question | **25.0** | 7.0 |
+| median CR rules per question | **0.0** | 3.0 |
+
+**The vector arm's median context on this stratum contains zero CR rules — and
+it wins the stratum**, 9/22 against 6/22. The graph holds more rules on 14 of 22
+questions; the vector holds more rulings on 21 of 22. The trade is general, not
+carried by a handful of questions.
+
+Summed over the 22, only in A: 441 rulings, 282 cards, 30 rules. Only in B: 123
+rules, 73 rulings, 55 cards, 30 keywords. **On the five questions where A is
+correct and B is not, B is missing 30 to 46 of A's items, almost all rulings and
+cards** — and `dropped` is empty on every one, so the graph did not discard that
+evidence. It never reached it.
+
+### Why this is the mechanism, stated at the width it supports
+
+A ruling is the Comprehensive Rules **already applied to a specific card**,
+written in the register the question is asked in. The graph spends its budget on
+rules reached by traversal; the vector arm spends it on rulings reached
+lexically. On this stratum the second is what answers.
+
+That makes measured here what this document observed on 2026-09-12 — *"the arm
+ahead on the multi-hop stratum is not answering from the rules"* — and it
+locates the cause in the **ontology**, not in the traversal being wrong:
+`Ruling → governing Rule` was removed in Phase 3 because its F1 did not support
+it, and that is the decision that makes rulings unreachable *as rules*.
+
+### What this is not
+
+- **Not a correctness result.** The floor at n = 22 is **0.326** against an
+  observed stratum gap of 0.136. Nothing here is a test.
+- **Not pre-registered.** E-031 is registered retrospectively and marked so: an
+  exploratory re-cut of a finished run, computed while answering a question.
+- **Not "the graph is badly built."** It is the ontology deciding what a
+  traversal can buy — the external audit's A-008 and A-009, measured.
+
+**Standing rule 9 changed which figure is quoted here.** *"Of the items the two
+arms retrieved, how many are shared?"* returns a Jaccard of 0.106 — and what
+else makes a Jaccard small? **A size asymmetry.** At 50 items against 12 the
+index is capped at 0.24 even for a perfect subset, and this document already
+published a 3.38× median item gap. Containment is therefore what the claim rests
+on; the Jaccard is printed beside it rather than alone.
+
+Reproduce with `python scripts/multihop_observability.py`, which also renders all
+22 questions on both arms to `data/interim/` — retrieval, prompt, answer,
+verdict — with every prompt **rebuilt and verified byte for byte** against the
+recorded context, because the prompt itself was never recorded.
 
 ## Three proposals died on checking, and the pattern is the result
 

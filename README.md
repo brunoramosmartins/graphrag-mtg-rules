@@ -151,13 +151,23 @@ arrives twice in twenty-two, and the graph answers **6 of 22** against 9.
 They cleared entity linking, retrieved 1–6 cards and 4–22 rulings, reached no
 CR rule, and the `no_seed` guard refused before a model call — scoring
 `incorrect` with the rulings still in hand. On the 17 it did attempt, the graph
-answers **6 against the baseline's 8**. **They are not five recoverable
-points:** the vector arm answered those same five from cards and rulings alone
-and scored **1 of 5**, which is the only evidence available for what lifting
-the guard would buy. The guard is still the wrong behaviour for a shipped
-system — discarding 22 rulings to report *no usable evidence* is not a
-refusal — and it is separated from the retrieval failure here because the two
-have different repairs and only one of them is cheap.
+answers **6 against the baseline's 8**. **They are not five recoverable points,
+and this is measured twice** *(corrected 2026-09-14 — an earlier version of this
+paragraph, written the same day, called the guard "the wrong behaviour for a
+shipped system". It is not in the shipped system)*. The vector arm answered
+those same five from cards and rulings and scored **1 of 5**. The **hybrid arm
+— which is what ships** — answers all five from a context that is a superset of
+the graph arm's, 38–62 items against 5–28, and scores **1 correct and 1
+partial**. Two arms with far more evidence land in the same place: these five
+are hard, not withheld.
+
+**The guard does not fire in the shipped system at all.** `ADR-007` routes
+`no_seed` to text retrieval rather than treating it as a miss, so arm C records
+**zero** `no_seed` on the split. The behaviour described above is a property of
+the graph-only arm, which exists to isolate what the topology reaches — and
+isolating it is the arm's job. What remains a real defect is narrower: the
+refusal string says *"retrieval returned no usable evidence"* on a path where
+evidence exists, which is false wherever that path is taken.
 
 **It is not the graph.** On the same 22 questions the vector arm reaches the
 gold rule **2 of 22 — the same two questions**, and both are ones where the
@@ -167,6 +177,31 @@ graph arm **0**, the hybrid **1**. The governing rule for a multi-card
 interaction is not recoverable from the question's surface text or the card's
 neighbourhood **by any method built here** — which makes this a property of the
 problem, not of one implementation.
+
+**So why does the vector arm still win here?** *(measured 2026-09-16, E-031, in
+answer to a reviewer who asked the sharpest version of it: the graph receives
+the same information plus relations, so how can the arm without relations be
+ahead?)* **Because the premise is false.** The two arms do not retrieve the same
+items — on these 22 questions their contexts are almost disjoint: **879 items
+against 404, with 123 shared.** Two-thirds of what the graph put in front of the
+model, the vector arm never saw.
+
+| per question, median | A (vector) | B (graph) |
+|---|---:|---:|
+| rulings | **25** | 7 |
+| CR rules | **0** | 3 |
+
+**The arm that wins this stratum holds a median of zero CR rules in its
+context.** A ruling is the Comprehensive Rules *already applied to a specific
+card*, written in the register the question is asked in. The graph spends its
+budget on rules reached by traversal; the vector arm spends it on rulings
+reached lexically; here the second is what answers. Not structure getting in the
+way — two different purchases with the same budget, and the purchase is decided
+by the ontology: `Ruling → governing Rule` was removed in Phase 3 because its F1
+did not support it, which is what makes rulings unreachable *as rules*.
+
+Exploratory and registered retrospectively; the floor at n = 22 is 0.326 against
+a stratum gap of 0.136, so this is a mechanism for a direction, not a test.
 
 **Four repairs, each measured, each unavailable:**
 
@@ -218,11 +253,15 @@ can see at all. **Of the nine paired correctness comparisons this project has
 run, zero produced an effect their own samples could have distinguished from
 zero at 80% power.**
 
-| n | smallest detectable effect | as an interaction |
-|---:|---:|---:|
-| 20 | 0.342 | 0.484 |
-| **57** | **0.203** | 0.287 |
-| 120 | 0.140 | 0.198 |
+| n | simple contrast (n total) | as an interaction (n per group) | = questions |
+|---:|---:|---:|---:|
+| 20 | 0.342 | 0.484 | 40 |
+| **57** | **0.203** | 0.287 | 114 |
+| 120 | 0.140 | 0.198 | 240 |
+
+The two columns are read at different sample sizes: an interaction needs two
+groups, so its row at `n` is a study of `2n` questions. With 57 questions **in
+total** the interaction floor is 0.409, not 0.287.
 
 The largest correctness effect ever measured here is +0.182. **An interaction
 costs about four times the questions of the simple effect it is built from** —
@@ -285,23 +324,38 @@ was chosen because it lets us *measure the truth*. Full rationale in
 
 ## Status
 
-**Phase 10 — The floor, and what sits above it.** The pipeline runs end to end: the graph,
-retrieval, grounded generation, a three-arm evaluation with confidence
-intervals, OpenTelemetry spans on every stage, a live demo, and CI that
-exercises all three arms with no API key. The evaluation split was opened once
-and the result is above. Phase 9 then asked what it would take to close the
-retrieval gap, measured four candidate repairs, and shipped none of them.
-Phase 10 opened to take a second correctness verdict, measured that no such
-verdict was available to it, and published the floor instead. Roadmap:
-Phases 0→10 (vector→graph→agentic trilogy).
+**Complete.** The pipeline runs end to end: the graph, retrieval, grounded
+generation, a three-arm evaluation with confidence intervals, OpenTelemetry
+spans on every stage, a live demo, and CI that exercises all three arms with no
+API key. The evaluation split was opened once and the result is above. Phase 9
+asked what it would take to close the retrieval gap, measured four candidate
+repairs, and shipped none. Phase 10 opened to take a second correctness verdict,
+measured that no such verdict was available to it, and published the floor
+instead. Phase 11 opened on one last repair, withdrew it the same day when the
+condition it targeted turned out not to occur in the shipped arm, shipped the
+one-line defect that survived — and then took an **external audit** of the
+pipeline and the experimental design, which closed with no defect invalidating a
+published result and one correction that landed inside the entry about numbers
+that mislead. Roadmap: Phases 0→11 (vector→graph→agentic trilogy).
 
-**What this project is actually a demonstration of.** The graph did not beat
-the baseline, and the interesting part is that this is knowable. The
-hypothesis was registered in July with its falsifier named; the decision rule
-was pinned in August before any arm ran; the split was drawn, frozen, and
-touched once. When the answer came back inconclusive there was nothing left to
-negotiate — which is the whole point of writing the rule down first. A system
-that can only report a win is not an evaluation.
+**Why it stopped here, stated rather than trailed off.** Three registered
+experiments in a row — E-019, E-025, E-030 — were **withdrawn on the day they
+were registered**, each because a measurement that already existed answered
+them. The last was going to change a refusal guard in "the shipped system"; the
+shipped arm records **zero** occurrences of the condition, because `ADR-007`
+routes it to text retrieval and has since August. With the golden set spent at
+77 rows, a correctness floor of 0.20 nothing has ever cleared, and three
+proposals dying to data already on disk, the honest read is that **this corpus
+has been asked what it can answer.** Ending on that is a decision; running a
+fourth entry to fill a phase would not have been.
+
+**What this project is actually a demonstration of.** The graph did not
+measurably beat the baseline, and the interesting part is that this is
+knowable. The hypothesis was registered in July with its falsifier named; the
+decision rule was pinned in August before any arm ran; the split was drawn,
+frozen, and touched once. When the answer came back inconclusive there was
+nothing left to negotiate — which is the whole point of writing the rule down
+first. A system that can only report a win is not an evaluation.
 
 Phase 9 is the same discipline pointed at the follow-up work. Four repairs were
 costed from the run's own inputs before any was implemented, and all four were
@@ -312,6 +366,17 @@ and thereby confirmed the hypothesis, and a prediction promoted to a decision
 boundary inside its own script — and each was written into the registry rather
 than quietly corrected. **Knowing what an intervention cannot buy before paying
 for it is the deliverable.**
+
+**What Project 3 inherits.** The vector baseline built in Phase 6 becomes the
+agentic router's text tool. Three things carry as constraints rather than as
+code: an evaluation's **floor is a property you can compute before you design
+anything**, and computing it first would have prevented three entries here; an
+**interaction costs roughly four times the n of the simple effect** it is built
+from; and the endpoints that separated on this corpus — tokens, evidence items,
+provenance — are exactly the ones that **need no labels**, while every
+label-bound endpoint sat under a floor it never cleared. The router's first
+question should be which of its claims need a human to score them, and what
+that implies about how many it can afford to make.
 
 ## Quickstart
 
@@ -525,8 +590,40 @@ The development split runs freely and costs nothing to re-measure:
 ## Limitations
 
 Stated here because they bound every number above; the full list is in
-[`docs/evaluation.md`](docs/evaluation.md).
+[`docs/evaluation.md`](docs/evaluation.md). The five below were added or
+sharpened on 2026-09-14 after an **external audit** of the pipeline and the
+experimental design; it found no defect that invalidates a published result,
+and its closing observation was that the largest remaining risk is **a reader
+taking the README more broadly than the registry permits.** These exist to
+close that gap.
 
+- **The conclusion this project supports, in the only width it supports it.**
+  Not *"GraphRAG is better for Magic rules."* It is: *on this corpus, under this
+  ontology, this seeding mechanism and this protocol, the graph showed no
+  statistically detectable advantage over the vector baseline, and its
+  usefulness is conditional on the question having structure the graph can
+  reach.* Every figure below is inside that sentence.
+- **Graph reachability is a property of the ontology, not of GraphRAG.** The
+  graph holds `Card`, `CardFace`, `Format`, `Keyword`, `Rule`, `Ruling` and a
+  deliberately narrow relation set — only chapter 701/702 glossary terms become
+  `Keyword` nodes, and `Ruling → governing Rule` was **removed in Phase 3**
+  because the data did not support it. So a measured graph recall is
+  *recall given this ontology, this extraction policy and these seeds*, and it
+  is not an estimate of what a knowledge graph of Magic could reach.
+- **Card interaction is queried as a pair, not as a set.** The router passes the
+  first two resolved cards to the `card_interaction` traversal. On the
+  evaluation split **9 of 57 questions resolve three or more cards** — eight of
+  them in `interaction_multihop` — so the traversal covers **22% of the
+  available card pairs in that stratum** (16 of 72), and 6% in the hybrid arm,
+  which resolves more cards. This is an architectural limitation of the product
+  and it does not reopen E-001: the stratum's 22 questions were fixed in advance
+  and every arm answered the same ones. **But nothing here should be read as
+  interaction retrieval over an arbitrary number of cards.**
+- **Arm C is not "arm A plus the graph".** It is a different pipeline: the graph
+  linker resolves cards, their oracle text expands the query, and *then* arm A's
+  retriever runs. So `C − A` is the effect of **graph-derived query expansion
+  plus text retrieval**, not an isolated graph contribution, and no analysis in
+  this repository decomposes it into one.
 - **n = 57, and the floor that follows from it is 0.203.** Exact McNemar needs
   6 discordant pairs one way to reach *p* < 0.05 and Holm's strictest step
   needs 7:0. The largest discordance observed anywhere is 5. This split could
@@ -535,7 +632,11 @@ Stated here because they bound every number above; the full list is in
   anywhere in this repository should be read without that floor beside it.**
   The floor was itself measured twice: the exact permutation value is higher
   still (0.220 at n = 57, 0.430 at n = 20), so the normal approximation quoted
-  here is the optimistic one.
+  here is the optimistic one. **And 0.203 is not "the statistical precision of
+  this experiment."** It is the MDE for this protocol *under the pooled
+  discordance of 17/57 chosen as the reference rate* — deliberately pooled, so
+  that the floor does not move with the result being judged, and therefore not a
+  per-contrast figure.
 - **The economy figures are exploratory, not pre-registered.** E-027 was
   registered retrospectively and says so: the numbers were computed while
   deciding whether the entry was worth writing. No decision rule was fixed in

@@ -52,6 +52,21 @@ class Outcome(StrEnum):
     Every value other than :attr:`RESOLVED` is an *explicit* failure the
     caller must handle. None of them may be answered from as though the
     subgraph were complete.
+
+    **"Must handle" is not "must refuse", and the two readings diverge on
+    exactly one value.** ADR-007 routes :attr:`NO_SEED` to text retrieval, so
+    the shipped hybrid arm *handles* it by going and finding the rule
+    elsewhere — and records **zero** `no_seed` on the E-001 evaluation split
+    as a result. The graph-only arm has nowhere to route to and refuses, which
+    is that arm's job: it exists to isolate what the topology reaches. Read as
+    "must refuse", this docstring contradicts the ADR; read as written, it does
+    not. Clarified 2026-09-14, after an entry (E-030) was registered and
+    withdrawn on the difference.
+
+    :attr:`NO_SEED` is therefore the one value whose right handling depends on
+    what the caller has available, and a caller that can only refuse should say
+    what was missing rather than that nothing arrived — see
+    :func:`graphrag_mtg.generation.answerer.refusal_reason`.
     """
 
     RESOLVED = "resolved"

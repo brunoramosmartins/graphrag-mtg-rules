@@ -95,11 +95,20 @@ def se_simple(n: int, discordance: float) -> float:
 
 
 def se_interaction(n: int, discordance: float) -> float:
-    """SE of a difference between two such differences, n per group.
+    """SE of a difference between two such differences, **n per group**.
 
     Twice the variance of one group, which is why an interaction costs about
     four times the questions of the simple effect it is built from — the single
-    arithmetic fact that decided Phase 10.
+    arithmetic fact that decided Phase 10. The factor is four and not two
+    because **both** halves apply: matching a simple contrast's SE needs 2n per
+    group, and an interaction needs two groups, so 2 x 2n = 4n questions. At the
+    pooled rate, the simple floor at n = 57 is 0.203 and an interaction reaches
+    it at 114 per group, which is 228 questions — exactly 4.00x.
+
+    **`n` here is per group, and every caller has to say so**, because the same
+    `n` in :func:`se_simple` is a total. An audit in September reproduced this
+    arithmetic correctly and still stopped at the convention, which is the
+    evidence that the convention needed printing rather than implying.
     """
     return sqrt(2 * discordance / n)
 
@@ -190,9 +199,19 @@ def main() -> int:
 
     print(f"\n{THIN}\nSMALLEST DETECTABLE EFFECT at {TARGET_POWER:.0%} power, "
           f"alpha={ALPHA}\n{THIN}")
-    print(f"{'n':>6}{'simple (one contrast)':>24}{'interaction':>16}")
+    # The two columns are read at DIFFERENT total sample sizes and the header
+    # has to say so. `n` is total questions for the simple contrast and
+    # questions PER GROUP for the interaction, which needs two of them — so the
+    # interaction row at n is a study of 2n questions. Printing one `n` over
+    # both columns let a reader take "57 -> 0.287" as an interaction reachable
+    # with 57 questions; at 57 total it is 0.409. Labelled 2026-09-14, after an
+    # external audit reproduced the arithmetic and stopped at the convention.
+    print(f"{'n':>6}{'simple (n total)':>24}{'interaction (n/group)':>24}{'= questions':>14}")
     for n in (20, 30, 40, 57, 80, 120, 200, 400):
-        print(f"{n:>6}{mde(n, disc):>24.3f}{mde(n, disc, interaction=True):>16.3f}")
+        print(
+            f"{n:>6}{mde(n, disc):>24.3f}"
+            f"{mde(n, disc, interaction=True):>24.3f}{2 * n:>14}"
+        )
     print(
         "\nAn interaction costs about four times the questions of the simple\n"
         "effect it is built from. That is the arithmetic, not a judgement."
