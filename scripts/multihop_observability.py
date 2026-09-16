@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import statistics
 import sys
 from collections import Counter
 from pathlib import Path
@@ -141,8 +142,6 @@ def overlap(retrieval: dict[str, dict[str, dict]], ids: list[str]) -> None:
     graph put in the context, what fraction did the vector arm also have? Both
     are printed, and the containment is the one the claim rests on.
     """
-    import statistics
-
     per_b, per_a, jac = [], [], []
     rulings, rules = [], []
     for qid in ids:
