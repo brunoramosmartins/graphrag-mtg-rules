@@ -587,6 +587,26 @@ python scripts/run_e010.py proxy --side eval                    # precision, and
 The development split runs freely and costs nothing to re-measure:
 `python scripts/run_eval.py run --arm C --limit 1`.
 
+**A re-run today will not reproduce one of the 57 evaluation contexts.** A
+linking defect was fixed after the evaluation, and it changes what arm C
+retrieves on `hand-humility-opalescence` and nothing else — measured, bounded,
+and written out in full under [Limitations](#limitations). The figures above
+come from the frozen artefacts and are unaffected.
+
+To ask a question that is **not** in the golden set, `scripts/ask.py` runs the
+same stack on any arm. It defaults to arm C as shipped, which needs the vector
+index; the ablation below needs only the graph `bootstrap.py` builds, and says
+on screen that it is an ablation:
+
+```bash
+python scripts/ask.py "Does deathtouch change how much damage trample must assign?" --text tfidf
+python scripts/ask.py "Does damage wear off between turns?" --arm A --mode lexical
+python scripts/ask.py "..." --text tfidf --retrieval-only   # the evidence, no tokens spent
+```
+
+A `CANNOT ANSWER` here is an output, not a failure — it is the pipeline
+declining to write about a context that does not hold the rule.
+
 ## Limitations
 
 Stated here because they bound every number above; the full list is in
@@ -681,6 +701,27 @@ close that gap.
   `card_core` emits card text only, and **power and toughness are never
   serialized for any card**. Zero occurrences in the vector arm. Small,
   specific, cheap to close, and it does not move the 2/22.
+- **A linking defect was fixed on 2026-09-16, after the evaluation ran, so the
+  code no longer matches the runs the figures come from.** The lexicon holds
+  exact card names, so a possessive resolved nothing:
+  `"Gollum, Riddle Master's ability"` linked no card while
+  `"the ability of Gollum, Riddle Master"` linked it and retrieved the ruling
+  that answers the question — with the card in the graph throughout. Found by
+  the first reader to ask this system a question of their own. The blast radius
+  was measured on both frozen splits **before** the change: four questions
+  resolve one more entity, **none loses one, flips its graph seed, or changes
+  its ambiguity set**, and in the published hybrid configuration **76 of the 77
+  questions retrieve a byte-identical context**. The one that differs is
+  `hand-humility-opalescence` on the evaluation split, where `Ghostly Prison`
+  now contributes and the same token budget holds a different 52 items. Arm A
+  has no linker and is untouched, so this differs from the published C-vs-A
+  figure on one side of **1 of 57** questions: were that question to flip, the
+  paired difference moves by 1/57 = 0.018, which sits inside its own confidence
+  interval and an order of magnitude below the 0.203 floor. **Every figure in
+  this README was computed from the frozen artefacts in `runs/` and is
+  unchanged.** What changed is that re-running the pipeline today will not
+  reproduce that one question's context, which is a reproducibility caveat
+  rather than a correction.
 
 ## Repository layout
 
@@ -689,7 +730,7 @@ docs/          hypothesis, evaluation, decision journal, data-sources (G1), ADRs
 experiments/   registry.md — every hypothesis, rule and amendment, dated
 src/graphrag_mtg/   Python package (etl · graph · extraction · retrieval · generation · evaluation · observability)
 app/           the Streamlit demo (demo.py) and its two pure helpers
-scripts/       bootstrap · run_eval · the per-experiment harnesses and analyses
+scripts/       bootstrap · ask · run_eval · the per-experiment harnesses and analyses
 tests/         unit tests (+ @integration against Neo4j)
 data/          raw/ & interim/ gitignored; golden/ versioned per license
 runs/          gitignored run artefacts — the only copy of generated answers

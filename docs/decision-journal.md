@@ -90,6 +90,51 @@ suggester was rejected precisely because it would grade the extractor
 against a gold it helped write. Embedding retrieval was deferred to Phase 4
 for the same correlation reason plus its infrastructure cost.
 
+## 2026-09-16 — A possessive defeated entity linking, and the fix was taken after measuring what it would cost the published figures
+
+The first reader to ask this system a question of their own found two
+`no_entities` refusals in two questions — an outcome that fired **zero times**
+across E-001's 57 evaluation questions. The first was the boundary of a
+card-seeded design: *"does damage carry over between turns?"* names nothing to
+link, and the planner returns before text retrieval, so `--always-text` cannot
+reach past it. The second was a defect. *"Gollum, Riddle Master's ability"*
+linked no card while *"the ability of Gollum, Riddle Master"* linked it and
+retrieved the ruling that answers the question, with the card in the graph
+throughout. The lexicon holds exact names and a possessive is not one.
+
+Zero of 57 was not evidence that the branch was sound. The golden set is drawn
+from a site for questions **about cards**, so a question naming none was
+unreachable by construction, and the possessive survived because the questions
+carrying one also named something else. Standing rule 9, on an outcome that
+never fired rather than a quantity that did: what else would make a count come
+back zero?
+
+**The decision was to fix it, and the order was to measure first.** A retrieval
+change after the evaluation makes the code stop matching the runs the figures
+come from, which is the drift this project has spent eleven phases refusing. So
+the blast radius was measured on both frozen splits before the edit: four
+questions resolve one more entity, **none loses one, flips its graph seed, or
+changes its ambiguity set**, and in the published hybrid configuration **76 of
+the 77 questions retrieve a byte-identical context**. The one that differs is
+`hand-humility-opalescence` on the evaluation split, where `Ghostly Prison` now
+contributes and the same budget holds a different 52 items. Arm A has no linker
+and is untouched.
+
+So the change differs from the published C-vs-A figure on one side of **1 of
+57** questions. Were that question to flip, the paired difference moves by
+1/57 = 0.018 — inside its own confidence interval and an order of magnitude
+below the 0.203 floor. The publication stands as measured, and the README says
+the fix postdates it, because a reader who re-runs today and gets a different
+context deserves to know why before concluding they failed to reproduce.
+
+`_variants` already existed for this shape of failure, so the possessive joins
+it as one more attempt **after the surface as written** — `_match_card` returns
+on the first candidate that matches, which is what makes the change able to add
+a resolution and unable to alter one.
+
+Whether that one question's answer or judged score changes is **not measured**.
+That would be an experiment, and it is not registered.
+
 ## 2026-09-16 — A format that needs a careful reader is a format with a defect
 
 The reviewer who misread E-013's ceiling as a result was not careless. The
