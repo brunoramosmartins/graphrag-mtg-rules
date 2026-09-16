@@ -178,6 +178,31 @@ interaction is not recoverable from the question's surface text or the card's
 neighbourhood **by any method built here** — which makes this a property of the
 problem, not of one implementation.
 
+**So why does the vector arm still win here?** *(measured 2026-09-16, E-031, in
+answer to a reviewer who asked the sharpest version of it: the graph receives
+the same information plus relations, so how can the arm without relations be
+ahead?)* **Because the premise is false.** The two arms do not retrieve the same
+items — on these 22 questions their contexts are almost disjoint: **879 items
+against 404, with 123 shared.** Two-thirds of what the graph put in front of the
+model, the vector arm never saw.
+
+| per question, median | A (vector) | B (graph) |
+|---|---:|---:|
+| rulings | **25** | 7 |
+| CR rules | **0** | 3 |
+
+**The arm that wins this stratum holds a median of zero CR rules in its
+context.** A ruling is the Comprehensive Rules *already applied to a specific
+card*, written in the register the question is asked in. The graph spends its
+budget on rules reached by traversal; the vector arm spends it on rulings
+reached lexically; here the second is what answers. Not structure getting in the
+way — two different purchases with the same budget, and the purchase is decided
+by the ontology: `Ruling → governing Rule` was removed in Phase 3 because its F1
+did not support it, which is what makes rulings unreachable *as rules*.
+
+Exploratory and registered retrospectively; the floor at n = 22 is 0.326 against
+a stratum gap of 0.136, so this is a mechanism for a direction, not a test.
+
 **Four repairs, each measured, each unavailable:**
 
 | candidate | measured | outcome |
@@ -306,7 +331,12 @@ API key. The evaluation split was opened once and the result is above. Phase 9
 asked what it would take to close the retrieval gap, measured four candidate
 repairs, and shipped none. Phase 10 opened to take a second correctness verdict,
 measured that no such verdict was available to it, and published the floor
-instead. Roadmap: Phases 0→11 (vector→graph→agentic trilogy).
+instead. Phase 11 opened on one last repair, withdrew it the same day when the
+condition it targeted turned out not to occur in the shipped arm, shipped the
+one-line defect that survived — and then took an **external audit** of the
+pipeline and the experimental design, which closed with no defect invalidating a
+published result and one correction that landed inside the entry about numbers
+that mislead. Roadmap: Phases 0→11 (vector→graph→agentic trilogy).
 
 **Why it stopped here, stated rather than trailed off.** Three registered
 experiments in a row — E-019, E-025, E-030 — were **withdrawn on the day they
