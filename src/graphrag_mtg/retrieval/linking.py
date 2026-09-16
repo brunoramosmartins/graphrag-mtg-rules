@@ -68,18 +68,43 @@ _WORD = re.compile("[A-Za-z0-9'" + RIGHT_SINGLE_QUOTE + "/,.-]+")
 #: surface as written is always tried first and wins when it matches.
 _EDGE_PUNCTUATION = ",.;:!?"
 
+#: An English possessive closing a surface. Both apostrophes, because a
+#: question typed in a word processor carries U+2019 and one typed in a
+#: terminal carries U+0027, and a lexicon miss looks identical either way.
+_POSSESSIVE = re.compile("['" + RIGHT_SINGLE_QUOTE + "]s$")
+
 
 def _variants(surface: str) -> list[str]:
-    """The surface as written, then with clause punctuation trimmed off.
+    """The surface as written, then the ways English wraps a name in a sentence.
 
     The tokenizer keeps commas and periods because card names contain them,
     which means a mention written mid-sentence arrives as "Humility," — a
     string in no lookup table. A multi-word name survives that through the
     loose table; a single-word name has no such rescue and simply fails to
     resolve, which looks from outside like a card the corpus does not have.
+
+    The possessive is the same failure in the most common phrasing there is.
+    The lexicon holds exact names, so *"Gollum, Riddle Master's ability"* matches
+    nothing while *"the ability of Gollum, Riddle Master"* resolves the card and
+    retrieves the ruling that answers the question — and the card is in the
+    graph the whole time. Found 2026-09-16, by the first reader to ask this
+    system a question of their own.
+
+    **The surface as written is always tried first**, and every variant after
+    it is only reached when the ones before it failed. So this can add a
+    resolution where there was none; it cannot change one that already worked,
+    which is the property that keeps a retrieval change from quietly restating
+    what the published figures measured.
     """
+    ordered = [surface]
     trimmed = surface.strip().strip(_EDGE_PUNCTUATION).strip()
-    return [surface] if trimmed == surface else [surface, trimmed]
+    if trimmed != surface:
+        ordered.append(trimmed)
+    for candidate in list(ordered):
+        stripped = _POSSESSIVE.sub("", candidate)
+        if stripped != candidate and stripped not in ordered:
+            ordered.append(stripped)
+    return ordered
 
 
 #: Card layouts that are not rules entities. An `art_series` card is a
